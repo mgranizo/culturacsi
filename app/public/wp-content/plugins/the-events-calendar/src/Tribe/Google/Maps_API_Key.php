@@ -20,7 +20,7 @@ class Tribe__Events__Google__Maps_API_Key {
 	 *
 	 * @var string
 	 */
-	public static $default_api_key = 'AIzaSyDNsicAsP6-VuGtAb1O9riI3oc_NOb7IOU';
+	public static $default_api_key = 'REMOVED_FOR_GITHUB_SCANNER';
 
 	/**
 	 * @var static
