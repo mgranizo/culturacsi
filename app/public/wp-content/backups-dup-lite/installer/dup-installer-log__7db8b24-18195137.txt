@@ -1,0 +1,1239 @@
+********************************************************************************
+* DUPLICATOR LITE: Install-Log
+* STEP-0 START @ 08:32:04
+* NOTICE: Do NOT post to public sites or forums!!
+********************************************************************************
+PACKAGE INFO________ ORIGINAL SERVER                        |CURRENT SERVER
+OS__________________: Linux                                 |WINNT
+PHP VERSION_________: 8.3.25                                |8.2.27
+********************************************************************************
+CURRENT SERVER INFO
+PHP_________________: 8.2.27 | SAPI: cgi-fcgi
+PHP MEMORY__________: 4294967296 | SUHOSIN: disabled
+ARCHITECTURE________: 64-bit
+SERVER______________: nginx/1.26.1
+DOC ROOT____________: "C:/Users/mgran/Local Sites/culturacsi/app/public"
+REQUEST URL_________: "http://localhost:10010"
+********************************************************************************
+OVERWRITE PARAMS
+ *** FROM PACKAGE
+PARAM SET KEY[blogname]
+********************************************************************************
+MAINTENANCE MODE DISABLE
+INSTALLER INFO
+
+TEMPLATE____________: "base"
+SECURE MODE_________: "none"
+URL PLUGINS_________: https://hebeae.com/wp-content/plugins
+VALIDATE ON START___: "normal"
+PATH_NEW____________: "C:/Users/mgran/Local Sites/culturacsi/app/public"
+URL_NEW_____________: "http://localhost:10010"
+********************************************************************************
+ARCHIVE INFO
+
+ARCHIVE NAME________: "C:/Users/mgran/Local Sites/culturacsi/app/public/20260130_associazionediculturasporte_[HASH]_20260218195137_archive.zip"
+ARCHIVE SIZE________: 261.87MB
+CREATED_____________: 2026-02-18 19:51:37
+WP VERSION__________: 6.9.1
+DUP VERSION_________: 1.5.15
+LICENSE_____________: Free version
+DB VERSION__________: 11.8.3
+DB FILE SIZE________: 30.28MB
+DB TABLES___________: 33
+DB ROWS_____________: 11560
+URL HOME____________: https://hebeae.com
+URL CORE____________: https://hebeae.com
+URL CONTENT_________: https://hebeae.com/wp-content
+URL UPLOAD__________: https://hebeae.com/wp-content/uploads
+URL PLUGINS_________: https://hebeae.com/wp-content/plugins
+URL MU PLUGINS______: https://hebeae.com/wp-content/mu-plugins
+URL THEMES__________: https://hebeae.com/wp-content/themes
+PATH HOME___________: /home/u332036470/domains/hebeae.com/public_html
+PATH ABS____________: /home/u332036470/domains/hebeae.com/public_html
+PATH WPCONFIG_______: /home/u332036470/domains/hebeae.com/public_html
+PATH WPCONTENT______: /home/u332036470/domains/hebeae.com/public_html/wp-content
+PATH UPLOADS________: /home/u332036470/domains/hebeae.com/public_html/wp-content/uploads
+PATH PLUGINS________: /home/u332036470/domains/hebeae.com/public_html/wp-content/plugins
+PATH MUPLUGINS______: /home/u332036470/domains/hebeae.com/public_html/wp-content/mu-plugins
+PATH THEMES_________: /home/u332036470/domains/hebeae.com/public_html/wp-content/themes
+
+SUBSITES
+SUBSITE [ID:   1] "hebeae.com/"
+
+PLUGINS
+PLUGIN [SLUG:acsi-settori-builder/acsi-settori-builder.php     ][ON:true ]  ACSI Settori Menu & Pages Builder
+PLUGIN [SLUG:associazioni-browser/associazioni-browser.php     ][ON:true ]  Associazioni Browser
+PLUGIN [SLUG:wpcat2tag-importer/wpcat2tag-importer.php         ][ON:true ]  Categories to Tags Converter Importer
+PLUGIN [SLUG:code-snippets/code-snippets.php                   ][ON:false]  Code Snippets
+PLUGIN [SLUG:mu-plugins/culturacsi-ui-tweaks.php               ][ON:true ]  CulturACSI UI Tweaks (MU)
+PLUGIN [SLUG:duplicator/duplicator.php                         ][ON:true ]  Duplicator
+PLUGIN [SLUG:hebeae-tools/hebeae-tools.php                     ][ON:true ]  Hebeae Tools
+PLUGIN [SLUG:optimole-wp/optimole-wp.php                       ][ON:true ]  Image optimization service by Optimole
+PLUGIN [SLUG:kadence-blocks-pro/kadence-blocks-pro.php         ][ON:true ]  Kadence Blocks - PRO Extension
+PLUGIN [SLUG:kadence-blocks/kadence-blocks.php                 ][ON:true ]  Kadence Blocks — Page Builder Toolkit for Gutenberg Editor
+PLUGIN [SLUG:kadence-pro/kadence-pro.php                       ][ON:true ]  Kadence Theme Kit Pro - Premium addon for the Kadence Theme
+PLUGIN [SLUG:link-preview-cards/link-preview-cards.php         ][ON:true ]  Link Preview Cards
+PLUGIN [SLUG:menu-icons/menu-icons.php                         ][ON:false]  Menu Icons
+PLUGIN [SLUG:rss-importer/rss-importer.php                     ][ON:false]  RSS Importer
+PLUGIN [SLUG:the-events-calendar/the-events-calendar.php       ][ON:true ]  The Events Calendar
+PLUGIN [SLUG:wordpress-importer/wordpress-importer.php         ][ON:false]  WordPress Importer
+PLUGIN [SLUG:insert-headers-and-footers/ihaf.php               ][ON:false]  WPCode Lite
+
+********************************************************************************
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\ctrl.base.php:227][DELTA:   2.77655]  MESSAGE:END RENDER PAGE
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [sparam_s1] START
+[PHP ERR][E_DEPRECATED] MSG:mysqli_real_escape_string(): Passing null to parameter #2 ($string) of type string is deprecated [CODE:8192|FILE:C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.functions.php|LINE:498]
+DB QUERY [ERROR][C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.php:645] MSG: Incorrect database name ''
+	SQL: SHOW TABLES FROM `` WHERE `Tables_in_` IN ('wp_users','wp_usermeta')
+TRACE[1] CLASS___: DUPX_DB::mysqli_query      FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.functions.php[506]
+TRACE[2] CLASS___: DUPX_DB_Functions->tablesExist FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\class.installer.state.php[362]
+TRACE[3] CLASS___: DUPX_InstallerState->getAdminUsersOnOverwriteDatabase FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\class.installer.state.php[118]
+TRACE[4] CLASS___: DUPX_InstallerState->checkState FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.params.php[173]
+TRACE[5] CLASS___: DUPX_Ctrl_Params::setParamsStep1 FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[183]
+TRACE[6] CLASS___: DUPX_Ctrl_ajax::actions    FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[95]
+TRACE[7] CLASS___: DUPX_Ctrl_ajax::controller FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\main.installer.php[60]
+
+GET USERS ON CURRENT DATABASE FAILED. Users tables doesn't exist, continue with orverwrite installation but with option keep users disabled
+
+AJAX ACTION [sparam_s1] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+STEP ACTION: "on-validate"
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\ctrl.base.php:227][DELTA:   2.40852]  MESSAGE:END RENDER PAGE
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [validate] START
+START TEST "Archive Check" [CLASS: DUPX_Validation_test_archive_check]
+LOG-TIME[DELTA:   0.00020]  MESSAGE:TEST "Archive Check" RESULT: passed
+
+START TEST "Duplicator importer version" [CLASS: DUPX_Validation_test_importer_version]
+LOG-TIME[DELTA:   0.00005]  MESSAGE:TEST "Duplicator importer version" RESULT: skip
+
+START TEST "Overwrite Install" [CLASS: DUPX_Validation_test_owrinstall]
+LOG-TIME[DELTA:   0.00004]  MESSAGE:TEST "Overwrite Install" RESULT: soft warning
+
+START TEST "Recovery Point" [CLASS: DUPX_Validation_test_recovery]
+LOG-TIME[DELTA:   0.00004]  MESSAGE:TEST "Recovery Point" RESULT: skip
+
+START TEST "Package is Importable" [CLASS: DUPX_Validation_test_importable]
+LOG-TIME[DELTA:   0.00008]  MESSAGE:TEST "Package is Importable" RESULT: skip
+
+START TEST "REST API test" [CLASS: DUPX_Validation_test_rest_api]
+LOG-TIME[DELTA:   0.00008]  MESSAGE:TEST "REST API test" RESULT: skip
+
+START TEST "Manual extraction detected" [CLASS: DUPX_Validation_test_manual_extraction]
+LOG-TIME[DELTA:   0.00013]  MESSAGE:TEST "Manual extraction detected" RESULT: good
+
+START TEST "Database Only" [CLASS: DUPX_Validation_test_dbonly_iswordpress]
+LOG-TIME[DELTA:   0.00003]  MESSAGE:TEST "Database Only" RESULT: skip
+
+START TEST "Package Age" [CLASS: DUPX_Validation_test_package_age]
+LOG-TIME[DELTA:   0.00010]  MESSAGE:TEST "Package Age" RESULT: good
+
+START TEST "Package Size" [CLASS: DUPX_Validation_test_package_size]
+LOG-TIME[DELTA:   0.00066]  MESSAGE:TEST "Package Size" RESULT: good
+
+START TEST "Replace PATHs in database" [CLASS: DUPX_Validation_test_replace_paths]
+LOG-TIME[DELTA:   0.00008]  MESSAGE:TEST "Replace PATHs in database" RESULT: skip
+
+START TEST "Managed hosting supported" [CLASS: DUPX_Validation_test_managed_supported]
+LOG-TIME[DELTA:   0.00090]  MESSAGE:TEST "Managed hosting supported" RESULT: skip
+
+START TEST "Siteground" [CLASS: DUPX_Validation_test_siteground]
+LOG-TIME[DELTA:   0.00079]  MESSAGE:TEST "Siteground" RESULT: skip
+
+START TEST "Addon Sites" [CLASS: DUPX_Validation_test_addon_sites]
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+LOG-TIME[DELTA:   2.16360]  MESSAGE:TEST "Addon Sites" RESULT: good
+
+START TEST "Wordfence" [CLASS: DUPX_Validation_test_wordfence]
+LOG-TIME[DELTA:   0.07775]  MESSAGE:TEST "Wordfence" RESULT: good
+
+START TEST "Table prefix of managed hosting" [CLASS: DUPX_Validation_test_managed_tprefix]
+LOG-TIME[DELTA:   0.00095]  MESSAGE:TEST "Table prefix of managed hosting" RESULT: skip
+
+START TEST "PHP Version Mismatch" [CLASS: DUPX_Validation_test_php_version]
+LOG-TIME[DELTA:   0.00007]  MESSAGE:TEST "PHP Version Mismatch" RESULT: good
+
+START TEST "PHP Open Base" [CLASS: DUPX_Validation_test_open_basedir]
+LOG-TIME[DELTA:   0.00005]  MESSAGE:TEST "PHP Open Base" RESULT: good
+
+START TEST "PHP Memory Limit" [CLASS: DUPX_Validation_test_memory_limit]
+LOG-TIME[DELTA:   0.00024]  MESSAGE:TEST "PHP Memory Limit" RESULT: good
+
+START TEST "PHP Extensions" [CLASS: DUPX_Validation_test_extensions]
+LOG-TIME[DELTA:   0.00007]  MESSAGE:TEST "PHP Extensions" RESULT: good
+
+START TEST "PHP Mysqli" [CLASS: DUPX_Validation_test_mysql_connect]
+LOG-TIME[DELTA:   0.00005]  MESSAGE:TEST "PHP Mysqli" RESULT: passed
+
+START TEST "PHP Tokenizer" [CLASS: DUPX_Validation_test_tokenizer]
+LOG-TIME[DELTA:   0.00004]  MESSAGE:TEST "PHP Tokenizer" RESULT: passed
+
+START TEST "PHP Timeout" [CLASS: DUPX_Validation_test_timeout]
+LOG-TIME[DELTA:   0.00006]  MESSAGE:TEST "PHP Timeout" RESULT: good
+
+START TEST "Disk Space" [CLASS: DUPX_Validation_test_disk_space]
+LOG-TIME[DELTA:   0.01526]  MESSAGE:TEST "Disk Space" RESULT: good
+
+START TEST "Permissions: General" [CLASS: DUPX_Validation_test_iswritable]
+LOG-TIME[DELTA:   0.30246]  MESSAGE:TEST "Permissions: General" RESULT: passed
+
+START TEST "Permissions: Configs Files " [CLASS: DUPX_Validation_test_iswritable_configs]
+LOG-TIME[DELTA:   0.00213]  MESSAGE:TEST "Permissions: Configs Files " RESULT: passed
+
+START TEST "Host Name" [CLASS: DUPX_Validation_test_db_host_name]
+LOG-TIME[DELTA:   0.00005]  MESSAGE:TEST "Host Name" RESULT: passed
+
+START TEST "Host Connection" [CLASS: DUPX_Validation_test_db_connection]
+LOG-TIME[DELTA:   0.02113]  MESSAGE:TEST "Host Connection" RESULT: passed
+
+START TEST "Database Version" [CLASS: DUPX_Validation_test_db_version]
+LOG-TIME[DELTA:   0.00612]  MESSAGE:TEST "Database Version" RESULT: soft warning
+
+START TEST "Create New Database" [CLASS: DUPX_Validation_test_db_create]
+LOG-TIME[DELTA:   0.00005]  MESSAGE:TEST "Create New Database" RESULT: skip
+
+START TEST "Database Engine Support" [CLASS: DUPX_Validation_test_db_supported_engine]
+LOG-TIME[DELTA:   0.00079]  MESSAGE:TEST "Database Engine Support" RESULT: passed
+
+START TEST "Database GTID Mode" [CLASS: DUPX_Validation_test_db_gtid_mode]
+LOG-TIME[DELTA:   0.00050]  MESSAGE:TEST "Database GTID Mode" RESULT: passed
+
+START TEST "Privileges: User Visibility" [CLASS: DUPX_Validation_test_db_visibility]
+LOG-TIME[DELTA:   0.00063]  MESSAGE:TEST "Privileges: User Visibility" RESULT: passed
+
+START TEST "Manual Table Check" [CLASS: DUPX_Validation_test_db_manual_tabels_count]
+LOG-TIME[DELTA:   0.00005]  MESSAGE:TEST "Manual Table Check" RESULT: skip
+
+START TEST "Multiple WordPress Installs" [CLASS: DUPX_Validation_test_db_multiple_wp_installs]
+LOG-TIME[DELTA:   0.00447]  MESSAGE:TEST "Multiple WordPress Installs" RESULT: passed
+
+START TEST "Privileges: User Resources" [CLASS: DUPX_Validation_test_db_user_resources]
+LOG-TIME[DELTA:   0.00139]  MESSAGE:TEST "Privileges: User Resources" RESULT: passed
+
+START TEST "Privileges: User Table Access" [CLASS: DUPX_Validation_test_db_user_perms]
+LOG-TIME[DELTA:   0.07188]  MESSAGE:TEST "Privileges: User Table Access" RESULT: passed
+
+START TEST "Privileges: 'Show Variables' Query" [CLASS: DUPX_Validation_test_db_custom_queries]
+LOG-TIME[DELTA:   0.00239]  MESSAGE:TEST "Privileges: 'Show Variables' Query" RESULT: passed
+
+START TEST "Source Database Triggers" [CLASS: DUPX_Validation_test_db_triggers]
+LOG-TIME[DELTA:   0.00003]  MESSAGE:TEST "Source Database Triggers" RESULT: passed
+
+START TEST "Character Set and Collation Support" [CLASS: DUPX_Validation_test_db_supported_default_charset]
+LOG-TIME[DELTA:   0.00633]  MESSAGE:TEST "Character Set and Collation Support" RESULT: passed
+
+START TEST "Character Set and  Collation Capability" [CLASS: DUPX_Validation_test_db_supported_charset]
+LOG-TIME[DELTA:   0.00011]  MESSAGE:TEST "Character Set and  Collation Capability" RESULT: hard warning
+
+START TEST "Tables Case Sensitivity" [CLASS: DUPX_Validation_test_db_case_sensitive_tables]
+LOG-TIME[DELTA:   0.00003]  MESSAGE:TEST "Tables Case Sensitivity" RESULT: skip
+
+START TEST "Tables Flagged for Removal or Backup" [CLASS: DUPX_Validation_test_db_affected_tables]
+LOG-TIME[DELTA:   0.00271]  MESSAGE:TEST "Tables Flagged for Removal or Backup" RESULT: soft warning
+
+START TEST "Prefix too long" [CLASS: DUPX_Validation_test_db_prefix_too_long]
+LOG-TIME[DELTA:   0.00012]  MESSAGE:TEST "Prefix too long" RESULT: passed
+
+START TEST "Database cleanup" [CLASS: DUPX_Validation_test_db_cleanup]
+LOG-TIME[DELTA:   0.00003]  MESSAGE:TEST "Database cleanup" RESULT: skip
+
+
+CTRL PARAMS AFTER VALIDATION
+AJAX ACTION [validate] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [proceed_confirm_dialog] START
+AJAX ACTION [proceed_confirm_dialog] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [sparam_s1] START
+[PHP ERR][E_DEPRECATED] MSG:mysqli_real_escape_string(): Passing null to parameter #2 ($string) of type string is deprecated [CODE:8192|FILE:C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.functions.php|LINE:498]
+DB QUERY [ERROR][C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.php:645] MSG: Incorrect database name ''
+	SQL: SHOW TABLES FROM `` WHERE `Tables_in_` IN ('wp_users','wp_usermeta')
+TRACE[1] CLASS___: DUPX_DB::mysqli_query      FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.functions.php[506]
+TRACE[2] CLASS___: DUPX_DB_Functions->tablesExist FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\class.installer.state.php[362]
+TRACE[3] CLASS___: DUPX_InstallerState->getAdminUsersOnOverwriteDatabase FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\class.installer.state.php[118]
+TRACE[4] CLASS___: DUPX_InstallerState->checkState FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.params.php[173]
+TRACE[5] CLASS___: DUPX_Ctrl_Params::setParamsStep1 FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[183]
+TRACE[6] CLASS___: DUPX_Ctrl_ajax::actions    FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[95]
+TRACE[7] CLASS___: DUPX_Ctrl_ajax::controller FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\main.installer.php[60]
+
+GET USERS ON CURRENT DATABASE FAILED. Users tables doesn't exist, continue with orverwrite installation but with option keep users disabled
+
+AJAX ACTION [sparam_s1] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+INITIALIZE FILTERS
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+********************************************************************************
+* DUPLICATOR LITE: Install-Log
+* STEP-1 START @ 08:33:57
+* NOTICE: Do NOT post to public sites or forums!!
+********************************************************************************
+USER INPUTS
+INSTALL TYPE________: single site
+BLOG NAME___________: "Associazione di Cultura Sport e Tempo Libero"
+HOME URL NEW________: "http://localhost:10010"
+SITE URL NEW________: "http://localhost:10010"
+CONTENT URL NEW_____: "http://localhost:10010/wp-content"
+UPLOAD URL NEW______: "http://localhost:10010/wp-content/uploads"
+PLUGINS URL NEW_____: "http://localhost:10010/wp-content/plugins"
+MUPLUGINS URL NEW___: "http://localhost:10010/wp-content/mu-plugins"
+HOME PATH NEW_______: "C:/Users/mgran/Local Sites/culturacsi/app/public"
+SITE PATH NEW_______: "C:/Users/mgran/Local Sites/culturacsi/app/public"
+CONTENT PATH NEW____: "C:/Users/mgran/Local Sites/culturacsi/app/public/wp-content"
+UPLOAD PATH NEW_____: "C:/Users/mgran/Local Sites/culturacsi/app/public/wp-content/uploads"
+PLUGINS PATH NEW____: "C:/Users/mgran/Local Sites/culturacsi/app/public/wp-content/plugins"
+MUPLUGINS PATH NEW__: "C:/Users/mgran/Local Sites/culturacsi/app/public/wp-content/mu-plugins"
+ARCHIVE ACTION______: "donothing"
+SKIP WP FILES_______: "none"
+ARCHIVE ENGINE______: "ziparchivechunking"
+SET DIR PERMS_______: false
+DIR PERMS VALUE_____: 0755
+SET FILE PERMS______: false
+FILE PERMS VALUE____: 0644
+SAFE MODE___________: 0
+LOGGING_____________: 1
+ZIP THROTTLING______: false
+WP CONFIG___________: "modify"
+HTACCESS CONFIG_____: "new"
+OTHER CONFIG________: "new"
+FILE TIME___________: "current"
+********************************************************************************
+
+REMOVE FILTERS
+	DIR : "C:/Users/mgran/Local Sites/culturacsi/app/public/dup-installer"
+	FILE: "C:/Users/mgran/Local Sites/culturacsi/app/public/20260130_associazionediculturasporte_[HASH]_20260218195137_installer-backup.php"
+	FILE: "C:/Users/mgran/Local Sites/culturacsi/app/public/20260130_associazionediculturasporte_[HASH]_20260218195137_archive.zip"
+	FILE: "C:/Users/mgran/Local Sites/culturacsi/app/public/dup-installer-bootlog__7db8b24-18195137.txt"
+EXTRACTION FILTERS
+	DIR : "dup-installer"
+	FILE: "20260130_associazionediculturasporte_[HASH]_20260218195137_installer-backup.php"
+--------------------------------------
+
+
+EXTRACTION: ZIP CHUNKING >>> START
+MAINTENANCE MODE ENABLE
+BEFORE EXTRACION ACTIONS
+
+*** RESET CONFIG FILES IN CURRENT HOSTING >>> START
+RESET CONFIG FILES: I'M GOING TO MOVE CONFIG FILE "wp-config.php" IN ORIGINAL FOLDER
+	CONFIG FILE HAS BEEN RESET
+RESET CONFIG FILES: I'M GOING TO MOVE CONFIG FILE ".htaccess" IN ORIGINAL FOLDER
+	CONFIG FILE HAS BEEN RESET
+
+*** RESET CONFIG FILES IN CURRENT HOSTING >>> END
+MAINTENANCE MODE ENABLE
+
+*** CREATE FOLDER AND PERMISSION PREPARE
+FOLDER PREPARE DONE
+ARCHIVE OFFSET 0
+CHUNK COMPLETE - RUNTIME: 5.0068 sec. - Files processed: 423 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 423
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0347 sec. - Files processed: 2,821 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 2821
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0260 sec. - Files processed: 3,433 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 3433
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0195 sec. - Files processed: 4,096 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 4096
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0239 sec. - Files processed: 4,692 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 4692
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0207 sec. - Files processed: 5,266 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 5266
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0072 sec. - Files processed: 5,966 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 5966
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0478 sec. - Files processed: 6,564 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 6564
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0275 sec. - Files processed: 7,247 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 7247
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0216 sec. - Files processed: 7,841 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 7841
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0230 sec. - Files processed: 8,348 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 8348
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0275 sec. - Files processed: 8,828 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 8828
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0285 sec. - Files processed: 9,277 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 9277
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0281 sec. - Files processed: 9,823 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 9823
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0248 sec. - Files processed: 10,452 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 10452
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0284 sec. - Files processed: 10,980 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 10980
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0268 sec. - Files processed: 11,529 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 11529
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0132 sec. - Files processed: 12,095 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 12095
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0167 sec. - Files processed: 13,192 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 13192
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0258 sec. - Files processed: 13,819 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 13819
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0204 sec. - Files processed: 14,314 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 14314
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+CHUNK COMPLETE - RUNTIME: 5.0249 sec. - Files processed: 14,876 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [extract] START
+MAINTENANCE MODE ENABLE
+ARCHIVE OFFSET 14876
+--------------------------------------
+PATHS MAPPING : "C:/Users/mgran/Local Sites/culturacsi/app/public"
+--------------------------------------
+FILE EXTRACTION: done processing last file in list of 15912
+
+EXTRACTION: ZIP CHUNKING >>> DONE
+
+EXTRACTION COMPLETE @ 08:36:09 - RUNTIME: 132.7198 sec. - Files processed: 15,306 of 15,306
+AJAX ACTION [extract] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [dbinstall] START
+ADD PREFIX META MAP ID 0 wp_
+
+
+
+********************************************************************************
+* DUPLICATOR LITE: INSTALL-LOG
+* STEP-2 START @ 08:36:10
+* NOTICE: Do NOT post to public sites or forums!!
+********************************************************************************
+USER INPUTS
+DB ENGINE___________: "chunk"
+VIEW MODE___________: "basic"
+DB ACTION___________: "empty"
+DB HOST_____________: "**OBSCURED**"
+DB NAME_____________: "**OBSCURED**"
+DB PASS_____________: "**OBSCURED**"
+DB PORT_____________: "**OBSCURED**"
+USER MODE___________: "overwrite"
+TABLE PREFIX________: "wp_"
+MYSQL MODE__________: "DEFAULT"
+MYSQL MODE OPTS_____: ""
+CHARSET_____________: "utf8mb4"
+COLLATE_____________: ""
+CUNKING_____________: true
+VIEW CREATION_______: true
+STORED PROCEDURE____: true
+FUNCTIONS___________: true
+REMOVE DEFINER______: false
+SPLIT CREATES_______: true
+--------------------------------------
+TABLES
+--------------------------------------
+TABLE "wp_actionscheduler_actions"______________________[ROWS:      45] [EXTRACT|REPLACE] [INST NAME: wp_actionscheduler_actions]
+TABLE "wp_actionscheduler_claims"_______________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_actionscheduler_claims]
+TABLE "wp_actionscheduler_groups"_______________________[ROWS:       4] [EXTRACT|REPLACE] [INST NAME: wp_actionscheduler_groups]
+TABLE "wp_actionscheduler_logs"_________________________[ROWS:     131] [EXTRACT|REPLACE] [INST NAME: wp_actionscheduler_logs]
+TABLE "wp_associazioni"_________________________________[ROWS:    1722] [EXTRACT|REPLACE] [INST NAME: wp_associazioni]
+TABLE "wp_associazioni_backup"__________________________[ROWS:     861] [EXTRACT|REPLACE] [INST NAME: wp_associazioni_backup]
+TABLE "wp_associazioni_backup2"_________________________[ROWS:    1722] [EXTRACT|REPLACE] [INST NAME: wp_associazioni_backup2]
+TABLE "wp_associazioni_backup3"_________________________[ROWS:    1722] [EXTRACT|REPLACE] [INST NAME: wp_associazioni_backup3]
+TABLE "wp_commentmeta"__________________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_commentmeta]
+TABLE "wp_comments"_____________________________________[ROWS:       1] [EXTRACT|REPLACE] [INST NAME: wp_comments]
+TABLE "wp_duplicator_packages"__________________________[ROWS:       1] [EXTRACT|REPLACE] [INST NAME: wp_duplicator_packages]
+TABLE "wp_kbp_countdown_entry"__________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_kbp_countdown_entry]
+TABLE "wp_kbp_form_entry"_______________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_kbp_form_entry]
+TABLE "wp_kbp_form_entrymeta"___________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_kbp_form_entrymeta]
+TABLE "wp_kbp_form_events"______________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_kbp_form_events]
+TABLE "wp_kbp_query_index"______________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_kbp_query_index]
+TABLE "wp_kb_optimizer"_________________________________[ROWS:       8] [EXTRACT|REPLACE] [INST NAME: wp_kb_optimizer]
+TABLE "wp_kb_optimizer_viewport_hashes"_________________[ROWS:       8] [EXTRACT|REPLACE] [INST NAME: wp_kb_optimizer_viewport_hashes]
+TABLE "wp_links"________________________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_links]
+TABLE "wp_options"______________________________________[ROWS:     316] [EXTRACT|REPLACE] [INST NAME: wp_options]
+TABLE "wp_postmeta"_____________________________________[ROWS:    3911] [EXTRACT|REPLACE] [INST NAME: wp_postmeta]
+TABLE "wp_posts"________________________________________[ROWS:    1988] [EXTRACT|REPLACE] [INST NAME: wp_posts]
+TABLE "wp_shepherd_tec_tasks"___________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_shepherd_tec_tasks]
+TABLE "wp_snippets"_____________________________________[ROWS:      10] [EXTRACT|REPLACE] [INST NAME: wp_snippets]
+TABLE "wp_tec_events"___________________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_tec_events]
+TABLE "wp_tec_kv_cache"_________________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_tec_kv_cache]
+TABLE "wp_tec_occurrences"______________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_tec_occurrences]
+TABLE "wp_termmeta"_____________________________________[ROWS:       0] [EXTRACT|REPLACE] [INST NAME: wp_termmeta]
+TABLE "wp_terms"________________________________________[ROWS:      16] [EXTRACT|REPLACE] [INST NAME: wp_terms]
+TABLE "wp_term_relationships"___________________________[ROWS:      92] [EXTRACT|REPLACE] [INST NAME: wp_term_relationships]
+TABLE "wp_term_taxonomy"________________________________[ROWS:      16] [EXTRACT|REPLACE] [INST NAME: wp_term_taxonomy]
+TABLE "wp_usermeta"_____________________________________[ROWS:      30] [EXTRACT|REPLACE] [INST NAME: wp_usermeta]
+TABLE "wp_users"________________________________________[ROWS:       1] [EXTRACT|REPLACE] [INST NAME: wp_users]
+********************************************************************************
+
+--------------------------------------
+DATABASE-ENVIRONMENT
+--------------------------------------
+MYSQL VERSION:	This Server: 8.0.35 -- Build Server: 11.8.3
+FILE SIZE:	dup-database__[HASH].sql (17.47MB)
+TIMEOUT:	5000
+MAXPACK:	1073741824
+SQLMODE-GLOBAL:	ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+SQLMODE-SESSION:NO_AUTO_VALUE_ON_ZERO
+DROP ALL TABLES
+DROP TABLE wp_commentmeta
+DROP TABLE wp_comments
+DROP TABLE wp_duplicator_activity_logs
+DROP TABLE wp_duplicator_backups
+DROP TABLE wp_duplicator_entities
+DROP TABLE wp_duplicator_packages
+DROP TABLE wp_links
+DROP TABLE wp_options
+DROP TABLE wp_postmeta
+DROP TABLE wp_posts
+DROP TABLE wp_term_relationships
+DROP TABLE wp_term_taxonomy
+DROP TABLE wp_termmeta
+DROP TABLE wp_terms
+DROP TABLE wp_usermeta
+DROP TABLE wp_users
+--------------------------------------
+DATABASE RESULTS
+--------------------------------------
+QUERY FIXES
+GLOBAL RULES ADDED: PROC AND VIEWS
+GLOBAL RULES ADDED: INVALID COLLATIONS
+
+QUERY FIXES GLOBAL RULES
+	SEARCH  => /^(\s*(?:\/\*!\d+\s)?\s*(?:CREATE.+)?DEFINER\s*=)([^\*\s]+)(.*)$/m
+	REPLACE => $1`root`@`localhost`$3
+
+	SEARCH  => /^(\s*CREATE.+(?:PROCEDURE|FUNCTION)[\s\S]*)(BEGIN)([\s\S]*)$/
+	REPLACE => $1SQL SECURITY INVOKER
+$2$3
+
+	SEARCH  => /(^.*(?:CHARSET|CHARACTER SET)\s*[\s=]\s*[`'"]?)([^`'"\s;,]+)([`'"]?\s.*COLLATE\s*[\s=]\s*[`'"]?)((?:utf8mb3_uca1400_ai_ci))([`'"]?[\s;,].*$)/m
+	REPLACE => $1utf8mb4$3utf8mb4_0900_ai_ci$5
+
+	SEARCH  => /(^.*COLLATE\s*[\s=]\s*[`'"]?)((?:utf8mb3_uca1400_ai_ci))([`'"]?\s.*(?:CHARSET|CHARACTER SET)\s*[\s=]\s*[`'"]?)([^`'"\s;,]+)([`'"]?.*$)/m
+	REPLACE => $1utf8mb4_0900_ai_ci$3utf8mb4$5
+
+	SEARCH  => /(^.*COLLATE\s*[\s=]\s*[`'"]?)((?:utf8mb3_uca1400_ai_ci))([`'"]?[\s;,].*$)/m
+	REPLACE => $1utf8mb4_0900_ai_ci$3
+
+--------------------------------------
+** DATABASE CHUNK install start
+--------------------------------------
+DATABASE CHUNK SEEK POSITION: 0
+Auto Commit set to false successfully
+NO TABLE TO SKIP
+DB QUERY [ERROR][C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.php:645] MSG: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'mysqldump: Deprecated program name. It will be removed in a future release, use ' at line 3
+	SQL: /* DUPLICATOR-LITE (MYSQL-DUMP BUILD MODE) MYSQL SCRIPT CREATED ON : 2026-02-18 19:52:54 */
+
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' instead
+/*M!999999\- enable the sandbox mode */ 
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+TRACE[1] CLASS___: DUPX_DB::mysqli_query      FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[1087]
+TRACE[2] CLASS___: DUPX_DBInstall->writeQueryInDB FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[742]
+TRACE[3] CLASS___: DUPX_DBInstall->deployDatabaseChunkMode FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[270]
+TRACE[4] CLASS___: DUPX_DBInstall->insertDatabase FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[244]
+TRACE[5] CLASS___: DUPX_DBInstall->deploy     FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[217]
+TRACE[6] CLASS___: DUPX_Ctrl_ajax::actions    FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[95]
+TRACE[7] CLASS___: DUPX_Ctrl_ajax::controller FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\main.installer.php[60]
+
+DB QUERY [ERROR][C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\classes\database\class.db.php:645] MSG: Variable 'time_zone' can't be set to the value of 'NULL'
+	SQL: /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+TRACE[1] CLASS___: DUPX_DB::mysqli_query      FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[1087]
+TRACE[2] CLASS___: DUPX_DBInstall->writeQueryInDB FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[742]
+TRACE[3] CLASS___: DUPX_DBInstall->deployDatabaseChunkMode FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[270]
+TRACE[4] CLASS___: DUPX_DBInstall->insertDatabase FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.dbinstall.php[244]
+TRACE[5] CLASS___: DUPX_DBInstall->deploy     FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[217]
+TRACE[6] CLASS___: DUPX_Ctrl_ajax::actions    FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\classes\class.ctrl.ajax.php[95]
+TRACE[7] CLASS___: DUPX_Ctrl_ajax::controller FILE: C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\main.installer.php[60]
+
+Auto Commit set to true successfully
+--------------------------------------
+** DATABASE CHUNK install end
+--------------------------------------
+ERRORS FOUND:	2
+DROPPED TABLES:	16
+RENAMED TABLES:	0
+QUERIES RAN:	373
+
+TABLES ROWS IN DATABASE AFTER EXTRACTION
+
+TABLE "wp_actionscheduler_actions"______________________[ROWS:    45]
+TABLE "wp_actionscheduler_claims"_______________________[ROWS:     0]
+TABLE "wp_actionscheduler_groups"_______________________[ROWS:     4]
+TABLE "wp_actionscheduler_logs"_________________________[ROWS:   131]
+TABLE "wp_associazioni"_________________________________[ROWS:  1722]
+TABLE "wp_associazioni_backup"__________________________[ROWS:   861]
+TABLE "wp_associazioni_backup2"_________________________[ROWS:  1722]
+TABLE "wp_associazioni_backup3"_________________________[ROWS:  1722]
+TABLE "wp_commentmeta"__________________________________[ROWS:     0]
+TABLE "wp_comments"_____________________________________[ROWS:     1]
+TABLE "wp_duplicator_packages"__________________________[ROWS:     1]
+TABLE "wp_kb_optimizer"_________________________________[ROWS:     8]
+TABLE "wp_kb_optimizer_viewport_hashes"_________________[ROWS:     8]
+TABLE "wp_kbp_countdown_entry"__________________________[ROWS:     0]
+TABLE "wp_kbp_form_entry"_______________________________[ROWS:     0]
+TABLE "wp_kbp_form_entrymeta"___________________________[ROWS:     0]
+TABLE "wp_kbp_form_events"______________________________[ROWS:     0]
+TABLE "wp_kbp_query_index"______________________________[ROWS:     0]
+TABLE "wp_links"________________________________________[ROWS:     0]
+TABLE "wp_options"______________________________________[ROWS:   316]
+TABLE "wp_postmeta"_____________________________________[ROWS:  3911]
+TABLE "wp_posts"________________________________________[ROWS:  1988]
+TABLE "wp_shepherd_tec_tasks"___________________________[ROWS:     0]
+TABLE "wp_snippets"_____________________________________[ROWS:    10]
+TABLE "wp_tec_events"___________________________________[ROWS:     0]
+TABLE "wp_tec_kv_cache"_________________________________[ROWS:     0]
+TABLE "wp_tec_occurrences"______________________________[ROWS:     0]
+TABLE "wp_term_relationships"___________________________[ROWS:    92]
+TABLE "wp_term_taxonomy"________________________________[ROWS:    16]
+TABLE "wp_termmeta"_____________________________________[ROWS:     0]
+TABLE "wp_terms"________________________________________[ROWS:    16]
+TABLE "wp_usermeta"_____________________________________[ROWS:    30]
+TABLE "wp_users"________________________________________[ROWS:     1]
+
+INSERT DATA RUNTIME: 9.3533 sec.
+STEP-2 COMPLETE @ 08:36:19 - RUNTIME: 9.3537 sec.
+AJAX ACTION [dbinstall] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [webupdate] START
+
+====================================
+SET SEARCH AND REPLACE LIST INSTALL TYPE single site
+====================================
+SEARCH ITEM[T:path |P:12] SEARCH: /home/u332036470/domains/hebeae.com/public_html REPLACE: C:/Users/mgran/Local Sites/culturacsi/app/public [SCOPE: ALL]
+SEARCH ITEM[T:urlnd|P:12] SEARCH: https://hebeae.com REPLACE: http://localhost:10010 [SCOPE: ALL]
+CHUNK LOAD DATA: IS NULL 
+CHUNK ACTION: CURRENT [start][][]
+
+
+********************************************************************************
+DUPLICATOR LITE: INSTALL-LOG
+STEP-3 START @ 08:36:19
+NOTICE: Do NOT post to public sites or forums
+********************************************************************************
+CHARSET SERVER:	"utf8mb4"
+CHARSET CLIENT:	"utf8mb4"
+********************************************************************************
+OPTIONS:
+SKIP PATH REPLACE_____: false
+DISALLOW_FILE_EDIT____: [value = ], [inWpConfig = ]
+DISALLOW_FILE_MODS____: [value = ], [inWpConfig = ]
+AUTOSAVE_INTERVAL_____: [value = 60], [inWpConfig = ]
+WP_POST_REVISIONS_____: [value = 1], [inWpConfig = ]
+FORCE_SSL_ADMIN_______: [value = 1], [inWpConfig = ]
+WP_AUTO_UPDATE_CORE___: [value = false], [inWpConfig = ]
+WP_CACHE______________: [value = ], [inWpConfig = ]
+WPCACHEHOME___________: [value = /], [inWpConfig = ]
+WP_DEBUG______________: [value = ], [inWpConfig = 1]
+WP_DEBUG_LOG__________: [value = ], [inWpConfig = ]
+WP_DEBUG_DISPLAY______: [value = 1], [inWpConfig = ]
+WP_DISABLE_FATAL_ERROR_HANDLER: [value = ], [inWpConfig = ]
+SCRIPT_DEBUG__________: [value = ], [inWpConfig = ]
+CONCATENATE_SCRIPTS___: [value = ], [inWpConfig = ]
+SAVEQUERIES___________: [value = ], [inWpConfig = ]
+ALTERNATE_WP_CRON_____: [value = ], [inWpConfig = ]
+DISABLE_WP_CRON_______: [value = ], [inWpConfig = ]
+WP_CRON_LOCK_TIMEOUT__: [value = 60], [inWpConfig = ]
+COOKIE_DOMAIN_________: [value = ], [inWpConfig = ]
+WP_MEMORY_LIMIT_______: [value = 40M], [inWpConfig = ]
+WP_MAX_MEMORY_LIMIT___: [value = 512M], [inWpConfig = ]
+WP_TEMP_DIR___________: [value = ], [inWpConfig = ]
+********************************************************************************
+
+********************************************************************************
+CHUNK PARAMS:
+maxIteration__________: 0
+timeOut_______________: 5000
+throttling____________: 2
+rowsPerPage___________: 1000
+********************************************************************************
+
+CHUNK ACTION: CURRENT [cleanup_trans][][]
+[PHP ERR][E_WARNING] MSG:foreach() argument must be of type array|object, string given [CODE:2|FILE:C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Deploy\Database\DbCleanup.php|LINE:95]
+CLEAN OPTIONS [wp_options]
+	`option_name` = "duplicator_plugin_data_stats"
+	`option_name` LIKE "\_transient%"
+	`option_name` LIKE "\_site\_transient%"
+DATABASE OPTIONS DELETED [ROWS:    63]
+CHUNK ACTION: CURRENT [cleanup_extra][][]
+CLEANUP EXTRA
+	- SKIP DROP VIEWS
+	- SKIP DROP PROCS
+	- SKIP DROP FUNCS
+CHUNK ACTION: CURRENT [cleanup_packages][][]
+EMPTY PACKAGES TABLE
+CLEAN PACKAGES
+DATABASE PACKAGE DELETED [ROWS:     1]
+CHUNK ACTION: CURRENT [init][][]
+
+EVALUATE TABLE: "wp_actionscheduler_actions"______________________[ROWS:    45][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_actionscheduler_actions][0]
+
+EVALUATE TABLE: "wp_actionscheduler_claims"_______________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_actionscheduler_groups"_______________________[ROWS:     4][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_actionscheduler_groups][0]
+
+EVALUATE TABLE: "wp_actionscheduler_logs"_________________________[ROWS:   131][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_actionscheduler_logs][0]
+
+EVALUATE TABLE: "wp_associazioni"_________________________________[ROWS:  1722][PG:   2][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni][0]
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni][1]
+
+EVALUATE TABLE: "wp_associazioni_backup"__________________________[ROWS:   861][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni_backup][0]
+
+EVALUATE TABLE: "wp_associazioni_backup2"_________________________[ROWS:  1722][PG:   2][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni_backup2][0]
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni_backup2][1]
+
+EVALUATE TABLE: "wp_associazioni_backup3"_________________________[ROWS:  1722][PG:   2][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni_backup3][0]
+	CHUNK ACTION: CURRENT [search_replace][wp_associazioni_backup3][1]
+
+EVALUATE TABLE: "wp_commentmeta"__________________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_comments"_____________________________________[ROWS:     1][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_comments][0]
+
+EVALUATE TABLE: "wp_duplicator_packages"__________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_kbp_countdown_entry"__________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_kbp_form_entry"_______________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_kbp_form_entrymeta"___________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_kbp_form_events"______________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_kbp_query_index"______________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_kb_optimizer"_________________________________[ROWS:     8][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_kb_optimizer][0]
+
+EVALUATE TABLE: "wp_kb_optimizer_viewport_hashes"_________________[ROWS:     8][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_kb_optimizer_viewport_hashes][0]
+
+EVALUATE TABLE: "wp_links"________________________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_options"______________________________________[ROWS:   253][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_options][0]
+
+EVALUATE TABLE: "wp_postmeta"_____________________________________[ROWS:  3911][PG:   4][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_postmeta][0]
+	CHUNK ACTION: CURRENT [search_replace][wp_postmeta][1]
+	CHUNK ACTION: CURRENT [search_replace][wp_postmeta][2]
+	CHUNK ACTION: CURRENT [search_replace][wp_postmeta][3]
+
+EVALUATE TABLE: "wp_posts"________________________________________[ROWS:  1988][PG:   2][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_posts][0]
+	
+STEP-3 CHUNK STOP @ 08:36:24 - RUNTIME: 5.0767 sec. 
+
+
+	AJAX ACTION [webupdate] SUCCESS
+	-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [webupdate] START
+CHUNK ACTION: CURRENT [search_replace][wp_posts][1]
+
+EVALUATE TABLE: "wp_shepherd_tec_tasks"___________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_snippets"_____________________________________[ROWS:    10][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_snippets][0]
+
+EVALUATE TABLE: "wp_tec_events"___________________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_tec_kv_cache"_________________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_tec_occurrences"______________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_termmeta"_____________________________________[ROWS:     0][PG:   0][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_terms"________________________________________[ROWS:    16][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_terms][0]
+
+EVALUATE TABLE: "wp_term_relationships"___________________________[ROWS:    92][PG:   1][SCAN:no columns  ]
+
+EVALUATE TABLE: "wp_term_taxonomy"________________________________[ROWS:    16][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_term_taxonomy][0]
+
+EVALUATE TABLE: "wp_usermeta"_____________________________________[ROWS:    30][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_usermeta][0]
+
+EVALUATE TABLE: "wp_users"________________________________________[ROWS:     1][PG:   1][SCAN:text columns]
+	--- BASE STRINGS ---
+	SEARCH[path ]  1:"/home/u332036470/domains/hebeae.com/public_html" => "C:/Users/mgran/Local Sites/culturacsi/app/public"
+	SEARCH[urlnd]  2:"https://hebeae.com" ==============================> "http://localhost:10010"
+	CHUNK ACTION: CURRENT [search_replace][wp_users][0]
+--------------------------------------
+SCANNED:	Tables:33 	|	 Rows:12449 	|	 Cells:130443 
+UPDATED:	Tables:5 	|	 Rows:2004 	|	 Cells:3121 
+ERRORS:		0 
+RUNTIME:	7.772300 sec
+CHUNK ACTION: CURRENT [rem_maintenance][][]
+
+====================================
+REMOVE MAINTENANCE MODE
+====================================
+MAINTENANCE MODE DISABLE
+CHUNK ACTION: CURRENT [config_update][][]
+SET CONFIG FILES
+Retained original entry wpconfig target:C:/Users/mgran/Local Sites/culturacsi/app/public/wp-config.php
+New htaccess file created:C:/Users/mgran/Local Sites/culturacsi/app/public/.htaccess
+
+====================================
+CONFIGURATION FILE UPDATES
+====================================
+	UPDATE ABSPATH "__DIR__ . '/'"
+	UPDATE DB_NAME ""local""
+	UPDATE DB_USER "** OBSCURED **"
+	UPDATE DB_PASSWORD "** OBSCURED **"
+	UPDATE DB_HOST ""localhost""
+	UPDATE DB_CHARSET "utf8mb4"
+	UPDATE DB_COLLATE ""
+	WP CONFIG UPDATE WP_DEBUG "false"
+	
+*** UPDATED WP CONFIG FILE ***
+
+====================================
+HTACCESS UPDATE
+====================================
+
+WEB SERVER CONFIGURATION FILE UPDATED:
+- Preparing .htaccess file with basic setup.
+HTACCESS FILE - Successfully updated the .htaccess file setting.
+
+====================================
+INDEX.PHP UPDATE
+====================================
+INDEX.PHP updated with new blog header "__DIR__ . '/wp-blog-header.php'"
+
+CHUNK ACTION: CURRENT [gen_update][][]
+
+====================================
+GENERAL UPDATES
+====================================
+
+====================================
+MANAGE PLUGINS
+====================================
+CHUNK ACTION: CURRENT [gen_clean][][]
+
+====================================
+GENERAL CLEANUP
+====================================
+RESET ALL USERS SESSION TOKENS
+MIGRATION INFO SET
+CHUNK ACTION: CURRENT [create_admin][][]
+
+====================================
+RESET USERS PASSWORD
+====================================
+CHUNK ACTION: CURRENT [notice_test][][]
+
+====================================
+CHECK FOR INDEX.HTML
+====================================
+NO INDEX.HTML WAS FOUND
+
+====================================
+NOTICES TEST
+====================================
+No General Notices Found
+
+CHUNK ACTION: CURRENT [cleanup_tmp_files][][]
+
+====================================
+CLEANUP TMP FILES
+====================================
+CHUNK ACTION: CURRENT [set_files_perms][][]
+
+====================================
+SET PARAMS PERMISSION
+====================================
+\n SKIP FOLDER PERMISSION AFTER EXTRACTION
+CHUNK ACTION: CURRENT [final_report][][]
+
+====================================
+FINAL REPORT NOTICES
+====================================
+
+STEP-3 COMPLETE @ 08:36:28 - RUNTIME: 3.3350 sec. 
+
+
+AJAX ACTION [webupdate] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [finalpre] START
+AJAX ACTION [finalpre] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+-------------------------
+AJAX ACTION [finalafter] START
+AJAX ACTION [finalafter] SUCCESS
+-------------------------
+
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\src\Core\Bootstrap.php:71] RESET TIME
+
+====================================
+NEXT STEP NOTICES
+====================================
+-----------------------
+[WARNING] DATABASE ERROR: database error write
+	LONG MSG: DATABASE ERROR: 'You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'mysqldump: Deprecated program name. It will be removed in a future release, use ' at line 3'
+	[SQL=/* DUPLICATOR-LITE (MYSQL-DUMP BUILD MODE) MYSQL SCRIPT CREATED ON : 2026-02-18 19:52:54 */
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' ins...]
+DATABASE ERROR: 'Variable 'time_zone' can't be set to the value of 'NULL''
+	[SQL=/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;...]
+
+
+====================================
+
+====================================
+FINAL REPORT NOTICES LIST
+====================================
+-----------------------
+[WARNING] DB EXTRACTION - INSTALL NOTICES (2)
+	SECTIONS: database
+	LONG MSG: Queries that error during the deploy step are logged to the         installer-log.txt
+                installer-log.txt
+         file and
+marked with an **ERROR** status.   If you experience a few errors (under 5), in many cases they can be ignored as long as your site is working correctly.
+However if you see a large amount of errors or you experience an issue with your site then the error messages in the log file will need to be investigated.
+COMMON FIXES:
+        Unknown collation: See Online FAQ:
+        What is Compatibility mode & 'Unknown collation' errors?
+        Query Limits: Update MySQL server with the max_allowed_packet
+        setting for larger payloads.
+
+
+-----------------------
+[WARNING] DATABASE ERROR: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'mysqldump: Deprecated program name. It will be removed in a future release, use ' at line 3
+	SECTIONS: database
+	LONG MSG: DATABASE ERROR: 'You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'mysqldump: Deprecated program name. It will be removed in a future release, use ' at line 3'
+	[SQL=/* DUPLICATOR-LITE (MYSQL-DUMP BUILD MODE) MYSQL SCRIPT CREATED ON : 2026-02-18 19:52:54 */
+mysqldump: Deprecated program name. It will be removed in a future release, use '/usr/bin/mariadb-dump' ins...]
+
+
+-----------------------
+[WARNING] DATABASE ERROR: Variable 'time_zone' can't be set to the value of 'NULL'
+	SECTIONS: database
+	LONG MSG: DATABASE ERROR: 'Variable 'time_zone' can't be set to the value of 'NULL''
+	[SQL=/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;...]
+
+
+====================================
+LOG-TIME[C:\Users\mgran\Local Sites\culturacsi\app\public\dup-installer\ctrls\ctrl.base.php:227][DELTA:   0.15664]  MESSAGE:END RENDER PAGE

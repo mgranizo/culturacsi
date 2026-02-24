@@ -1,0 +1,482 @@
+/*
+Theme Name: Cultura ACSI
+Theme URI: https://example.com
+Author: Antigravity
+Author URI: https://example.com
+Description: Custom theme for Cultura ACSI
+Version: 1.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: culturacsi
+*/
+
+:root {
+    --primary-blue: #0A3B75;
+    /* Deep Royal Blue found in header/footer */
+    --secondary-blue: #1E5BB0;
+    /* Lighter blue for hover states */
+    --accent-yellow: #FFC20E;
+    /* From logo */
+    --accent-red: #E30613;
+    /* From logo */
+    --accent-green: #009640;
+    /* From logo */
+    --text-dark: #333333;
+    --text-light: #666666;
+    --white: #ffffff;
+    --light-gray: #f4f4f4;
+    --border-color: #dddddd;
+    --font-main: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --max-width: 1200px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-main);
+    line-height: 1.6;
+    color: var(--text-dark);
+    background-color: var(--white);
+    overflow-x: hidden;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+
+.container {
+    max-width: var(--site-constrained-width, 1200px);
+    /* Fallback to 1200px */
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Layout Containers - Structure (Overridden by Dynamic CSS) */
+.site-outer {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.site-wrapper {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.site-inner {
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+}
+
+.site-main {
+    width: 100%;
+}
+
+/* Header Sections */
+.top-bar {
+    padding: 15px 0;
+    width: 100%;
+    background: var(--white);
+}
+
+/* Specific containers for independent width control */
+.header-container,
+.nav-container {
+    width: 100%;
+    /* Max-width handled by dynamic CSS variables */
+    margin: 0 auto;
+    padding: 0 20px;
+    /* Fallback padding */
+}
+
+.top-bar-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* Align items to top */
+    position: relative;
+}
+
+.logo-left img {
+    height: 50px;
+    width: auto;
+}
+
+.logo-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    top: 0;
+    /* Anchor to top */
+}
+
+.logo-center img {
+    height: 70px;
+    margin-bottom: 5px;
+}
+
+.site-tagline {
+    font-size: 0.75rem;
+    color: #999;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.logos {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.main-logo img {
+    height: 60px;
+    /* Adjust based on actual logo aspect ratio */
+}
+
+.area-riservata-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--primary-blue);
+    color: var(--primary-blue);
+    padding: 5px 15px;
+    border-radius: 4px;
+    /* Slight rounded corners */
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.area-riservata-btn:hover {
+    background-color: var(--primary-blue);
+    color: var(--white);
+}
+
+/* Navigation */
+.main-nav {
+    /* Background handled by dynamic CSS */
+    background-color: var(--primary-blue);
+    color: var(--white);
+}
+
+.nav-list {
+    display: flex;
+    justify-content: center;
+    /* Center the specific menu items */
+    font-size: 0.95rem;
+    /* Fallback */
+}
+
+.nav-item {
+    position: relative;
+}
+
+.nav-link {
+    display: block;
+    padding: 15px 20px;
+    /* Fallback */
+    color: var(--white);
+    /* Fallback */
+    transition: background 0.3s;
+}
+
+.nav-link:hover,
+.nav-item.active .nav-link {
+    background-color: var(--secondary-blue);
+}
+
+/* Dropdown Menu (hidden by default) */
+.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #2c3e50;
+    /* A dark slate blue for dropdown based on images */
+    min-width: 200px;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.nav-item:hover .dropdown {
+    display: block;
+}
+
+.dropdown-link {
+    display: block;
+    padding: 10px 20px;
+    color: var(--white);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Utility Classes */
+.text-center {
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+/* Typography Overrides */
+h2 {
+    color: var(--primary-blue);
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+h3 {
+    color: var(--primary-blue);
+    font-weight: 600;
+}
+
+/* Hero Slider */
+#hero-slider {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    background-color: #ddd;
+    /* Placeholder background until we have images */
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('https://placehold.co/1920x600/ccc/999?text=Hero+Image');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Section Common Styles */
+section {
+    padding: 60px 0;
+}
+
+.intro-text p {
+    font-size: 1.15rem;
+    color: var(--secondary-blue);
+    line-height: 1.6;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* Carousel Section (Associazioni...) */
+.carousel-section {
+    padding-top: 20px;
+}
+
+.section-title {
+    text-align: left;
+    color: var(--primary-blue);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 25px;
+    border-bottom: 2px solid transparent;
+    /* Ready for underlining if needed */
+}
+
+.carousel-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+}
+
+.carousel-item {
+    flex: 0 0 240px;
+    /* Fixed width for items */
+    position: relative;
+    cursor: pointer;
+}
+
+.carousel-item img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s;
+}
+
+.carousel-item:hover img {
+    transform: scale(1.02);
+}
+
+.carousel-caption {
+    background: #fff;
+    padding: 12px 5px;
+    text-align: center;
+    color: var(--primary-blue);
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-top: 3px solid var(--light-gray);
+}
+
+/* Services Grid */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-top: 40px;
+}
+
+.service-card {
+    position: relative;
+    height: 180px;
+    background-color: #eee;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.service-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.service-card:hover img {
+    transform: scale(1.1);
+}
+
+.service-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(10, 59, 117, 0.85);
+    color: white;
+    text-align: center;
+    padding: 10px 5px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Info Point Stranieri */
+.info-point-section {
+    position: relative;
+    background-image: url('https://placehold.co/1920x800/2c3e50/fff?text=Background');
+    background-size: cover;
+    background-attachment: fixed;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 60px;
+}
+
+.info-card {
+    background: rgba(245, 245, 245, 0.9);
+    padding: 40px 50px;
+    text-align: center;
+    max-width: 650px;
+    border-radius: 2px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.info-logo-placeholder {
+    width: 80px;
+    height: 40px;
+    margin: 0 auto 15px;
+}
+
+.info-title {
+    color: var(--primary-blue);
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-subtitle {
+    color: var(--secondary-blue);
+    margin-bottom: 30px;
+    font-size: 1rem;
+}
+
+.btn-outline {
+    display: inline-block;
+    border: 2px solid var(--primary-blue);
+    color: var(--primary-blue);
+    padding: 10px 35px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 30px;
+    transition: all 0.3s;
+    background: transparent;
+}
+
+.btn-outline:hover {
+    background: var(--primary-blue);
+    color: white;
+    cursor: pointer;
+}
+
+/* Footer Section */
+.footer-main {
+    background-color: var(--primary-blue);
+    color: white;
+    padding: 50px 0;
+    margin-top: 0;
+    /* Flush with bottom image if any */
+}
+
+.footer-content h3 {
+    color: white;
+    margin-bottom: 30px;
+    text-align: center;
+    font-size: 1.3rem;
+}
+
+.footer-info {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-item i {
+    width: 32px;
+    height: 32px;
+    background: white;
+    color: var(--primary-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}

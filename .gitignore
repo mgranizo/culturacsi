@@ -1,0 +1,42 @@
+# Local WP folders
+backups/
+logs/
+
+# Optional: Ignore all WP core files, leaving just wp-content mapped
+app/public/wp-admin/
+app/public/wp-includes/
+app/public/wp-*php
+app/public/index.php
+app/public/xmlrpc.php
+app/public/license.txt
+app/public/readme.html
+app/public/robots.txt
+
+# WP Content
+app/public/wp-content/uploads/
+app/public/wp-content/upgrade/
+app/public/wp-content/cache/
+app/public/wp-content/plugins/index.php
+app/public/wp-content/themes/index.php
+
+# Environment Variables
+.env
+.env.*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Any SQL dumps
+*.sql
+*.sql.gz
+
+# WP Backups
+*.wpress
+app/public/wp-content/ai1wm-backups/
+*.zip

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settori Setup Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0a3a75",
+                        "background-light": "#f1f1f1",
+                        "background-dark": "#101822",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar: Modernized WP Admin Style -->
+<aside class="w-64 bg-[#1e1e1e] dark:bg-slate-950 flex flex-col shrink-0">
+<div class="p-6 flex items-center gap-3">
+<div class="size-8 bg-primary rounded flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">deployed_code</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-sm font-bold leading-none">Settori</h1>
+<p class="text-slate-500 text-[10px] mt-1 uppercase tracking-widest font-bold">Admin Suite</p>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<div class="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Main</div>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-white bg-primary rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">settings_suggest</span>
+<span class="text-sm font-medium">Settori Setup</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">tune</span>
+<span class="text-sm font-medium">General Settings</span>
+</a>
+<div class="pt-6 px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Appearance</div>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">palette</span>
+<span class="text-sm font-medium">Themes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">widgets</span>
+<span class="text-sm font-medium">Widgets</span>
+</a>
+</nav>
+<div class="p-4 border-t border-white/5 mt-auto">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+<span class="text-sm font-medium">Support Center</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- Top Header -->
+<header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-10">
+<div class="flex items-center gap-2">
+<span class="text-slate-400 text-sm">Plugins</span>
+<span class="material-symbols-outlined text-slate-400 text-sm">chevron_right</span>
+<span class="text-slate-900 dark:text-slate-100 text-sm font-semibold tracking-tight">Settori Setup Dashboard</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-background-light dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-48 placeholder:text-slate-400" placeholder="Search settings..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900"></span>
+</button>
+<div class="h-8 w-8 rounded-full bg-slate-200 overflow-hidden border border-slate-300">
+<img alt="User Profile Avatar" data-alt="Modern profile avatar for administrative user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB03L8EZPhIKKhDFTnx_VKFCm3iQefcydBlzZfMNHCWNgXjq9aIRlDPDc0i2TOJkIK2f3lr-T-hJzo4kSQPVZEeef-QxUrDPDlOGAY6vsqiJkwRa-ZfjziCAiDXWJIXFZe1aUenk2ruNGB0oiIU9uikntAdznk_UKJpf5GNQjJW5zLlh9hlsYIlmNnphHDz8jUyk4bb4lUkN6unMs61gYraAgEUN98bRcHDNQrlxcUAyuPpa3a9KPk8gOWxFC2PRBUWVVxTshtj22U"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content -->
+<div class="p-8 max-w-5xl mx-auto w-full">
+<!-- Main Configuration Card -->
+<div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="p-10">
+<!-- Card Header -->
+<div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+<div class="max-w-2xl">
+<h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-3">Settori Setup</h2>
+<p class="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">
+                                    Welcome to Settori. Configure your environment and initialize the core menu structures with a single click. This automated wizard handles database optimizations and template mappings.
+                                </p>
+</div>
+<button class="shrink-0 flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-lg transition-all">
+<span class="material-symbols-outlined text-lg">menu_book</span>
+                                View Documentation
+                            </button>
+</div>
+<!-- Alert Box -->
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-10 flex items-start gap-4">
+<div class="text-primary mt-0.5">
+<span class="material-symbols-outlined text-2xl">info</span>
+</div>
+<div>
+<h4 class="text-primary font-bold text-base mb-1">Prerequisite Check</h4>
+<p class="text-primary/80 text-sm leading-relaxed">
+                                    Please ensure all prerequisite plugins (WooCommerce, Advanced Custom Fields) are active before running the setup process. Incomplete dependencies may lead to configuration errors.
+                                    <a class="underline font-semibold ml-1" href="#">Check Dependencies →</a>
+</p>
+</div>
+</div>
+<!-- Status Section -->
+<div class="mb-10">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                                Current Menu Status
+                            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex items-center justify-between p-4 bg-background-light/50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-xl font-bold">check_circle</span>
+</div>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Database Connection</span>
+</div>
+<span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full uppercase tracking-wider">OK</span>
+</div>
+<div class="flex items-center justify-between p-4 bg-background-light/50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-xl font-bold">check_circle</span>
+</div>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Theme Compatibility</span>
+</div>
+<span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full uppercase tracking-wider">Verified</span>
+</div>
+<div class="flex items-center justify-between p-4 bg-background-light/50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-xl font-bold">check_circle</span>
+</div>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Plugin Dependencies</span>
+</div>
+<span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full uppercase tracking-wider">Met</span>
+</div>
+<div class="flex items-center justify-between p-4 bg-background-light/50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-xl">hourglass_empty</span>
+</div>
+<span class="text-sm font-medium text-slate-400">Core Menu Initialization</span>
+</div>
+<span class="text-xs font-bold text-slate-400 bg-slate-50 dark:bg-slate-700/30 px-2.5 py-1 rounded-full uppercase tracking-wider">Pending</span>
+</div>
+</div>
+</div>
+<!-- Final Action Area -->
+<div class="flex items-center justify-between pt-8 border-t border-slate-100 dark:border-slate-800">
+<div class="text-sm text-slate-500">
+<p>This process will take approximately <span class="font-bold">45 seconds</span>.</p>
+<p>Last run: Never</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-3 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                    Reset Configuration
+                                </button>
+<button class="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-3 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2 transition-all transform active:scale-[0.98]">
+<span class="material-symbols-outlined">rocket_launch</span>
+                                    Run Setup
+                                </button>
+</div>
+</div>
+</div>
+<!-- Footer Badge -->
+<div class="bg-background-light dark:bg-slate-800/50 px-10 py-4 flex items-center justify-between">
+<span class="text-xs font-medium text-slate-500 uppercase tracking-widest">Powered by Settori Framework</span>
+<span class="text-xs font-medium text-slate-500">v6.4.1 (Latest)</span>
+</div>
+</div>
+<!-- Secondary Cards / Quick Links -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="text-primary mb-3">
+<span class="material-symbols-outlined text-3xl">terminal</span>
+</div>
+<h4 class="font-bold text-slate-900 dark:text-white mb-2">CLI Access</h4>
+<p class="text-sm text-slate-500 mb-4">Run the setup via WP-CLI for automated server deployments.</p>
+<a class="text-primary text-sm font-bold hover:underline" href="#">View Commands →</a>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="text-primary mb-3">
+<span class="material-symbols-outlined text-3xl">history</span>
+</div>
+<h4 class="font-bold text-slate-900 dark:text-white mb-2">Change Logs</h4>
+<p class="text-sm text-slate-500 mb-4">View detailed history of all configuration changes made.</p>
+<a class="text-primary text-sm font-bold hover:underline" href="#">View History →</a>
+</div>
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="text-primary mb-3">
+<span class="material-symbols-outlined text-3xl">contact_support</span>
+</div>
+<h4 class="font-bold text-slate-900 dark:text-white mb-2">Need Help?</h4>
+<p class="text-sm text-slate-500 mb-4">Our premium support team is available 24/7 for assistance.</p>
+<a class="text-primary text-sm font-bold hover:underline" href="#">Open Ticket →</a>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

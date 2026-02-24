@@ -1,0 +1,38 @@
+{
+  "name": "link-preview-cards",
+  "version": "0.1.2",
+  "type": "module",
+  "description": "WordPress plugin that replaces embeds with link preview cards",
+  "scripts": {
+    "start": "wp-env start",
+    "stop": "wp-env stop",
+    "destroy": "wp-env destroy",
+    "reset": "wp-env reset",
+    "test:unit": "wp-scripts test-unit-js",
+    "test:php": "wp-env run tests-cli bash -c \"php wp-content/plugins/link-preview-cards/tests/unit-test.php && php wp-content/plugins/link-preview-cards/tests/api-integration.test.php\"",
+    "test:playwright": "playwright test",
+    "shell": "wp-env run cli wp shell",
+    "build": "wp-scripts build",
+    "block-start": "wp-scripts start",
+    "dev:playground": "node dev-server.js"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@wordpress/api-fetch": "^7.26.0",
+    "@wordpress/block-editor": "^14.21.0",
+    "@wordpress/components": "^29.12.0",
+    "@wordpress/env": "^10.26.0",
+    "@wordpress/scripts": "^30.19.0",
+    "@wp-playground/cli": "^2.0.4"
+  },
+  "files": [
+    "src",
+    "build",
+    "link-preview-cards.php",
+    "LICENSE.txt",
+    "README.md",
+    "README.txt",
+    "package.json"
+  ]
+}

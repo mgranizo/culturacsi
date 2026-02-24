@@ -1,0 +1,98 @@
+/* Uniform admin style language for Assoc Portal related screens */
+
+:root {
+    --assoc-ui-primary: #0b3d91;
+    --assoc-ui-primary-ink: #07285f;
+    --assoc-ui-border: #d5e0ee;
+    --assoc-ui-soft: #f5f9ff;
+    --assoc-ui-text: #0f172a;
+    --assoc-ui-muted: #475569;
+    --assoc-ui-success-bg: #e7f8ed;
+    --assoc-ui-success-bd: #8ed1a7;
+    --assoc-ui-success-tx: #14532d;
+    --assoc-ui-error-bg: #fee2e2;
+    --assoc-ui-error-bd: #f87171;
+    --assoc-ui-error-tx: #991b1b;
+    --assoc-ui-warning-bg: #fff7e6;
+    --assoc-ui-warning-bd: #f5c36b;
+    --assoc-ui-warning-tx: #8a4b04;
+}
+
+#wpbody-content .notice {
+    border-width: 2px;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 14px 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+#wpbody-content .notice.notice-success {
+    background: var(--assoc-ui-success-bg);
+    border-color: var(--assoc-ui-success-bd);
+    color: var(--assoc-ui-success-tx);
+}
+
+#wpbody-content .notice.notice-error {
+    background: var(--assoc-ui-error-bg);
+    border-color: var(--assoc-ui-error-bd);
+    color: var(--assoc-ui-error-tx);
+}
+
+#wpbody-content .notice.notice-warning {
+    background: var(--assoc-ui-warning-bg);
+    border-color: var(--assoc-ui-warning-bd);
+    color: var(--assoc-ui-warning-tx);
+}
+
+.wp-core-ui .button,
+.wp-core-ui .button-secondary {
+    border-color: #b7c9e3;
+    background: #f1f6ff;
+    color: var(--assoc-ui-primary-ink);
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.wp-core-ui .button:hover,
+.wp-core-ui .button:focus,
+.wp-core-ui .button-secondary:hover,
+.wp-core-ui .button-secondary:focus {
+    border-color: #8dabd6;
+    background: #e3eeff;
+    color: var(--assoc-ui-primary);
+}
+
+.wp-core-ui .button.button-primary {
+    border-color: var(--assoc-ui-primary);
+    background: var(--assoc-ui-primary);
+    color: #fff;
+}
+
+.wp-core-ui .button.button-primary:hover,
+.wp-core-ui .button.button-primary:focus {
+    border-color: var(--assoc-ui-primary-ink);
+    background: var(--assoc-ui-primary-ink);
+    color: #fff;
+}
+
+.wp-list-table thead th,
+.wp-list-table tfoot th {
+    background: var(--assoc-ui-soft);
+}
+
+.wp-list-table td,
+.wp-list-table th {
+    color: var(--assoc-ui-text);
+}
+
+.wrap h1,
+.wrap h2 {
+    color: var(--assoc-ui-primary-ink);
+}
+
+.form-table th,
+.form-wrap label {
+    color: var(--assoc-ui-primary-ink);
+}

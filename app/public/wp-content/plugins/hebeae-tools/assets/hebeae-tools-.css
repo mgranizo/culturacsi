@@ -1,0 +1,249 @@
+/* =========================================================
+   Kadence tweaks — plugin-only (clean + stable)
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   1) Gallery Adv / Slick / Splide: full-height side arrow panels
+   Apply class: fullheight-arrows to the block/section wrapper
+   --------------------------------------------------------- */
+.fullheight-arrows .splide,
+.fullheight-arrows .kt-post-grid-layout-carousel,
+.fullheight-arrows .kt-post-grid-layout-carousel-wrap {
+  position: relative !important;
+}
+
+.fullheight-arrows .slick-prev,
+.fullheight-arrows .slick-next,
+.fullheight-arrows .kb-slider-arrow-prev,
+.fullheight-arrows .kb-slider-arrow-next,
+.fullheight-arrows .splide__arrow,
+.fullheight-arrows .splide__arrow--prev,
+.fullheight-arrows .splide__arrow--next {
+  top: 0 !important;
+  bottom: 0 !important;
+  height: auto !important;
+  transform: none !important;
+  margin-top: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 30px !important;
+  border-radius: 0 !important;
+  background: rgba(0, 72, 150, 0.55) !important;
+  z-index: 5 !important;
+}
+
+.fullheight-arrows .splide__arrows {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+}
+.fullheight-arrows .splide__arrow {
+  pointer-events: auto !important;
+}
+.fullheight-arrows .splide__arrow--prev {
+  left: 0 !important;
+}
+.fullheight-arrows .splide__arrow--next {
+  right: 0 !important;
+}
+
+.fullheight-arrows .slick-prev:before,
+.fullheight-arrows .slick-next:before {
+  font-size: 36px !important;
+  line-height: 1 !important;
+}
+
+.fullheight-arrows .kb-slider-arrow-prev svg,
+.fullheight-arrows .kb-slider-arrow-next svg,
+.fullheight-arrows .splide__arrow svg {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+
+/* ---------------------------------------------------------
+   2) HERO overlay for Kadence Post Grid/Carousel (SAFE)
+   Apply class: hero-overlay to the HERO Post Grid/Carousel block
+   --------------------------------------------------------- */
+
+/* Positioning context on each slide/item */
+.hero-overlay .kadence-post-grid-item,
+.hero-overlay .kadence-post-grid-item-inner,
+.hero-overlay .kadence-post-grid-item-wrap,
+.hero-overlay .kb-post-grid-item {
+  position: relative !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+/* Keep Kadence intrinsic sizing intact */
+.hero-overlay .kadence-post-image,
+.hero-overlay .kadence-post-image-intrisic,
+.hero-overlay .kadence-post-image-inner-intrisic {
+  margin: 0 !important;
+}
+
+/* Default image behavior (before cover fix kicks in) */
+.hero-overlay .kadence-post-image img,
+.hero-overlay .kb-post-grid-item img {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Overlay container (bottom) */
+.hero-overlay .kadence-post-image + div,
+.hero-overlay .kadence-post-content,
+.hero-overlay .kadence-post-grid-content,
+.hero-overlay .kadence-post-text,
+.hero-overlay .kadence-post-header,
+.hero-overlay .kadence-post-footer,
+.hero-overlay .kb-post-grid-text,
+.hero-overlay .kb-post-grid-content {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 30 !important;
+
+  padding: 18px 20px !important;
+  margin: 0 !important;
+
+  /* Stronger gradient for real-world photos */
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.82) 0%,
+    rgba(0,0,0,0.65) 35%,
+    rgba(0,0,0,0.35) 65%,
+    rgba(0,0,0,0.00) 100%
+  ) !important;
+
+  color: #fff !important;
+}
+
+/* Remove inner “second container” styling inside overlay */
+.hero-overlay .kadence-post-content *,
+.hero-overlay .kadence-post-grid-content *,
+.hero-overlay .kadence-post-text *,
+.hero-overlay .kb-post-grid-text *,
+.hero-overlay .kb-post-grid-content * {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* ---------------------------------------------------------
+   3) Contrast: force white + add text-shadow (key fix)
+   --------------------------------------------------------- */
+
+/* Only target typical text elements (no global * nuke) */
+.hero-overlay .kadence-post-title,
+.hero-overlay .kadence-post-grid-title,
+.hero-overlay .kb-post-grid-title,
+.hero-overlay .kadence-post-excerpt,
+.hero-overlay .kadence-post-grid-excerpt,
+.hero-overlay .kb-post-grid-excerpt,
+.hero-overlay .kadence-post-meta,
+.hero-overlay .kadence-post-date,
+.hero-overlay .kadence-post-category,
+.hero-overlay .kadence-post-tags,
+.hero-overlay .kb-post-grid-meta,
+.hero-overlay .kb-post-grid-date,
+.hero-overlay .kb-post-grid-cat,
+.hero-overlay p,
+.hero-overlay span,
+.hero-overlay small {
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+}
+
+/* Headings get a bit stronger shadow */
+.hero-overlay .kadence-post-title,
+.hero-overlay .kadence-post-grid-title,
+.hero-overlay .kb-post-grid-title,
+.hero-overlay h2,
+.hero-overlay h3 {
+  margin: 0 0 8px 0 !important;
+  line-height: 1.15 !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.65);
+}
+
+.hero-overlay .kadence-post-excerpt,
+.hero-overlay .kadence-post-grid-excerpt,
+.hero-overlay .kb-post-grid-excerpt {
+  color: rgba(255,255,255,0.92) !important;
+  margin: 0 0 12px 0 !important;
+}
+
+/* Links inside overlay (kills Kadence blue leak) */
+.hero-overlay a,
+.hero-overlay a:visited,
+.hero-overlay a:hover,
+.hero-overlay a:active,
+.hero-overlay .kadence-post-content a,
+.hero-overlay .kadence-post-grid-content a,
+.hero-overlay .kadence-post-text a,
+.hero-overlay .kb-post-grid-text a,
+.hero-overlay .kb-post-grid-content a {
+  color: #fff !important;
+  text-decoration: none !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+}
+
+/* Button */
+.hero-overlay .wp-block-button {
+  margin: 10px 0 0 0 !important;
+}
+
+.hero-overlay .wp-block-button__link {
+  color: #fff !important;
+  text-shadow: none !important;
+
+  background: rgba(0,0,0,0.25) !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+}
+
+/* Optional mild image pop */
+.hero-overlay .kadence-post-image img,
+.hero-overlay .kb-post-grid-item img {
+  filter: brightness(1.03) contrast(1.03) saturate(1.03);
+  transform: translateZ(0);
+}
+
+
+/* ---------------------------------------------------------
+   4) HERO 16:9 fill fix — no gaps, no broken intrinsic wrapper
+   (Kadence 16:9 = 56.25%)
+   --------------------------------------------------------- */
+.hero-overlay .kadence-post-image-intrisic.kt-image-ratio-56-25,
+.hero-overlay .kt-image-ratio-56-25 {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.hero-overlay .kadence-post-image-inner-intrisic {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+.hero-overlay .kadence-post-image-inner-intrisic img,
+.hero-overlay .kadence-post-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+
+  /* DEBUG: you must see these if CSS is loading + class is correct */
+.hero-overlay { outline: 8px solid red !important; }
+.hero-overlay * { outline: 1px dashed rgba(255,0,0,.35) !important; }
+
+}
