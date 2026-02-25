@@ -647,7 +647,7 @@ function culturacsi_portal_events_list_shortcode(): string {
 		'e_dir',
 		'date',
 		'desc',
-		array( 'index', 'title', 'date', 'status' )
+		array( 'index', 'title', 'date', 'status', 'history' )
 	);
 
 	$args = array(
@@ -712,6 +712,12 @@ function culturacsi_portal_events_list_shortcode(): string {
 					case 'date':
 						$cmp = strtotime( (string) $a->post_date ) <=> strtotime( (string) $b->post_date );
 						break;
+					case 'history':
+						static $h_cache = array();
+						if(!isset($h_cache[$a->ID])) { $m=culturacsi_logging_get_last_modified('event',$a->ID); $c=culturacsi_logging_get_creator('event',$a->ID); $h_cache[$a->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($a->post_date)); }
+						if(!isset($h_cache[$b->ID])) { $m=culturacsi_logging_get_last_modified('event',$b->ID); $c=culturacsi_logging_get_creator('event',$b->ID); $h_cache[$b->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($b->post_date)); }
+						$cmp = $h_cache[$a->ID] <=> $h_cache[$b->ID];
+						break;
 					case 'index':
 					default:
 						$cmp = (int) $a->ID <=> (int) $b->ID;
@@ -731,7 +737,8 @@ function culturacsi_portal_events_list_shortcode(): string {
 	echo culturacsi_portal_sortable_th( 'Titolo', 'title', $sort_state['sort'], $sort_state['dir'], 'e_sort', 'e_dir', $base_url, 'assoc-col-title' );
 	echo culturacsi_portal_sortable_th( 'Data', 'date', $sort_state['sort'], $sort_state['dir'], 'e_sort', 'e_dir', $base_url, 'assoc-col-date' );
 	echo culturacsi_portal_sortable_th( 'Stato', 'status', $sort_state['sort'], $sort_state['dir'], 'e_sort', 'e_dir', $base_url, 'assoc-col-status' );
-	echo '<th class="assoc-col-history" style="width:180px;">Cronologia</th>';
+	$th_html = culturacsi_portal_sortable_th( 'Cronologia', 'history', $sort_state['sort'], $sort_state['dir'], 'e_sort', 'e_dir', $base_url, 'assoc-col-history' );
+	echo str_replace( '<th class="assoc-col-history">', '<th class="assoc-col-history" style="width:180px;">', $th_html );
 	echo '<th class="assoc-col-actions">Azioni</th>';
 	echo '</tr></thead><tbody>';
 	if ( ! empty( $posts ) ) {
@@ -957,7 +964,7 @@ function culturacsi_portal_news_list_shortcode(): string {
 		'n_dir',
 		'date',
 		'desc',
-		array( 'index', 'title', 'date', 'status', 'ext' )
+		array( 'index', 'title', 'date', 'status', 'ext', 'history' )
 	);
 
 	$args = array(
@@ -1031,6 +1038,12 @@ function culturacsi_portal_news_list_shortcode(): string {
 					case 'date':
 						$cmp = strtotime( (string) $a->post_date ) <=> strtotime( (string) $b->post_date );
 						break;
+					case 'history':
+						static $h_cache_n = array();
+						if(!isset($h_cache_n[$a->ID])) { $m=culturacsi_logging_get_last_modified('news',$a->ID); $c=culturacsi_logging_get_creator('news',$a->ID); $h_cache_n[$a->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($a->post_date)); }
+						if(!isset($h_cache_n[$b->ID])) { $m=culturacsi_logging_get_last_modified('news',$b->ID); $c=culturacsi_logging_get_creator('news',$b->ID); $h_cache_n[$b->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($b->post_date)); }
+						$cmp = $h_cache_n[$a->ID] <=> $h_cache_n[$b->ID];
+						break;
 					case 'index':
 					default:
 						$cmp = (int) $a->ID <=> (int) $b->ID;
@@ -1051,7 +1064,8 @@ function culturacsi_portal_news_list_shortcode(): string {
 	echo culturacsi_portal_sortable_th( 'Data', 'date', $sort_state['sort'], $sort_state['dir'], 'n_sort', 'n_dir', $base_url, 'assoc-col-date' );
 	echo culturacsi_portal_sortable_th( 'Stato', 'status', $sort_state['sort'], $sort_state['dir'], 'n_sort', 'n_dir', $base_url, 'assoc-col-status' );
 	echo culturacsi_portal_sortable_th( 'Ext URL', 'ext', $sort_state['sort'], $sort_state['dir'], 'n_sort', 'n_dir', $base_url, 'assoc-col-ext' );
-	echo '<th class="assoc-col-history" style="width:180px;">Cronologia</th>';
+	$th_html = culturacsi_portal_sortable_th( 'Cronologia', 'history', $sort_state['sort'], $sort_state['dir'], 'n_sort', 'n_dir', $base_url, 'assoc-col-history' );
+	echo str_replace( '<th class="assoc-col-history">', '<th class="assoc-col-history" style="width:180px;">', $th_html );
 	echo '<th class="assoc-col-actions">Azioni</th>';
 	echo '</tr></thead><tbody>';
 	if ( ! empty( $posts ) ) {
@@ -1712,7 +1726,7 @@ function culturacsi_portal_users_list_shortcode(): string {
 		'u_dir',
 		'registered',
 		'desc',
-		array( 'index', 'name', 'email', 'role', 'status', 'registered' )
+		array( 'index', 'name', 'email', 'role', 'status', 'registered', 'history' )
 	);
 
 	if ( $is_site_admin ) {
@@ -1796,6 +1810,12 @@ function culturacsi_portal_users_list_shortcode(): string {
 					case 'registered':
 						$cmp = strtotime( (string) $a->user_registered ) <=> strtotime( (string) $b->user_registered );
 						break;
+					case 'history':
+						static $h_cache_u = array();
+						if(!isset($h_cache_u[$a->ID])) { $m=culturacsi_logging_get_last_modified('user',$a->ID); $c=culturacsi_logging_get_creator('user',$a->ID); $h_cache_u[$a->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($a->user_registered)); }
+						if(!isset($h_cache_u[$b->ID])) { $m=culturacsi_logging_get_last_modified('user',$b->ID); $c=culturacsi_logging_get_creator('user',$b->ID); $h_cache_u[$b->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($b->user_registered)); }
+						$cmp = $h_cache_u[$a->ID] <=> $h_cache_u[$b->ID];
+						break;
 					case 'index':
 					default:
 						$cmp = (int) $a->ID <=> (int) $b->ID;
@@ -1819,7 +1839,8 @@ function culturacsi_portal_users_list_shortcode(): string {
 	echo culturacsi_portal_sortable_th( 'Email', 'email', $sort_state['sort'], $sort_state['dir'], 'u_sort', 'u_dir', $base_url, 'assoc-col-email' );
 	echo culturacsi_portal_sortable_th( 'Ruolo', 'role', $sort_state['sort'], $sort_state['dir'], 'u_sort', 'u_dir', $base_url, 'assoc-col-role' );
 	echo culturacsi_portal_sortable_th( 'Stato', 'status', $sort_state['sort'], $sort_state['dir'], 'u_sort', 'u_dir', $base_url, 'assoc-col-status assoc-col-status-compact' );
-	echo '<th class="assoc-col-history" style="width:180px;">Cronologia</th>';
+	$th_html_u = culturacsi_portal_sortable_th( 'Cronologia', 'history', $sort_state['sort'], $sort_state['dir'], 'u_sort', 'u_dir', $base_url, 'assoc-col-history' );
+	echo str_replace( '<th class="assoc-col-history">', '<th class="assoc-col-history" style="width:180px;">', $th_html_u );
 	echo culturacsi_portal_sortable_th( 'Registrato', 'registered', $sort_state['sort'], $sort_state['dir'], 'u_sort', 'u_dir', $base_url, 'assoc-col-date' );
 	echo '<th class="assoc-col-actions">Azioni</th>';
 	echo '</tr></thead><tbody>';
@@ -1919,7 +1940,7 @@ function culturacsi_portal_associations_list_shortcode(): string {
 		'a_dir',
 		'name',
 		'asc',
-		array( 'index', 'name', 'category', 'status' )
+		array( 'index', 'name', 'category', 'status', 'history' )
 	);
 	$per_page = 50;
 
@@ -1989,6 +2010,12 @@ function culturacsi_portal_associations_list_shortcode(): string {
 					case 'status':
 						$cmp = strcmp( (string) $a->post_status, (string) $b->post_status );
 						break;
+					case 'history':
+						static $h_cache_a = array();
+						if(!isset($h_cache_a[$a->ID])) { $m=culturacsi_logging_get_last_modified('association',$a->ID); $c=culturacsi_logging_get_creator('association',$a->ID); $h_cache_a[$a->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($a->post_date)); }
+						if(!isset($h_cache_a[$b->ID])) { $m=culturacsi_logging_get_last_modified('association',$b->ID); $c=culturacsi_logging_get_creator('association',$b->ID); $h_cache_a[$b->ID]=$m?strtotime($m->created_at):($c?strtotime($c->created_at):strtotime($b->post_date)); }
+						$cmp = $h_cache_a[$a->ID] <=> $h_cache_a[$b->ID];
+						break;
 					case 'index':
 					default:
 						$cmp = (int) $a->ID <=> (int) $b->ID;
@@ -2019,7 +2046,8 @@ function culturacsi_portal_associations_list_shortcode(): string {
 	echo culturacsi_portal_sortable_th( 'Nome', 'name', $sort_state['sort'], $sort_state['dir'], 'a_sort', 'a_dir', $base_url, 'assoc-col-title', array( 'a_page' ) );
 	echo culturacsi_portal_sortable_th( 'Categoria', 'category', $sort_state['sort'], $sort_state['dir'], 'a_sort', 'a_dir', $base_url, 'assoc-col-category', array( 'a_page' ) );
 	echo culturacsi_portal_sortable_th( 'Stato', 'status', $sort_state['sort'], $sort_state['dir'], 'a_sort', 'a_dir', $base_url, 'assoc-col-status assoc-col-status-compact', array( 'a_page' ) );
-	echo '<th class="assoc-col-history" style="width:180px;">Cronologia</th>';
+	$th_html_a = culturacsi_portal_sortable_th( 'Cronologia', 'history', $sort_state['sort'], $sort_state['dir'], 'a_sort', 'a_dir', $base_url, 'assoc-col-history', array( 'a_page' ) );
+	echo str_replace( '<th class="assoc-col-history">', '<th class="assoc-col-history" style="width:180px;">', $th_html_a );
 	echo '<th class="assoc-col-actions">Azioni</th>';
 	echo '</tr></thead><tbody>';
 	if ( ! empty( $paged_posts ) ) {
