@@ -225,6 +225,76 @@ function culturacsi_export_csv_handler() {
                 $post->post_date
             ));
         }
+    } elseif ( $type === 'cronologia' ) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'culturacsi_audit_log';
+        if ( $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name ) {
+            $where = "1=1";
+            if ( ! $is_site_admin ) {
+                $assoc_id = culturacsi_portal_get_managed_association_id( $user_id );
+                if ( $assoc_id > 0 ) {
+                    $allowed_objects = array( "(l.object_type = 'association' AND l.object_id = " . (int) $assoc_id . ")" );
+                    
+                    $event_ids = get_posts( array( 'post_type' => 'event', 'meta_query' => array( array( 'key' => 'organizer_association_id', 'value' => $assoc_id ) ), 'fields' => 'ids', 'posts_per_page' => -1 ) );
+                    if ( ! empty( $event_ids ) ) {
+                        $allowed_objects[] = "(l.object_type = 'event' AND l.object_id IN (" . implode( ',', array_map( 'intval', $event_ids ) ) . "))";
+                    }
+                    
+                    $news_ids = get_posts( array( 'post_type' => 'news', 'meta_query' => array( array( 'key' => 'organizer_association_id', 'value' => $assoc_id ) ), 'fields' => 'ids', 'posts_per_page' => -1 ) );
+                    if ( ! empty( $news_ids ) ) {
+                        $allowed_objects[] = "(l.object_type = 'news' AND l.object_id IN (" . implode( ',', array_map( 'intval', $news_ids ) ) . "))";
+                    }
+                    
+                    $user_ids = get_users( array( 'meta_query' => array( array( 'key' => 'association_post_id', 'value' => $assoc_id ) ), 'fields' => 'ID' ) );
+                    if ( ! empty( $user_ids ) ) {
+                        $allowed_objects[] = "(l.object_type = 'user' AND l.object_id IN (" . implode( ',', array_map( 'intval', $user_ids ) ) . "))";
+                    }
+                    
+                    $where .= " AND (" . implode( " OR ", $allowed_objects ) . ")";
+                } else {
+                    $where .= " AND 0=1";
+                }
+            }
+
+            fputcsv($output, array('ID', 'Data e Ora', 'Azione', 'Tipo Oggetto', 'ID Oggetto', 'Dettagli', 'Utente Responsabile', 'IP Utente'));
+            $logs = $wpdb->get_results( 
+                "SELECT l.*, u.display_name as user_name 
+                 FROM $table_name l 
+                 LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID 
+                 WHERE $where 
+                 ORDER BY l.created_at DESC" 
+            );
+            $action_labels = array(
+                'create_post' => 'CREATO',
+                'update_post' => 'MODIFICATO',
+                'trash_post'  => 'ELIMINATO',
+                'wp_insert_user' => 'REGISTRATO (UTENTE)',
+                'update_user' => 'MODIFICATO (UTENTE)',
+                'approve'     => 'APPROVATO',
+                'reject'      => 'RIFIUTATO',
+                'hold'        => 'IN ATTESA',
+                'login'       => 'ACCESSO (LOGIN)'
+            );
+            foreach($logs as $log) {
+                $display_action = isset( $action_labels[ $log->action ] ) ? $action_labels[ $log->action ] : strtoupper( $log->action );
+                $display_type = $log->object_type;
+                if ( $display_type === 'event' ) $display_type = 'Evento';
+                elseif ( $display_type === 'news' ) $display_type = 'Notizia';
+                elseif ( $display_type === 'user' ) $display_type = 'Utente';
+                elseif ( $display_type === 'association' ) $display_type = 'Associazione';
+
+                fputcsv($output, array(
+                    $log->id,
+                    $log->created_at,
+                    $display_action,
+                    $display_type,
+                    $log->object_id,
+                    $log->details,
+                    $log->user_name ?: 'Utente ' . $log->user_id,
+                    $log->ip_address
+                ));
+            }
+        }
     }
 
     fclose($output);

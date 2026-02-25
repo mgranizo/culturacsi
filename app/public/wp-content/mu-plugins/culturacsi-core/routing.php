@@ -123,6 +123,9 @@ add_action(
 			'dashboard/association'   => '/area-riservata/associazione/',
 			'dashboard/events/new'    => '/area-riservata/eventi/nuovo/',
 			'dashboard/events/edit'   => '/area-riservata/eventi/nuovo/',
+			'dashboard/cronologia'    => '/area-riservata/cronologia/',
+			'cronologia'              => '/area-riservata/cronologia/',
+			'area-riservata/cronologia' => '/area-riservata/cronologia/',
 		);
 
 		if ( isset( $aliases[ $path ] ) ) {
