@@ -16,4 +16,5 @@ require_once __DIR__ . '/culturacsi-core/admin-ui.php';
 require_once __DIR__ . '/culturacsi-core/queries-filters.php';
 require_once __DIR__ . '/culturacsi-core/logging.php';
 require_once __DIR__ . '/culturacsi-core/performance-hints.php';
+require_once __DIR__ . '/culturacsi-core/exports.php';
 
