@@ -492,6 +492,13 @@ function ab_assoc_build_source_key_from_row(array $row): array {
       }
     }
   }
+  // Final fallback: stable hash from contacts if still unknown
+  if ($disc === '') {
+    $norm = strtolower(trim(preg_replace('/\s+/u',' ', $emailsRaw . '|' . $urlsRaw)));
+    if ($norm !== '') {
+      $disc = substr(sha1($norm), 0, 10);
+    }
+  }
 
   $strict = $baseKey;
   if ($disc !== '') {
@@ -2913,7 +2920,15 @@ function ab_assoc_merge_duplicate_rows(array $rows): array {
       $groups[$key]['_ab_categories'][$category] = true;
       $activity = ab_assoc_extract_activity_from_category($category);
       if ($activity !== '') {
-        $groups[$key]['_ab_activities'][$activity] = true;
+        // Normalize and filter trivial tokens for activity labels
+        $act = trim((string)$activity);
+        if ($act !== '') {
+          $alpha = (string)preg_replace('/[^\p{L}]+/u', '', $act);
+          $len = function_exists('mb_strlen') ? (int)mb_strlen($alpha, 'UTF-8') : (int)strlen($alpha);
+          if ($len >= 3 && !ab_assoc_is_placeholder_label($act)) {
+            $groups[$key]['_ab_activities'][ab_assoc_normalize_key($act)] = $act;
+          }
+        }
       }
     }
 
