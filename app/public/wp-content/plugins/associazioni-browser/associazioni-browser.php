@@ -401,7 +401,13 @@ function ab_assoc_collect_category_activity_labels(array $categoryPaths): array 
     }
 
     if ($settore2 !== '' && !ab_assoc_is_placeholder_label($settore2)) {
-      $activities[ab_assoc_normalize_key($settore2)] = $settore2;
+      $act = trim((string)$settore2);
+      // Skip trivial tokens (e.g., single letters like "M")
+      $alpha = (string)preg_replace('/[^\p{L}]+/u', '', $act);
+      $len = function_exists('mb_strlen') ? (int)mb_strlen($alpha, 'UTF-8') : (int)strlen($alpha);
+      if ($len >= 3) {
+        $activities[ab_assoc_normalize_key($act)] = $act;
+      }
     }
   }
 
@@ -3940,11 +3946,16 @@ function ab_sync_upsert_association_posts(array $rows) {
       }
     }
 
-    // Legacy without discriminator
+    // Legacy without discriminator: only reuse if the candidate's strict key matches this row's strict key.
     if ($postId <= 0 && $sourceKeyCompat !== '' && isset($sourceMap[$sourceKeyCompat])) {
       $candidateId = (int)$sourceMap[$sourceKeyCompat];
-      if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKeyCompat)) {
-        $postId = $candidateId;
+      if ($candidateId > 0 && get_post_type($candidateId) === 'association') {
+        $candStrict = trim((string)get_post_meta($candidateId, '_ab_source_key', true));
+        if ($candStrict !== '' && $sourceKey !== '' && $candStrict !== $sourceKey) {
+          // Do not reuse: this compat key is already tied to a different strict chapter; force new post
+        } else if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKeyCompat)) {
+          $postId = $candidateId;
+        }
       }
     }
 
