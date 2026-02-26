@@ -448,26 +448,41 @@ function ab_assoc_build_source_key_from_row(array $row): array {
   $urlsRaw = trim((string)($row['urls'] ?? ''));
 
   $disc = '';
+  // Prefer FULL email (local@domain) as discriminator when location is unknown.
   if ($emailsRaw !== '') {
     $parts = preg_split('/[|,;\r\n\s]+/', $emailsRaw);
     if (is_array($parts)) {
       foreach ($parts as $p) {
-        $email = sanitize_email(trim((string)$p));
+        $email = strtolower((string)sanitize_email(trim((string)$p)));
         if ($email !== '' && strpos($email, '@') !== false) {
-          $dom = strtolower((string)substr((string)strrchr($email, '@'), 1));
-          if ($dom !== '') { $disc = $dom; break; }
+          $disc = $email; break;
         }
       }
     }
   }
+  // Else derive from first URL as host + first path segment (e.g. facebook.com/PageName)
   if ($disc === '' && $urlsRaw !== '') {
     $parts = preg_split('/[|,;\r\n\s]+/', $urlsRaw);
     if (is_array($parts)) {
       foreach ($parts as $p) {
         $u = ab_assoc_normalize_url(trim((string)$p));
         if ($u === '') continue;
-        $host = strtolower((string)(wp_parse_url($u, PHP_URL_HOST) ?? ''));
-        if ($host !== '') { $disc = $host; break; }
+        $parsed = wp_parse_url($u);
+        if (!is_array($parsed)) continue;
+        $host = strtolower((string)($parsed['host'] ?? ''));
+        $path = trim((string)($parsed['path'] ?? ''), '/');
+        // take first non-empty segment of path to capture page/profile slug
+        $seg = '';
+        if ($path !== '') {
+          $segs = preg_split('/\/+/', $path);
+          if (is_array($segs)) {
+            foreach ($segs as $s) { if (trim((string)$s) !== '') { $seg = strtolower((string)$s); break; } }
+          }
+        }
+        if ($host !== '') {
+          $disc = $host . ($seg !== '' ? '/' . $seg : '');
+          break;
+        }
       }
     }
   }
