@@ -140,8 +140,8 @@ function culturacsi_portal_associations_list_shortcode(): string {
 				return true;
 			}
 
-			function open(){ if(!ensureModal()) return; modal.style.display="block"; titleEl.textContent="Editor Struttura"; loadTree(); }
-			function close(){ if(!ensureModal()) return; modal.style.display="none"; content.innerHTML=' . wp_json_encode( '' ) . '; footer.innerHTML=' . wp_json_encode( '' ) . '; }
+			function open(){ if(!ensureModal()) return; modal.classList.add('is-open'); titleEl.textContent="Editor Struttura"; loadTree(); }
+			function close(){ if(!ensureModal()) return; modal.classList.remove('is-open'); content.innerHTML=' . wp_json_encode( '' ) . '; footer.innerHTML=' . wp_json_encode( '' ) . '; }
 			openBtn.addEventListener("click", function(){ open(); });
 
 			var tree = { macros: [] };
