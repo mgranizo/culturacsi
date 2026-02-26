@@ -16,8 +16,12 @@ if (!defined('AB_SETTORI_HERO_OVERRIDES_OPTION')) {
  */
 function ab_table(): string {
   global $wpdb;
-  if (defined('AB_ASSOCIAZIONI_TABLE') && is_string(AB_ASSOCIAZIONI_TABLE) && AB_ASSOCIAZIONI_TABLE !== '') {
-    return AB_ASSOCIAZIONI_TABLE;
+  // Allow optional override via a constant without triggering static-analyzer warnings.
+  if (defined('AB_ASSOCIAZIONI_TABLE')) {
+    $override = constant('AB_ASSOCIAZIONI_TABLE');
+    if (is_string($override) && $override !== '') {
+      return $override;
+    }
   }
   // Default: prefix-aware and portable
   return $wpdb->prefix . 'associazioni';
@@ -141,6 +145,179 @@ function ab_assoc_is_placeholder_label(string $value): bool {
     'n-a',
     'null',
   ], true);
+}
+
+/**
+ * Settori tree settings helpers (admin-configurable filters)
+ */
+function abf_get_settori_settings(): array {
+  $raw = get_option(AB_SETTORI_TREE_OPTION, []);
+  if (!is_array($raw)) $raw = [];
+  $hidden = [];
+  $rawHidden = isset($raw['hidden']) && is_array($raw['hidden']) ? $raw['hidden'] : [];
+  foreach ($rawHidden as $label) {
+    $key = ab_assoc_normalize_key((string)$label);
+    if ($key !== '') $hidden[$key] = true;
+  }
+  // Renames: [from => to]
+  $renames = [];
+  $rawRenames = isset($raw['renames']) && is_array($raw['renames']) ? $raw['renames'] : [];
+  foreach ($rawRenames as $from => $to) {
+    $k = ab_assoc_normalize_key((string)$from);
+    $v = trim((string)$to);
+    if ($k !== '' && $v !== '') $renames[$k] = $v;
+  }
+  // Moves: list of [from_path, to_path]
+  $moves = [];
+  $rawMoves = isset($raw['moves']) && is_array($raw['moves']) ? $raw['moves'] : [];
+  foreach ($rawMoves as $pair) {
+    if (!is_array($pair)) continue;
+    $from = isset($pair['from']) ? trim((string)$pair['from']) : '';
+    $to   = isset($pair['to']) ? trim((string)$pair['to']) : '';
+    if ($from === '' || $to === '') continue;
+    $moves[] = [
+      'from' => $from,
+      'to'   => $to,
+      'from_key' => ab_assoc_normalize_key($from),
+    ];
+  }
+  $applyOnImport = !empty($raw['apply_on_import']);
+  // Manual nodes: curated tree additions not sourced from rows
+  $manualNodes = [];
+  if (isset($raw['manual_nodes']) && is_array($raw['manual_nodes'])) {
+    $manualNodes = $raw['manual_nodes'];
+  }
+  return [
+    'hidden' => $hidden,
+    'renames' => $renames,
+    'moves' => $moves,
+    'apply_on_import' => $applyOnImport,
+    'manual_nodes' => $manualNodes,
+  ];
+}
+
+function abf_is_label_hidden(string $label): bool {
+  $label = trim($label);
+  if ($label === '' || ab_assoc_is_placeholder_label($label)) return true;
+  $settings = abf_get_settori_settings();
+  $key = ab_assoc_normalize_key($label);
+  return isset($settings['hidden'][$key]);
+}
+
+function abf_filter_category_path(string $category): string {
+  $parts = ab_split_category($category);
+  if (empty($parts)) return '';
+  // Apply full transformation (moves + renames + hiding)
+  [$macro, $settore, $settore2] = abf_apply_tree_rules_to_segments(
+    isset($parts[0]) ? (string)$parts[0] : '',
+    isset($parts[1]) ? (string)$parts[1] : '',
+    isset($parts[2]) ? (string)$parts[2] : ''
+  );
+  $segs = array_values(array_filter([$macro, $settore, $settore2], fn($v) => trim((string)$v) !== ''));
+  return empty($segs) ? '' : ab_join_category($segs);
+}
+
+function abf_rename_label(string $label): string {
+  $label = trim($label);
+  if ($label === '' || ab_assoc_is_placeholder_label($label)) return '';
+  $settings = abf_get_settori_settings();
+  $key = ab_assoc_normalize_key($label);
+  if (isset($settings['renames'][$key])) {
+    return trim((string)$settings['renames'][$key]);
+  }
+  return $label;
+}
+
+function abf_apply_tree_rules_to_segments(string $macro, string $settore, string $settore2): array {
+  // 1) Renames (per label)
+  $macro = $macro !== '' ? abf_rename_label($macro) : '';
+  $settore = $settore !== '' ? abf_rename_label($settore) : '';
+  $settore2 = $settore2 !== '' ? abf_rename_label($settore2) : '';
+
+  // 2) Moves (full path match)
+  $settings = abf_get_settori_settings();
+  if (!empty($settings['moves'])) {
+    $current = ab_join_category(array_values(array_filter([$macro, $settore, $settore2], fn($v) => $v !== '')));
+    $currentKey = ab_assoc_normalize_key($current);
+    foreach ($settings['moves'] as $mv) {
+      if (!is_array($mv)) continue;
+      if (($mv['from_key'] ?? '') === $currentKey && trim((string)$mv['to']) !== '') {
+        $target = trim((string)$mv['to']);
+        $toParts = ab_split_category($target);
+        $macro   = isset($toParts[0]) ? (string)$toParts[0] : '';
+        $settore = isset($toParts[1]) ? (string)$toParts[1] : '';
+        $settore2= isset($toParts[2]) ? (string)$toParts[2] : '';
+        break;
+      }
+    }
+  }
+
+  // 3) Hiding (drop hidden labels/segments)
+  $macro = ($macro !== '' && !abf_is_label_hidden($macro)) ? $macro : '';
+  $settore = ($settore !== '' && !abf_is_label_hidden($settore)) ? $settore : '';
+  $settore2 = ($settore2 !== '' && !abf_is_label_hidden($settore2)) ? $settore2 : '';
+
+  return [$macro, $settore, $settore2];
+}
+
+/** Manual nodes: helpers */
+function abf_get_manual_nodes(): array {
+  $settings = abf_get_settori_settings();
+  $nodes = isset($settings['manual_nodes']) && is_array($settings['manual_nodes']) ? $settings['manual_nodes'] : [];
+  // Ensure shape: [macro => [settore => [settore2, ...], ...]]
+  $out = [];
+  foreach ($nodes as $m => $sMap) {
+    $mLabel = abf_rename_label((string)$m);
+    if ($mLabel === '' || abf_is_label_hidden($mLabel)) continue;
+    if (!isset($out[$mLabel])) $out[$mLabel] = [];
+    if (!is_array($sMap)) $sMap = [];
+    foreach ($sMap as $s => $s2List) {
+      $sLabel = abf_rename_label((string)$s);
+      if ($sLabel !== '' && !abf_is_label_hidden($sLabel)) {
+        if (!isset($out[$mLabel][$sLabel])) $out[$mLabel][$sLabel] = [];
+        if (is_array($s2List)) {
+          foreach ($s2List as $s2) {
+            $s2Label = abf_rename_label((string)$s2);
+            if ($s2Label !== '' && !abf_is_label_hidden($s2Label)) {
+              $out[$mLabel][$sLabel][$s2Label] = true;
+            }
+          }
+        }
+      }
+    }
+  }
+  // normalize s2 to lists
+  foreach ($out as $mm => $sMap2) {
+    foreach ($sMap2 as $ss => $s2set) {
+      $out[$mm][$ss] = array_keys($s2set);
+      sort($out[$mm][$ss], SORT_NATURAL | SORT_FLAG_CASE);
+    }
+  }
+  return $out;
+}
+
+function abf_manual_nodes_paths(): array {
+  $nodes = abf_get_manual_nodes();
+  $paths = [];
+  foreach ($nodes as $m => $sMap) {
+    if (empty($sMap)) {
+      $paths[] = (string)$m;
+      continue;
+    }
+    foreach ($sMap as $s => $s2List) {
+      if (empty($s2List)) {
+        $paths[] = ab_join_category([(string)$m, (string)$s]);
+        continue;
+        }
+      foreach ($s2List as $s2) {
+        $paths[] = ab_join_category([(string)$m, (string)$s, (string)$s2]);
+      }
+    }
+  }
+  // Apply move/hide/rename filters
+  $paths = array_values(array_filter(array_map('abf_filter_category_path', $paths), fn($v) => $v !== ''));
+  sort($paths, SORT_NATURAL | SORT_FLAG_CASE);
+  return $paths;
 }
 
 function ab_assoc_category_from_levels(string $macro, string $settore, string $settore2): string {
@@ -622,9 +799,10 @@ function ab_assoc_post_matches_row(int $postId, string $rowKey, string $sourceKe
     return true;
   }
 
-  // Legacy fallback: if an old source key matches and row key is not available,
-  // allow updating the existing record once.
-  if ($candidateRowKey === '' && $sourceKey !== '') {
+  // New behavior: always accept a match by source key (organization + location),
+  // even when row keys (which include category) differ. This prevents creating
+  // duplicate association posts for the same entity that has multiple activities.
+  if ($sourceKey !== '') {
     $candidateSource = trim((string)get_post_meta($postId, '_ab_source_key', true));
     if ($candidateSource !== '' && $candidateSource === $sourceKey) {
       return true;
@@ -1891,7 +2069,37 @@ function abf_distinct_level_values(string $field, array $filters = []): array {
     $out[$value] = $value;
   }
 
-  $result = array_values($out);
+  // Build list: apply renames and filter out hidden labels
+  $renamed = [];
+  foreach ($out as $label) {
+    $lbl = abf_rename_label((string)$label);
+    if ($lbl === '' || abf_is_label_hidden($lbl)) continue;
+    $renamed[$lbl] = $lbl;
+  }
+  // Merge manual nodes for the requested level
+  $manual = abf_get_manual_nodes();
+  if (!empty($manual)) {
+    if ($field === 'macro') {
+      foreach ($manual as $m => $sMap) { $renamed[(string)$m] = (string)$m; }
+    } elseif ($field === 'settore') {
+      $needMacro = isset($filters['macro']) && trim((string)$filters['macro']) !== '' ? trim((string)$filters['macro']) : '';
+      foreach ($manual as $m => $sMap) {
+        if ($needMacro !== '' && $m !== $needMacro) continue;
+        foreach (array_keys($sMap) as $s) { $renamed[(string)$s] = (string)$s; }
+      }
+    } elseif ($field === 'settore2') {
+      $needMacro = isset($filters['macro']) && trim((string)$filters['macro']) !== '' ? trim((string)$filters['macro']) : '';
+      $needSettore = isset($filters['settore']) && trim((string)$filters['settore']) !== '' ? trim((string)$filters['settore']) : '';
+      foreach ($manual as $m => $sMap) {
+        if ($needMacro !== '' && $m !== $needMacro) continue;
+        foreach ($sMap as $s => $s2List) {
+          if ($needSettore !== '' && $s !== $needSettore) continue;
+          foreach ($s2List as $s2) { $renamed[(string)$s2] = (string)$s2; }
+        }
+      }
+    }
+  }
+  $result = array_values($renamed);
   sort($result, SORT_NATURAL | SORT_FLAG_CASE);
   ab_cache_set($cacheKey, $result, 1 * HOUR_IN_SECONDS);
   return $result;
@@ -1906,6 +2114,13 @@ function abf_all_categories(): array {
   $table = ab_table_sql();
   $rows = $wpdb->get_col("SELECT DISTINCT category FROM {$table} WHERE TRIM(COALESCE(category,'')) <> ''");
   $rows = array_values(array_filter(array_map(fn($v) => trim((string)$v), $rows), fn($v) => $v !== ''));
+  // Apply hidden-label filtering to each category path
+  $rows = array_values(array_filter(array_map('abf_filter_category_path', $rows), fn($v) => $v !== ''));
+  // Merge curated manual nodes as categories as well
+  $manual = abf_manual_nodes_paths();
+  if (!empty($manual)) {
+    $rows = array_values(array_unique(array_merge($rows, $manual)));
+  }
   sort($rows, SORT_NATURAL | SORT_FLAG_CASE);
 
   ab_cache_set($cacheKey, $rows, 1 * HOUR_IN_SECONDS);
@@ -3083,6 +3298,18 @@ if (!defined('AB_SYNC_URL_OPTION')) {
 if (!defined('AB_SYNC_LAST_OPTION')) {
   define('AB_SYNC_LAST_OPTION', 'ab_sync_last_result');
 }
+// Settori tree admin settings (hidden labels, future renames/moves)
+if (!defined('AB_SETTORI_TREE_OPTION')) {
+  define('AB_SETTORI_TREE_OPTION', 'ab_settori_tree_settings');
+}
+
+// Hardening limits (can be filtered)
+if (!defined('AB_SYNC_MAX_UPLOAD_BYTES')) {
+  define('AB_SYNC_MAX_UPLOAD_BYTES', 5 * 1024 * 1024); // 5MB
+}
+if (!defined('AB_SYNC_MAX_REMOTE_BYTES')) {
+  define('AB_SYNC_MAX_REMOTE_BYTES', 8 * 1024 * 1024); // 8MB
+}
 
 function ab_sync_normalize_text(string $value): string {
   $value = trim($value);
@@ -3205,6 +3432,9 @@ function ab_sync_parse_csv(string $csv) {
     if ($key !== '') $headerIndex[$key] = $i;
   }
 
+  // Keep a normalized map of all headers to capture every CSV column per row
+  $allHeaders = array_keys($headerIndex);
+
   $idxMacro = ab_sync_map_index($headerIndex, [
     'macro_categoria',
     'macro_categorie',
@@ -3288,16 +3518,47 @@ function ab_sync_parse_csv(string $csv) {
 
     if ($nome === '') continue;
 
-    $category = ab_assoc_category_from_levels($macro, $settore, $settore2);
-    $baseRowKey = ab_assoc_row_key_from_values($nome, $regione, $provincia, $comune, $category);
-    $rowKey = $baseRowKey;
-    if ($baseRowKey !== '') {
-      if (!isset($rowKeyCounts[$baseRowKey])) {
-        $rowKeyCounts[$baseRowKey] = 0;
+    // Build category variants: interpret slash-separated tokens as multiple categories, not a single long one.
+    $splitTokens = static function(string $value): array {
+      $v = trim($value);
+      if ($v === '') return [''];
+      if (strpos($v, '/') === false) return [$v];
+      $parts = preg_split('~/+~', $v);
+      if (!is_array($parts)) return [$v];
+      $out = [];
+      foreach ($parts as $p) { $p = trim((string)$p); if ($p !== '') $out[$p] = true; }
+      $list = array_keys($out);
+      return !empty($list) ? $list : [''];
+    };
+
+    $macroTks = $splitTokens($macro);
+    $settoreTks = $splitTokens($settore);
+    $settore2Tks = $splitTokens($settore2);
+
+    $variants = [];
+    foreach ($macroTks as $mTk) {
+      foreach ($settoreTks as $sTk) {
+        foreach ($settore2Tks as $s2Tk) {
+          $path = ab_assoc_category_from_levels((string)$mTk, (string)$sTk, (string)$s2Tk);
+          if ($path === '') continue;
+          $variants[] = [
+            'macro' => (string)$mTk,
+            'settore' => (string)$sTk,
+            'settore2' => (string)$s2Tk,
+            'category' => $path,
+          ];
+        }
       }
-      $rowKeyCounts[$baseRowKey]++;
-      if ($rowKeyCounts[$baseRowKey] > 1) {
-        $rowKey .= '|dup:' . (string)$rowKeyCounts[$baseRowKey];
+    }
+    if (empty($variants)) {
+      $single = ab_assoc_category_from_levels($macro, $settore, $settore2);
+      if ($single !== '') {
+        $variants[] = [
+          'macro' => $macro,
+          'settore' => $settore,
+          'settore2' => $settore2,
+          'category' => $single,
+        ];
       }
     }
 
@@ -3311,27 +3572,54 @@ function ab_sync_parse_csv(string $csv) {
     if ($locationRaw !== '') $source .= ' - ' . $locationRaw;
     if ($urlsStr !== '') $source .= "\n" . $urlsStr;
 
-    $rows[] = [
-      'category'     => $category,
-      'region'       => $regione,
-      'organization' => $nome,
-      'city'         => $comune,
-      'province'     => $provincia,
-      'macro'        => $macro,
-      'settore'      => $settore,
-      'settore2'     => $settore2,
-      'website'      => $sito,
-      'facebook'     => $facebook,
-      'instagram'    => $instagram,
-      'location_raw' => $locationRaw,
-      'urls'         => $urlsStr,
-      'emails'       => $email,
-      'notes'        => '',
-      'source_block' => $source,
-      'source_key'   => ab_assoc_source_key($nome, $provincia, $comune, $regione),
-      'row_key'      => $rowKey,
-      '_line'        => $line,
-    ];
+    // Capture all columns for this row as normalized => value
+    $allCols = [];
+    foreach ($allHeaders as $hk) {
+      $idx = isset($headerIndex[$hk]) ? (int)$headerIndex[$hk] : null;
+      $val = ab_sync_get_col($data, $idx);
+      if ($val !== '') {
+        $allCols[$hk] = $val;
+      }
+    }
+
+    // Create one row per category variant; maintain unique row keys using counters
+    foreach ($variants as $v) {
+      $cat = (string)$v['category'];
+      $baseRowKey = ab_assoc_row_key_from_values($nome, $regione, $provincia, $comune, $cat);
+      $rowKey = $baseRowKey;
+      if ($baseRowKey !== '') {
+        if (!isset($rowKeyCounts[$baseRowKey])) {
+          $rowKeyCounts[$baseRowKey] = 0;
+        }
+        $rowKeyCounts[$baseRowKey]++;
+        if ($rowKeyCounts[$baseRowKey] > 1) {
+          $rowKey .= '|dup:' . (string)$rowKeyCounts[$baseRowKey];
+        }
+      }
+
+      $rows[] = [
+        'category'     => $cat,
+        'region'       => $regione,
+        'organization' => $nome,
+        'city'         => $comune,
+        'province'     => $provincia,
+        'macro'        => (string)$v['macro'],
+        'settore'      => (string)$v['settore'],
+        'settore2'     => (string)$v['settore2'],
+        'website'      => $sito,
+        'facebook'     => $facebook,
+        'instagram'    => $instagram,
+        'location_raw' => $locationRaw,
+        'urls'         => $urlsStr,
+        'emails'       => $email,
+        'notes'        => '',
+        'source_block' => $source,
+        'source_key'   => ab_assoc_source_key($nome, $provincia, $comune, $regione),
+        'row_key'      => $rowKey,
+        'csv_all_cols' => $allCols,
+        '_line'        => $line,
+      ];
+    }
   }
 
   fclose($fp);
@@ -3656,6 +3944,17 @@ function ab_sync_upsert_association_posts(array $rows) {
     ab_sync_set_external_url_meta($postId, $externalUrlCandidates);
 
     ab_sync_set_activity_category_if_empty($postId, $resolvedCategory);
+
+    // Store ALL available CSV columns as post meta with _ab_csv_ prefix
+    if (isset($row['csv_all_cols']) && is_array($row['csv_all_cols'])) {
+      foreach ((array)$row['csv_all_cols'] as $colKey => $colVal) {
+        $metaKey = '_ab_csv_' . sanitize_key((string)$colKey);
+        $val = ab_sync_normalize_text((string)$colVal);
+        if ($metaKey !== '' && $val !== '') {
+          update_post_meta($postId, $metaKey, $val);
+        }
+      }
+    }
   }
 
   $pruned = 0;
@@ -3765,6 +4064,18 @@ function ab_sync_import_rows(array $rows) {
   $inserted = 0;
   foreach ($rows as $row) {
     $resolvedCategory = ab_assoc_resolve_category_from_row($row);
+    // Optionally apply tree rules during import so DB reflects final structure
+    $settings = abf_get_settori_settings();
+    if (!empty($settings['apply_on_import'])) {
+      $macro   = (string)($row['macro'] ?? '');
+      $settore = (string)($row['settore'] ?? '');
+      $settore2= (string)($row['settore2'] ?? '');
+      [$macro, $settore, $settore2] = abf_apply_tree_rules_to_segments($macro, $settore, $settore2);
+      $row['macro'] = $macro;
+      $row['settore'] = $settore;
+      $row['settore2'] = $settore2;
+      $resolvedCategory = ab_join_category(array_values(array_filter([$macro, $settore, $settore2], fn($v) => trim((string)$v) !== '')));
+    }
     $ok = $wpdb->insert(
       $table,
       [
@@ -3804,6 +4115,16 @@ function ab_sync_fetch_remote_csv(string $rawUrl) {
     return new WP_Error('ab_sync_no_url', 'URL CSV non impostato.');
   }
 
+  // Basic scheme/domain validation + allow filtering for custom policies
+  $parts = wp_parse_url($url);
+  if (!is_array($parts) || !isset($parts['scheme']) || !in_array(strtolower((string)$parts['scheme']), ['http','https'], true)) {
+    return new WP_Error('ab_sync_url_scheme', 'Schema URL non valido.');
+  }
+  $allow = (bool)apply_filters('ab_sync_allow_remote_url', true, $url, $parts);
+  if (!$allow) {
+    return new WP_Error('ab_sync_url_blocked', 'Dominio URL non consentito dalla configurazione.');
+  }
+
   $response = wp_remote_get($url, ['timeout' => 35, 'redirection' => 5]);
   if (is_wp_error($response)) return $response;
 
@@ -3812,9 +4133,21 @@ function ab_sync_fetch_remote_csv(string $rawUrl) {
     return new WP_Error('ab_sync_http', 'HTTP non valido durante download CSV: ' . $code);
   }
 
+  // Content-Length guard (if present)
+  $lenHeader = wp_remote_retrieve_header($response, 'content-length');
+  $len = is_numeric($lenHeader) ? (int)$lenHeader : 0;
+  $maxRemote = (int)apply_filters('ab_sync_max_remote_bytes', AB_SYNC_MAX_REMOTE_BYTES, $url);
+  if ($len > 0 && $len > $maxRemote) {
+    return new WP_Error('ab_sync_too_large', 'CSV remoto troppo grande.');
+  }
+
   $body = wp_remote_retrieve_body($response);
   if (!is_string($body) || trim($body) === '') {
     return new WP_Error('ab_sync_empty_remote', 'CSV remoto vuoto.');
+  }
+
+  if (strlen($body) > $maxRemote) {
+    return new WP_Error('ab_sync_body_too_large', 'Contenuto CSV supera la dimensione massima consentita.');
   }
 
   return $body;
@@ -3878,6 +4211,13 @@ function ab_sync_admin_menu(): void {
     'manage_options',
     'ab-settori-images',
     'ab_settori_images_admin_page'
+  );
+  add_management_page(
+    'Settori Struttura',
+    'Settori Struttura',
+    'manage_options',
+    'ab-settori-structure',
+    'ab_settori_structure_admin_page'
   );
 }
 add_action('admin_menu', 'ab_sync_admin_menu');
@@ -3947,6 +4287,326 @@ function ab_sync_admin_page(): void {
   </div>
   <?php
 }
+
+function ab_settori_structure_admin_page(): void {
+  if (!current_user_can('manage_options')) return;
+
+  $message = isset($_GET['ab_struct_msg']) ? sanitize_text_field((string)wp_unslash($_GET['ab_struct_msg'])) : '';
+  $status = isset($_GET['ab_struct_status']) ? sanitize_key((string)wp_unslash($_GET['ab_struct_status'])) : '';
+
+  $settings = get_option(AB_SETTORI_TREE_OPTION, []);
+  $hidden = [];
+  $renames = [];
+  $moves = [];
+  $applyOnImport = !empty($settings['apply_on_import']);
+  if (is_array($settings)) {
+    if (isset($settings['hidden']) && is_array($settings['hidden'])) $hidden = $settings['hidden'];
+    if (isset($settings['renames']) && is_array($settings['renames'])) $renames = $settings['renames'];
+    if (isset($settings['moves']) && is_array($settings['moves'])) $moves = $settings['moves'];
+  }
+  $hiddenText = is_array($hidden) ? implode("\n", array_map('strval', $hidden)) : '';
+  // Build renames textarea content
+  $renamesText = '';
+  if (!empty($renames)) {
+    foreach ($renames as $from => $to) {
+      // $from may be stored as array-key normalized on read, but here we use saved raw if available
+      if (is_numeric($from)) continue;
+      $renamesText .= $from . ' => ' . $to . "\n";
+    }
+    $renamesText = trim($renamesText);
+  }
+  // Build moves textarea content
+  $movesText = '';
+  if (!empty($moves)) {
+    foreach ($moves as $mv) {
+      $movesText .= (string)($mv['from'] ?? '') . ' => ' . (string)($mv['to'] ?? '') . "\n";
+    }
+    $movesText = trim($movesText);
+  }
+
+  // Preview current values from DB (already filtered in UI elsewhere, but here we show raw lists for reference)
+  $macros = abf_distinct_level_values('macro');
+  $settori = abf_distinct_level_values('settore');
+  $settori2 = abf_distinct_level_values('settore2');
+
+  ?>
+  <div class="wrap">
+    <h1>Settori - Struttura</h1>
+
+    <?php if ($message !== ''): ?>
+      <div class="notice notice-<?php echo $status === 'ok' ? 'success' : 'error'; ?> is-dismissible"><p><?php echo esc_html($message); ?></p></div>
+    <?php endif; ?>
+
+    <p>Gestisci l'albero delle attività nascondendo etichette non desiderate. Le etichette nascoste saranno escluse dai filtri "Settori" e dai link automatici nella home.</p>
+
+    <form method="post">
+      <?php wp_nonce_field('ab_settori_structure_save'); ?>
+      <input type="hidden" name="ab_sync_action" value="save_settori_structure">
+      <table class="form-table" role="presentation">
+        <tbody>
+          <tr>
+            <th scope="row"><label for="ab_settori_hidden">Etichette da nascondere</label></th>
+            <td>
+              <textarea id="ab_settori_hidden" name="ab_settori_hidden" rows="8" cols="60" class="large-text code" placeholder="Una etichetta per riga, es.:&#10;AMBIENTE&#10;VOLOMTARIATO&#10;..."><?php echo esc_textarea($hiddenText); ?></textarea>
+              <p class="description">Confronto non sensibile a maiuscole/minuscole e accenti. Valgono a qualsiasi livello (Macro, Settore, Settore 2).</p>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row"><label for="ab_settori_renames">Rinomina etichette</label></th>
+            <td>
+              <textarea id="ab_settori_renames" name="ab_settori_renames" rows="8" cols="60" class="large-text code" placeholder="Formato: originale => nuovo&#10;Esempi:&#10;VOLOMTARIATO => VOLONTARIATO&#10;cinema => Cinema"><?php echo esc_textarea($renamesText); ?></textarea>
+              <p class="description">Una regola per riga. Il confronto dell’originale non distingue maiuscole/minuscole/accentsi.</p>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row"><label for="ab_settori_moves">Sposta percorsi</label></th>
+            <td>
+              <textarea id="ab_settori_moves" name="ab_settori_moves" rows="8" cols="60" class="large-text code" placeholder="Formato: Percorso vecchio => Percorso nuovo&#10;Esempi:&#10;CULTURA > CINEMA => ARTE > CINEMA&#10;MUSICA E CANTO > MUSICA => ARTE > MUSICA"><?php echo esc_textarea($movesText); ?></textarea>
+              <p class="description">Usa il separatore ">" per i livelli. Se ometti livelli, saranno rimossi.</p>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Applicazione regole</th>
+            <td>
+              <label><input type="checkbox" name="ab_settori_apply_on_import" value="1" <?php checked($applyOnImport ? 1 : 0, 1); ?>> Applica durante l’import CSV/Google Sheet</label>
+              <p class="description">Se attivo, le colonne Macro/Settore/Settore 2 salvate in tabella saranno già normalizzate.</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <?php submit_button('Salva Struttura Settori'); ?>
+    </form>
+
+    <h2 style="margin-top:28px;">Anteprima valori attuali (dopo filtri)</h2>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div>
+        <h3>Macro Categorie</h3>
+        <ul>
+          <?php foreach ($macros as $m): ?>
+            <li><?php echo esc_html((string)$m); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <div>
+        <h3>Settori</h3>
+        <ul>
+          <?php foreach ($settori as $s): ?>
+            <li><?php echo esc_html((string)$s); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+      <div>
+        <h3>Settore 2</h3>
+        <ul>
+          <?php foreach ($settori2 as $s2): ?>
+            <li><?php echo esc_html((string)$s2); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <?php
+}
+
+/** Submenu under Associazioni CPT: modal editor */
+function abf_register_associazioni_structure_submenu(): void {
+  // Attach under the Associations custom post type menu if it exists
+  add_submenu_page(
+    'edit.php?post_type=association',
+    'Struttura Settori',
+    'Struttura Settori',
+    'manage_options',
+    'ab-settori-structure-modal',
+    'abf_render_settori_structure_modal_page'
+  );
+}
+add_action('admin_menu', 'abf_register_associazioni_structure_submenu');
+
+function abf_render_settori_structure_modal_page(): void {
+  if (!current_user_can('manage_options')) return;
+  $nonce = wp_create_nonce('abf_settori_tree');
+  ?>
+  <div class="wrap">
+    <h1>Struttura Settori (Editor)</h1>
+    <p>Gestisci Macro, Settore e Settore 2. Le modifiche aggiornano i nodi manuali e possono essere combinate con rinomini/spostamenti nella pagina Struttura (Tools).</p>
+    <button id="abf-open-struct-modal" class="button button-primary">Apri Editor</button>
+
+    <div id="abf-struct-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100000;"></div>
+    <div id="abf-struct-modal" style="display:none; position:fixed; inset:10%; background:#fff; z-index:100001; border-radius:10px; box-shadow:0 20px 40px rgba(0,0,0,.3); overflow:auto;">
+      <div style="padding:14px; border-bottom:1px solid #e5e5e5; display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0;">Editor Struttura</h2>
+        <button id="abf-close-struct-modal" class="button">Chiudi</button>
+      </div>
+      <div style="padding:14px;">
+        <div id="abf-struct-app">Caricamento…</div>
+        <p class="description">Suggerimento: per ridenominare/eliminare una voce esistente dai dati, usa anche la pagina Tools → Settori Struttura per aggiungere regole di rinomina/nascondi/sposta.</p>
+      </div>
+      <div style="padding:14px; border-top:1px solid #e5e5e5; display:flex; gap:10px; justify-content:flex-end;">
+        <button id="abf-save-struct" class="button button-primary">Salva</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const qs = (s, r=document)=>r.querySelector(s);
+    const ce = (t)=>document.createElement(t);
+    const openBtn = qs('#abf-open-struct-modal');
+    const closeBtn = qs('#abf-close-struct-modal');
+    const modal = qs('#abf-struct-modal');
+    const backdrop = qs('#abf-struct-backdrop');
+    const app = qs('#abf-struct-app');
+    const saveBtn = qs('#abf-save-struct');
+    const nonce = <?php echo wp_json_encode($nonce); ?>;
+
+    function open(){ modal.style.display='block'; backdrop.style.display='block'; loadTree(); }
+    function close(){ modal.style.display='none'; backdrop.style.display='none'; }
+    openBtn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+
+    let tree = { macros: [] };
+
+    function loadTree(){
+      app.textContent = 'Caricamento…';
+      const form = new FormData();
+      form.append('action','abf_get_settori_tree');
+      form.append('_wpnonce', nonce);
+      fetch(ajaxurl,{method:'POST', body:form}).then(r=>r.json()).then(data=>{
+        if (!data || !data.success){ app.textContent = (data && data.message) || 'Errore'; return; }
+        tree = data.data || {macros:[]};
+        render();
+      }).catch(()=>{ app.textContent='Errore rete'; });
+    }
+
+    function render(){
+      app.innerHTML = '';
+      const wrap = ce('div');
+      // List macros
+      const addMacroRow = ce('div');
+      addMacroRow.style.marginBottom='10px';
+      const macroInput = ce('input'); macroInput.type='text'; macroInput.placeholder='Nuova Macro'; macroInput.style.minWidth='260px';
+      const macroAddBtn = ce('button'); macroAddBtn.className='button'; macroAddBtn.textContent='Aggiungi Macro';
+      macroAddBtn.addEventListener('click', ()=>{ const v = macroInput.value.trim(); if(!v) return; tree.macros.push({label:v, settori:[]}); macroInput.value=''; render(); });
+      addMacroRow.append(macroInput, macroAddBtn);
+      wrap.append(addMacroRow);
+
+      tree.macros.forEach((m, mi)=>{
+        const box = ce('div'); box.style.border='1px solid #e5e5e5'; box.style.borderRadius='8px'; box.style.padding='10px'; box.style.marginBottom='12px';
+        const head = ce('div'); head.style.display='flex'; head.style.gap='8px'; head.style.alignItems='center';
+        const mIn = ce('input'); mIn.type='text'; mIn.value=m.label; mIn.style.minWidth='260px'; mIn.addEventListener('input', e=>{ tree.macros[mi].label = e.target.value; });
+        const mDel = ce('button'); mDel.className='button-link-delete'; mDel.textContent='Rimuovi Macro'; mDel.addEventListener('click', ()=>{ tree.macros.splice(mi,1); render(); });
+        head.append(mIn, mDel);
+        box.append(head);
+
+        const addSRow = ce('div'); addSRow.style.margin='8px 0';
+        const sIn = ce('input'); sIn.type='text'; sIn.placeholder='Nuovo Settore'; sIn.style.minWidth='240px';
+        const sAdd = ce('button'); sAdd.className='button'; sAdd.textContent='Aggiungi Settore';
+        sAdd.addEventListener('click', ()=>{ const v = sIn.value.trim(); if(!v) return; m.settori.push({label:v, settori2:[]}); sIn.value=''; render(); });
+        addSRow.append(sIn, sAdd);
+        box.append(addSRow);
+
+        m.settori.forEach((s, si)=>{
+          const row = ce('div'); row.style.margin='6px 0 6px 16px';
+          const sIn2 = ce('input'); sIn2.type='text'; sIn2.value=s.label; sIn2.style.minWidth='220px'; sIn2.addEventListener('input', e=>{ s.label=e.target.value; });
+          const sDel = ce('button'); sDel.className='button-link-delete'; sDel.textContent='Rimuovi Settore'; sDel.addEventListener('click', ()=>{ m.settori.splice(si,1); render(); });
+          row.append(sIn2, sDel);
+
+          const addS2Row = ce('div'); addS2Row.style.margin='4px 0 4px 16px';
+          const s2In = ce('input'); s2In.type='text'; s2In.placeholder='Nuovo Settore 2'; s2In.style.minWidth='200px';
+          const s2Add = ce('button'); s2Add.className='button'; s2Add.textContent='Aggiungi Settore 2';
+          s2Add.addEventListener('click', ()=>{ const v = s2In.value.trim(); if(!v) return; s.settori2.push({label:v}); s2In.value=''; render(); });
+          addS2Row.append(s2In, s2Add);
+          row.append(addS2Row);
+
+          s.settori2.forEach((s2, s2i)=>{
+            const r2 = ce('div'); r2.style.margin='2px 0 2px 32px';
+            const s2In2 = ce('input'); s2In2.type='text'; s2In2.value=s2.label; s2In2.style.minWidth='200px'; s2In2.addEventListener('input', e=>{ s2.label=e.target.value; });
+            const s2Del = ce('button'); s2Del.className='button-link-delete'; s2Del.textContent='Rimuovi'; s2Del.addEventListener('click', ()=>{ s.settori2.splice(s2i,1); render(); });
+            r2.append(s2In2, s2Del);
+            row.append(r2);
+          });
+
+          box.append(row);
+        });
+
+        wrap.append(box);
+      });
+
+      app.append(wrap);
+    }
+
+    function serializeManualNodes(){
+      const out = {};
+      (tree.macros||[]).forEach(m=>{
+        const mLabel = (m.label||'').trim(); if(!mLabel) return;
+        if (!out[mLabel]) out[mLabel] = {};
+        (m.settori||[]).forEach(s=>{
+          const sLabel = (s.label||'').trim(); if(!sLabel) return;
+          if (!out[mLabel][sLabel]) out[mLabel][sLabel] = [];
+          (s.settori2||[]).forEach(s2=>{
+            const s2Label = (s2.label||'').trim(); if(!s2Label) return;
+            out[mLabel][sLabel].push(s2Label);
+          });
+        });
+      });
+      return out;
+    }
+
+    saveBtn.addEventListener('click', ()=>{
+      const form = new FormData();
+      form.append('action','abf_save_settori_tree');
+      form.append('_wpnonce', nonce);
+      form.append('manual_nodes', JSON.stringify(serializeManualNodes()));
+      fetch(ajaxurl,{method:'POST', body:form}).then(r=>r.json()).then(data=>{
+        if (!data || !data.success){ alert((data && data.message)||'Errore salvataggio'); return; }
+        alert('Struttura salvata.');
+        close();
+      }).catch(()=>alert('Errore rete'));
+    });
+  })();
+  </script>
+  <?php
+}
+
+// AJAX: fetch current tree (manual nodes + distinct DB values)
+function abf_ajax_get_settori_tree(): void {
+  if (!current_user_can('manage_options') || !check_ajax_referer('abf_settori_tree', '_wpnonce', false)) {
+    wp_send_json_error(['message' => 'Unauthorized'], 403);
+  }
+  $manual = abf_get_manual_nodes();
+  // Normalize manual to UI shape
+  $ui = ['macros' => []];
+  foreach ($manual as $m => $sMap) {
+    $uM = ['label' => (string)$m, 'settori' => []];
+    foreach ($sMap as $s => $s2List) {
+      $uS = ['label' => (string)$s, 'settori2' => []];
+      foreach ($s2List as $s2) { $uS['settori2'][] = ['label' => (string)$s2]; }
+      $uM['settori'][] = $uS;
+    }
+    $ui['macros'][] = $uM;
+  }
+  wp_send_json_success($ui);
+}
+add_action('wp_ajax_abf_get_settori_tree', 'abf_ajax_get_settori_tree');
+
+function abf_ajax_save_settori_tree(): void {
+  if (!current_user_can('manage_options') || !check_ajax_referer('abf_settori_tree', '_wpnonce', false)) {
+    wp_send_json_error(['message' => 'Unauthorized'], 403);
+  }
+  $raw = isset($_POST['manual_nodes']) ? (string)wp_unslash($_POST['manual_nodes']) : '';
+  $nodes = json_decode($raw, true);
+  if (!is_array($nodes)) $nodes = [];
+  $settings = get_option(AB_SETTORI_TREE_OPTION, []);
+  if (!is_array($settings)) $settings = [];
+  $settings['manual_nodes'] = $nodes;
+  update_option(AB_SETTORI_TREE_OPTION, $settings, false);
+  ab_sync_clear_cache();
+  wp_send_json_success(['ok' => true]);
+}
+add_action('wp_ajax_abf_save_settori_tree', 'abf_ajax_save_settori_tree');
+
+// Enable portal modal on reserved pages so the front-end editor can use it
+add_filter('culturacsi_portal_enable_modal', '__return_true');
 
 function ab_settori_images_admin_assets(string $hook): void {
   if (!is_admin()) return;
@@ -4119,6 +4779,72 @@ function ab_sync_handle_admin_post(): void {
     exit;
   }
 
+  if ($action === 'save_settori_structure') {
+    check_admin_referer('ab_settori_structure_save');
+    $redirectStruct = admin_url('tools.php?page=ab-settori-structure');
+    $rawHidden = isset($_POST['ab_settori_hidden']) ? (string)wp_unslash($_POST['ab_settori_hidden']) : '';
+    $rawRenames = isset($_POST['ab_settori_renames']) ? (string)wp_unslash($_POST['ab_settori_renames']) : '';
+    $rawMoves = isset($_POST['ab_settori_moves']) ? (string)wp_unslash($_POST['ab_settori_moves']) : '';
+    $applyOnImport = !empty($_POST['ab_settori_apply_on_import']);
+    $lines = preg_split('/\r?\n/', $rawHidden);
+    $hidden = [];
+    if (is_array($lines)) {
+      foreach ($lines as $line) {
+        $label = trim((string)$line);
+        if ($label === '') continue;
+        $hidden[] = $label; // store raw; normalize on read
+      }
+    }
+    // Parse renames: one per line, "old => new"
+    $renames = [];
+    if (trim($rawRenames) !== '') {
+      $rLines = preg_split('/\r?\n/', $rawRenames);
+      if (is_array($rLines)) {
+        foreach ($rLines as $rline) {
+          $rline = trim((string)$rline);
+          if ($rline === '') continue;
+          $parts = preg_split('/\s*=>\s*/', $rline);
+          if (!is_array($parts) || count($parts) < 2) continue;
+          $from = trim((string)$parts[0]);
+          $to   = trim((string)implode('=>', array_slice($parts, 1))); // in case '=>' appears in value
+          if ($from !== '' && $to !== '') {
+            $renames[$from] = $to;
+          }
+        }
+      }
+    }
+    // Parse moves: one per line, "oldPath => newPath"
+    $moves = [];
+    if (trim($rawMoves) !== '') {
+      $mLines = preg_split('/\r?\n/', $rawMoves);
+      if (is_array($mLines)) {
+        foreach ($mLines as $mline) {
+          $mline = trim((string)$mline);
+          if ($mline === '') continue;
+          $parts = preg_split('/\s*=>\s*/', $mline);
+          if (!is_array($parts) || count($parts) < 2) continue;
+          $from = trim((string)$parts[0]);
+          $to   = trim((string)implode('=>', array_slice($parts, 1)));
+          if ($from !== '' && $to !== '') {
+            $moves[] = ['from' => $from, 'to' => $to];
+          }
+        }
+      }
+    }
+    $settings = [
+      'hidden' => $hidden,
+      'renames' => $renames,
+      'moves' => $moves,
+      'apply_on_import' => $applyOnImport ? 1 : 0,
+    ];
+    update_option(AB_SETTORI_TREE_OPTION, $settings, false);
+    // Clear caches so UI reflects changes immediately
+    ab_sync_clear_cache();
+    $msg = 'Struttura Settori aggiornata.';
+    wp_safe_redirect(add_query_arg(['ab_struct_status' => 'ok', 'ab_struct_msg' => $msg], $redirectStruct));
+    exit;
+  }
+
   $redirect = admin_url('tools.php?page=ab-sync-csv');
 
   if ($action === 'save_url') {
@@ -4148,13 +4874,48 @@ function ab_sync_handle_admin_post(): void {
 
   if ($action === 'upload_csv') {
     check_admin_referer('ab_sync_upload_csv');
-    if (!isset($_FILES['ab_csv_file']) || !is_uploaded_file($_FILES['ab_csv_file']['tmp_name'])) {
-      wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'File CSV non valido.'], $redirect));
+    if (!isset($_FILES['ab_csv_file'])) {
+      wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'Nessun file ricevuto.'], $redirect));
       exit;
     }
-    $content = file_get_contents($_FILES['ab_csv_file']['tmp_name']);
+    $f = $_FILES['ab_csv_file'];
+    if (!is_array($f) || !isset($f['tmp_name']) || !is_uploaded_file($f['tmp_name'])) {
+      wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'Upload CSV non valido.'], $redirect));
+      exit;
+    }
+    if (!empty($f['error']) && (int)$f['error'] !== UPLOAD_ERR_OK) {
+      wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'Errore upload CSV.'], $redirect));
+      exit;
+    }
+
+    $tmp = (string)$f['tmp_name'];
+    $size = @filesize($tmp);
+    $maxUpload = (int)apply_filters('ab_sync_max_upload_bytes', AB_SYNC_MAX_UPLOAD_BYTES);
+    if ($size !== false && $size > $maxUpload) {
+      wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'File CSV troppo grande.'], $redirect));
+      exit;
+    }
+
+    // Validate extension/MIME using WP core
+    $check = wp_check_filetype_and_ext($tmp, (string)($f['name'] ?? ''), ['csv' => 'text/csv']);
+    $ext = isset($check['ext']) ? (string)$check['ext'] : '';
+    if ($ext !== 'csv') {
+      // Allow text/plain CSVs as well (common on Windows/macOS)
+      $allowedFallback = ['text/plain', 'application/vnd.ms-excel', 'application/csv', 'text/csv'];
+      $type = isset($check['type']) ? (string)$check['type'] : (string)($f['type'] ?? '');
+      if (!in_array($type, $allowedFallback, true)) {
+        wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'Estensione/MIME non valido. Caricare un file .csv.'], $redirect));
+        exit;
+      }
+    }
+
+    $content = file_get_contents($tmp);
     if ($content === false) {
       wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'Impossibile leggere il file CSV.'], $redirect));
+      exit;
+    }
+    if (strlen($content) > $maxUpload) {
+      wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => 'Contenuto CSV supera la dimensione massima.'], $redirect));
       exit;
     }
     $result = ab_sync_run_import_from_csv_text($content, 'upload');
@@ -4187,4 +4948,24 @@ function ab_sync_cron_runner(): void {
   ab_sync_run_import_from_url();
 }
 add_action(AB_SYNC_HOOK, 'ab_sync_cron_runner');
+
+// Activation/Deactivation: ensure cron is scheduled/cleared
+function ab_sync_activate(): void {
+  if (!wp_next_scheduled(AB_SYNC_HOOK)) {
+    wp_schedule_event(time() + 600, 'hourly', AB_SYNC_HOOK);
+  }
+}
+function ab_sync_deactivate(): void {
+  $timestamp = wp_next_scheduled(AB_SYNC_HOOK);
+  while ($timestamp) {
+    wp_unschedule_event($timestamp, AB_SYNC_HOOK);
+    $timestamp = wp_next_scheduled(AB_SYNC_HOOK);
+  }
+}
+if (function_exists('register_activation_hook')) {
+  register_activation_hook(__FILE__, 'ab_sync_activate');
+}
+if (function_exists('register_deactivation_hook')) {
+  register_deactivation_hook(__FILE__, 'ab_sync_deactivate');
+}
 
