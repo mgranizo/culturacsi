@@ -425,6 +425,61 @@ function ab_assoc_source_key(string $organization, string $province = '', string
   return $org . '|' . $region . '|' . $prov . '|' . $city;
 }
 
+/**
+ * Build a robust source key from a parsed row, keeping distinct chapters per city/province.
+ * When both city and province are missing, append a stable discriminator derived from
+ * the first email domain or first URL host to avoid over-merging different chapters.
+ */
+function ab_assoc_build_source_key_from_row(array $row): array {
+  $organization = trim((string)($row['organization'] ?? ''));
+  $region = trim((string)($row['region'] ?? ''));
+  $province = trim((string)($row['province'] ?? ''));
+  $city = trim((string)($row['city'] ?? ''));
+
+  $baseKey = ab_assoc_source_key($organization, $province, $city, $region);
+
+  $needsDisambiguator = (ab_assoc_normalize_key($province) === '' && ab_assoc_normalize_key($city) === '');
+  if (!$needsDisambiguator) {
+    return [$baseKey, $baseKey]; // strict, compat (same)
+  }
+
+  // Try to derive a discriminator from emails or URLs (website/facebook/instagram/others)
+  $emailsRaw = trim((string)($row['emails'] ?? ''));
+  $urlsRaw = trim((string)($row['urls'] ?? ''));
+
+  $disc = '';
+  if ($emailsRaw !== '') {
+    $parts = preg_split('/[|,;\r\n\s]+/', $emailsRaw);
+    if (is_array($parts)) {
+      foreach ($parts as $p) {
+        $email = sanitize_email(trim((string)$p));
+        if ($email !== '' && strpos($email, '@') !== false) {
+          $dom = strtolower((string)substr((string)strrchr($email, '@'), 1));
+          if ($dom !== '') { $disc = $dom; break; }
+        }
+      }
+    }
+  }
+  if ($disc === '' && $urlsRaw !== '') {
+    $parts = preg_split('/[|,;\r\n\s]+/', $urlsRaw);
+    if (is_array($parts)) {
+      foreach ($parts as $p) {
+        $u = ab_assoc_normalize_url(trim((string)$p));
+        if ($u === '') continue;
+        $host = strtolower((string)(wp_parse_url($u, PHP_URL_HOST) ?? ''));
+        if ($host !== '') { $disc = $host; break; }
+      }
+    }
+  }
+
+  $strict = $baseKey;
+  if ($disc !== '') {
+    $strict = $baseKey . '|' . $disc;
+  }
+  // compat key without discriminator for matching legacy posts
+  return [$strict, $baseKey];
+}
+
 function ab_assoc_row_key_from_values(string $organization, string $region = '', string $province = '', string $city = '', string $category = ''): string {
   $org = ab_assoc_normalize_key($organization);
   if ($org === '') return '';
@@ -3857,23 +3912,36 @@ function ab_sync_upsert_association_posts(array $rows) {
     if ($rowKey === '') {
       $rowKey = ab_assoc_row_key_from_values($organization, $region, $province, $city, $resolvedCategory);
     }
-    $sourceKey = trim((string)($row['source_key'] ?? ''));
-    if ($sourceKey === '') {
-      $sourceKey = ab_assoc_source_key($organization, $province, $city, $region);
-    }
+    // Build strict and legacy-compatible source keys to keep chapters distinct by city/province,
+    // and avoid collapsing when location data is missing.
+    [$sourceKey, $sourceKeyCompat] = ab_assoc_build_source_key_from_row($row);
 
     $postId = 0;
-    if ($rowKey !== '' && isset($rowKeyMap[$rowKey])) {
-      $candidateId = (int)$rowKeyMap[$rowKey];
+    // Prefer source-key match (organization + location) to avoid per-activity duplicates
+    if ($sourceKey !== '' && isset($sourceMap[$sourceKey])) {
+      $candidateId = (int)$sourceMap[$sourceKey];
       if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKey)) {
         $postId = $candidateId;
       }
     }
 
-    if ($postId <= 0 && $sourceKey !== '' && isset($sourceMap[$sourceKey])) {
-      $candidateId = (int)$sourceMap[$sourceKey];
+    // Legacy without discriminator
+    if ($postId <= 0 && $sourceKeyCompat !== '' && isset($sourceMap[$sourceKeyCompat])) {
+      $candidateId = (int)$sourceMap[$sourceKeyCompat];
+      if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKeyCompat)) {
+        $postId = $candidateId;
+      }
+    }
+
+    // Fallback: row-key (category-specific) match
+    if ($postId <= 0 && $rowKey !== '' && isset($rowKeyMap[$rowKey])) {
+      $candidateId = (int)$rowKeyMap[$rowKey];
       if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKey)) {
         $postId = $candidateId;
+        // If a source-key canonical exists, favor it and remap this row-key for future rows
+        if ($sourceKey !== '' && isset($sourceMap[$sourceKey]) && (int)$sourceMap[$sourceKey] !== $postId) {
+          $postId = (int)$sourceMap[$sourceKey];
+        }
       }
     }
 
@@ -3900,16 +3968,23 @@ function ab_sync_upsert_association_posts(array $rows) {
       $created++;
     }
 
-    $linked++;
+    if (!isset($touchedPostIds[$postId])) {
+      $linked++;
+    }
     $touchedPostIds[$postId] = true;
 
     if ($rowKey !== '') {
       update_post_meta($postId, '_ab_row_key', $rowKey);
+      // Point this category-specific row key at the canonical post for this source
       $rowKeyMap[$rowKey] = $postId;
     }
     if ($sourceKey !== '') {
       update_post_meta($postId, '_ab_source_key', $sourceKey);
       $sourceMap[$sourceKey] = $postId;
+      // Also register legacy key so future rows pre-migration still resolve
+      if ($sourceKeyCompat !== '' && $sourceKeyCompat !== $sourceKey) {
+        $sourceMap[$sourceKeyCompat] = $postId;
+      }
     }
 
     $urlsParsed = ab_assoc_parse_urls((string)($row['urls'] ?? ''));
