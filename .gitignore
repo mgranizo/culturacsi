@@ -1,42 +1,89 @@
-# Local WP folders
+# Local IDE settings
+app/public/.vscode/
+
+# Local helper scripts (not production code)
+app/public/tools/
+
+# WordPress core (not tracked in this repo)
+app/public/index.php
+app/public/license.txt
+app/public/readme.html
+app/public/xmlrpc.php
+app/public/wp-admin/
+app/public/wp-includes/
+app/public/wp-*.php
+app/public/wp-config.php
+app/public/wp-config-sample.php
+
+# WordPress runtime cache/backups
+app/public/*.zip
+app/public/wp-content/uploads/
+app/public/wp-content/cache/
+app/public/wp-content/ai1wm-backups/
+app/public/wp-content/backups-dup-lite/logs/
+app/public/wp-content/backups-dup-pro/logs/
+app/public/wp-content/updraft/
+app/public/wp-content/upgrade-temp-backup/
+app/public/wp-content/wp-cache-config.php
+app/public/wp-content/plugins/all-in-one-wp-migration-unlimited-main-1/
+app/public/wp-content/plugins/all-in-one-wp-migration/lib/view/backups/
+app/public/wp-content/plugins/wp-mail-smtp/assets/images/logs/
+app/public/wp-content/plugins/kadence-blocks/.env.testing.slic
+app/public/wp-content/plugins/index.php
+app/public/wp-content/themes/index.php
+app/sql/
 backups/
 logs/
 
-# Optional: Ignore all WP core files, leaving just wp-content mapped
-app/public/wp-admin/
-app/public/wp-includes/
-app/public/wp-*php
-app/public/index.php
-app/public/xmlrpc.php
-app/public/license.txt
-app/public/readme.html
-app/public/robots.txt
+# Auto-generated plugin translation packs
+app/public/wp-content/languages/plugins/updraftplus-*.*
+app/public/wp-content/languages/plugins/wp-super-cache-*.*
+app/public/wp-content/plugins/the-events-calendar/lang/the-events-calendar-lo.mo
 
-# WP Content
-app/public/wp-content/uploads/
-app/public/wp-content/upgrade/
-app/public/wp-content/cache/
-app/public/wp-content/plugins/index.php
-app/public/wp-content/themes/index.php
+# Third-party plugin installs (managed outside this repo)
+app/public/wp-content/plugins/code-snippets/
+app/public/wp-content/plugins/insert-headers-and-footers/
+app/public/wp-content/plugins/menu-icons/
+app/public/wp-content/plugins/rss-importer/
+app/public/wp-content/plugins/ui-fixes2/
+app/public/wp-content/plugins/updraftplus/
+app/public/wp-content/plugins/wordpress-importer/
+app/public/wp-content/plugins/wp-super-cache/
 
-# Environment Variables
-.env
-.env.*
+# Sensitive export/diagnostic files — never commit to repo
+app/public/_export/
+app/public/dump_schema.php
+app/public/dump_*.php
+app/public/_tmp_*
+app/public/.tmp_*/
+app/public/i18n_*_hits.csv
+app/public/site_urls.txt
+app/public/sitemap_index.xml
+app/public/AREA
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Production credential snapshots — MUST NOT be tracked
+app/public/_legacy_scripts/live_wp_config.php
+app/public/_legacy_scripts/
+app/public/_deploy_backups/
+app/public/_online_snapshot/
+app/public/plans/
 
-# Any SQL dumps
-*.sql
-*.sql.gz
+# WP-CLI binary — must not be in webroot
+app/public/wp-cli.phar
+app/public/*.phar
 
-# WP Backups
-*.wpress
-app/public/wp-content/ai1wm-backups/
-*.zip
+# Local rollback/debug artifacts
+app/public/wp-content/mu-plugins/*.pre_rollback_*.bak
+app/public/wp-content/mu-plugins/split.py
+app/public/wp-content/themes/culturacsi/styleOLD.css
+app/public/wp-content/themes/culturacsi/test-settori-access.php
+app/public/wp-content/plugins/associazioni-browser/*.sql
+app/public/wp-content/plugins/associazioni-browser/**/*.bak
+app/public/wp-content/debug.log
+app/public/wp-content/*.log
+app/public/wp-content/advanced-cache.php
+app/public/wp-content/boost-cache/
+app/public/wp-content/fonts/*.css
+app/public/wp-content/plugins/all-in-one-wp-migration/storage/
+app/public/wp-content/plugins/all-in-one-wp-migration-unlimited-main/storage/
+app/public/wp-content/backups-dup-lite/installer/

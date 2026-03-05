@@ -573,13 +573,17 @@ function assoc_portal_events_calendar_browser_shortcode(): string {
         'ev_anno' => (int) $selected['data_year'] > 0 ? (int) $selected['data_year'] : null,
         'ev_vista' => in_array( $selected['vista'], [ 'rows', 'cards' ], true ) ? $selected['vista'] : null,
     ];
+    // Keep deep-link open only for the initial request. Navigation should not
+    // keep forcing the modal to reopen on every month/page change.
+    $base_args_nav = $base_args;
+    $base_args_nav['ev_event_id'] = null;
 
     $prev_ts = strtotime( '-1 month', $timestamp );
     $next_ts = strtotime( '+1 month', $timestamp );
-    $prev_link = esc_url( add_query_arg( array_merge( $base_args, [ 'ev_y' => date( 'Y', $prev_ts ), 'ev_m' => date( 'n', $prev_ts ) ] ), $calendar_base_url ) );
-    $next_link = esc_url( add_query_arg( array_merge( $base_args, [ 'ev_y' => date( 'Y', $next_ts ), 'ev_m' => date( 'n', $next_ts ) ] ), $calendar_base_url ) );
+    $prev_link = esc_url( add_query_arg( array_merge( $base_args_nav, [ 'ev_y' => date( 'Y', $prev_ts ), 'ev_m' => date( 'n', $prev_ts ) ] ), $calendar_base_url ) );
+    $next_link = esc_url( add_query_arg( array_merge( $base_args_nav, [ 'ev_y' => date( 'Y', $next_ts ), 'ev_m' => date( 'n', $next_ts ) ] ), $calendar_base_url ) );
     $calendar_nav_args = array_merge(
-        $base_args,
+        $base_args_nav,
         array(
             'ev_y' => null,
             'ev_m' => null,
@@ -628,7 +632,7 @@ function assoc_portal_events_calendar_browser_shortcode(): string {
     if ( $total_pages > 1 ) {
         $pagination_base = add_query_arg(
             array_merge(
-                $base_args,
+                $base_args_nav,
                 [
                     'ev_y' => $current_year,
                     'ev_m' => $current_month,

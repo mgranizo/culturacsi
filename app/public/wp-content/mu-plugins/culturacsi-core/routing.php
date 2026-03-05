@@ -125,11 +125,14 @@ add_action(
 			'dashboard/events/edit'   => '/area-riservata/eventi/nuovo/',
 			'dashboard/cronologia'    => '/area-riservata/cronologia/',
 			'cronologia'              => '/area-riservata/cronologia/',
-			'area-riservata/cronologia' => '/area-riservata/cronologia/',
 		);
 
 		if ( isset( $aliases[ $path ] ) ) {
 			$target = home_url( $aliases[ $path ] );
+			$target_path = trim( (string) wp_parse_url( $target, PHP_URL_PATH ), '/' );
+			if ( $target_path === $path ) {
+				return;
+			}
 			$query  = isset( $_SERVER['QUERY_STRING'] ) ? trim( (string) $_SERVER['QUERY_STRING'] ) : '';
 			if ( $query !== '' ) {
 				$target .= ( strpos( $target, '?' ) === false ? '?' : '&' ) . $query;

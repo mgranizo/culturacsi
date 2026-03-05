@@ -41,15 +41,22 @@ if ( is_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
  * Fallback menu if no menu is assigned
  */
 function culturacsi_fallback_menu() {
+    $tr = static function( $label ) {
+        if ( function_exists( 'culturacsi_it_runtime_label_map' ) ) {
+            return culturacsi_it_runtime_label_map( $label );
+        }
+        return $label;
+    };
+
     echo '<ul class="nav-list">';
     echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link"><i class="fas fa-home"></i></a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">ACSI Cultura</a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">Servizi</a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">Convenzioni</a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">Settori</a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">Documenti online</a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">Notizie</a></li>';
-    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">Contatti</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'ACSI Cultura' ) ) . '</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'Servizi' ) ) . '</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'Convenzioni' ) ) . '</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'Settori' ) ) . '</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'Documenti online' ) ) . '</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'Notizie' ) ) . '</a></li>';
+    echo '<li class="nav-item"><a href="' . esc_url( home_url( '/' ) ) . '" class="nav-link">' . esc_html( $tr( 'Contatti' ) ) . '</a></li>';
     echo '</ul>';
 }
 
@@ -138,6 +145,11 @@ add_action( 'after_setup_theme', 'culturacsi_setup' );
  */
 function culturacsi_force_italian_gettext( $translated, $text, $domain ) {
     if ( ! in_array( $domain, array( 'culturacsi', 'assoc-portal' ), true ) ) {
+        return $translated;
+    }
+
+    // Respect runtime language switching from the MU translations layer.
+    if ( function_exists( 'culturacsi_get_current_language' ) && 'it' !== culturacsi_get_current_language() ) {
         return $translated;
     }
 
@@ -391,61 +403,11 @@ function add_favicon() {
 }
 add_action('wp_head', 'add_favicon');
 
+/**
+ * Stub for deprecated search form - functionality moved to associazioni-browser plugin.
+ * Templates calling do_action('culturacsi_settori_search_form') will no longer render the old form.
+ */
 function culturacsi_settori_search_form() {
-    ?>
-    <div class="settori-search-form-container">
-        <form role="search" method="get" class="search-form" action="<?php echo esc_url( home_url( '/associazioni/' ) ); ?>">
-            <div class="search-form-grid">
-                <div class="form-row top-row">
-                    <div class="form-group">
-                        <label for="macro_categoria">Macro categoria</label>
-                        <select name="macro_categoria" id="macro_categoria">
-                            <option value="">Tutte</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="settore">Settore</label>
-                        <select name="settore" id="settore">
-                            <option value="">Tutti</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="settore2">Settore 2</label>
-                        <select name="settore2" id="settore2">
-                            <option value="">Tutti</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row bottom-row">
-                    <div class="form-group">
-                        <label for="regione">Regione</label>
-                        <select name="regione" id="regione">
-                            <option value="">Tutte</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="provincia">Provincia</label>
-                        <select name="provincia" id="provincia">
-                            <option value="">Tutte</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="comune">Comune / Città</label>
-                        <select name="comune" id="comune">
-                            <option value="">Tutti</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>&nbsp;</label>
-                        <button type="reset" class="reset-button">Azzera</button>
-                    </div>
-                </div>
-            </div>
-            <div class="search-submit-wrapper">
-                <button type="submit" class="search-submit">Cerca</button>
-            </div>
-        </form>
-    </div>
-    <?php
+    // This function was removed - the search form is now handled by the associazioni-browser plugin.
 }
 add_action( 'culturacsi_settori_search_form', 'culturacsi_settori_search_form' );

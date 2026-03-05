@@ -15,17 +15,25 @@ function culturacsi_logging_get_table_name(): string {
  * Ensure the audit log table exists.
  */
 function culturacsi_logging_ensure_table(): void {
-	if ( get_transient( 'culturacsi_audit_table_checked' ) ) {
-		return;
-	}
-
 	global $wpdb;
 	$table_name = culturacsi_logging_get_table_name();
+	$schema_ready = false;
+	if ( get_transient( 'culturacsi_audit_table_checked' ) ) {
+		$has_user_login = (bool) $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$table_name} LIKE %s", 'user_login' ) );
+		$has_user_display_name = (bool) $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$table_name} LIKE %s", 'user_display_name' ) );
+		$schema_ready = $has_user_login && $has_user_display_name;
+		if ( $schema_ready ) {
+			return;
+		}
+	}
+
 	$charset_collate = $wpdb->get_charset_collate();
 
 	$sql = "CREATE TABLE $table_name (
 		id bigint(20) NOT NULL AUTO_INCREMENT,
 		user_id bigint(20) NOT NULL,
+		user_login varchar(60) DEFAULT '' NOT NULL,
+		user_display_name varchar(255) DEFAULT '' NOT NULL,
 		action varchar(50) NOT NULL,
 		object_type varchar(50) DEFAULT '' NOT NULL,
 		object_id bigint(20) DEFAULT 0 NOT NULL,
@@ -53,12 +61,23 @@ function culturacsi_log_event( string $action, string $object_type = '', int $ob
 	$table_name = culturacsi_logging_get_table_name();
 	
 	$user_id = get_current_user_id();
+	$user_login = '';
+	$user_display_name = '';
+	if ( $user_id > 0 ) {
+		$user = get_userdata( $user_id );
+		if ( $user instanceof WP_User ) {
+			$user_login = (string) $user->user_login;
+			$user_display_name = (string) $user->display_name;
+		}
+	}
 	$ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
 	$wpdb->insert(
 		$table_name,
 		array(
 			'user_id'     => $user_id,
+			'user_login'  => sanitize_user( $user_login, true ),
+			'user_display_name' => sanitize_text_field( $user_display_name ),
 			'action'      => sanitize_key( $action ),
 			'object_type' => sanitize_key( $object_type ),
 			'object_id'   => $object_id,
@@ -66,7 +85,7 @@ function culturacsi_log_event( string $action, string $object_type = '', int $ob
 			'ip_address'  => sanitize_text_field( $ip ),
 			'created_at'  => current_time( 'mysql' ),
 		),
-		array( '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
+		array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
 	);
 }
 
@@ -183,7 +202,7 @@ function culturacsi_logging_get_last_modified( string $object_type, int $object_
 	
 	return $wpdb->get_row(
 		$wpdb->prepare(
-			"SELECT l.*, u.display_name as user_name 
+			"SELECT l.*, COALESCE(NULLIF(u.display_name, ''), NULLIF(l.user_display_name, ''), NULLIF(l.user_login, ''), IF(l.user_id > 0, CONCAT('ID ', l.user_id), 'Sistema')) AS user_name
 			 FROM $table_name l 
 			 LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID 
 			 WHERE l.object_type = %s AND l.object_id = %d AND l.action IN ('update_post', 'update_user', 'approve_user', 'moderate_user', 'approve', 'reject', 'hold')
@@ -203,7 +222,7 @@ function culturacsi_logging_get_creator( string $object_type, int $object_id ): 
 	
 	return $wpdb->get_row(
 		$wpdb->prepare(
-			"SELECT l.*, u.display_name as user_name 
+			"SELECT l.*, COALESCE(NULLIF(u.display_name, ''), NULLIF(l.user_display_name, ''), NULLIF(l.user_login, ''), IF(l.user_id > 0, CONCAT('ID ', l.user_id), 'Sistema')) AS user_name
 			 FROM $table_name l 
 			 LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID 
 			 WHERE l.object_type = %s AND l.object_id = %d AND l.action IN ('create_post', 'wp_insert_user')

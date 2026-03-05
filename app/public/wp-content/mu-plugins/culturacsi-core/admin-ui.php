@@ -1,5 +1,15 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+/**
+ * Safety: ensure portal modal never shows in wp-admin.
+ */
+function culturacsi_hide_portal_modal_in_admin(): void {
+	if ( ! is_admin() ) return;
+	// Use specific selectors to avoid hiding unrelated modals
+	echo '<style>#assoc-portal-modal, .assoc-portal-modal, body.admin .assoc-modal{display:none !important;}</style>';
+}
+add_action( 'admin_head', 'culturacsi_hide_portal_modal_in_admin', 1 );
 function culturacsi_portal_reserved_inline_styles(): void {
 	if ( is_admin() ) {
 		return;
@@ -14,27 +24,9 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-search-panel,
 			.assoc-portal-section{
 				box-sizing:border-box;
-			}
-			/* Keep reserved-area shortcodes inside the intended content width.
-			   If page markup renders shortcodes as top-level nodes, constrain them.
-			   If they are inside a section/group block, let that parent control width. */
-			body.assoc-reserved-page .entry-content > .wp-block-shortcode,
-			body.assoc-reserved-page .entry-content > .assoc-reserved-nav,
-			body.assoc-reserved-page .entry-content > .assoc-search-panel,
-			body.assoc-reserved-page .entry-content > .assoc-portal-section{
-				width:min(80%, 1280px);
-				margin-left:auto;
-				margin-right:auto;
-			}
-			body.assoc-reserved-page .entry-content .wp-block-group .wp-block-shortcode,
-			body.assoc-reserved-page .entry-content .wp-block-group .assoc-reserved-nav,
-			body.assoc-reserved-page .entry-content .wp-block-group .assoc-search-panel,
-			body.assoc-reserved-page .entry-content .wp-block-group .assoc-portal-section{
 				width:100%;
-				max-width:100%;
-				margin-left:0;
-				margin-right:0;
 			}
+
 			/* Reserved pages: keep predictable spacing and allow editor Spacer/Separator blocks
 			   to control distance between shortcode blocks. */
 			body.assoc-reserved-page .entry-content > .wp-block-shortcode + .wp-block-shortcode,
@@ -73,11 +65,20 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-reserved-nav-list li{margin:0 0 -1px;padding:0;list-style:none}
 			.assoc-reserved-nav-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 22px;border-radius:10px 10px 0 0;border:1px solid #c5d2e2;background:#eef4fb;color:#1f2937;font-size:.96rem;font-weight:700;text-decoration:none;transition:background-color .16s ease,color .16s ease,border-color .16s ease}
 			.assoc-reserved-nav-link:hover,.assoc-reserved-nav-link:focus{background:#f8fbff;border-color:#9eb8df;color:#0b3d91}
+			.assoc-reserved-nav-link.is-dark-tab{background:#d7e0ec;border-color:#9caac0;color:#1f2f46}
+			.assoc-reserved-nav-link.is-dark-tab:hover,.assoc-reserved-nav-link.is-dark-tab:focus{background:#c8d4e4;border-color:#7f91ab;color:#122948}
 			.assoc-reserved-nav-link.is-active{background:#fff;border-color:#9eb8df;border-bottom-color:#fff;color:#0b3d91;box-shadow:inset 0 3px 0 #0b3d91;position:relative;z-index:2}
+			.assoc-reserved-nav-link.is-dark-tab.is-active{border-color:#7f91ab;border-bottom-color:#fff;color:#0b3d91;box-shadow:inset 0 3px 0 #334155}
 		.assoc-portal-section{width:100%;max-width:100%;}
 		.assoc-page-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
 		.assoc-page-title{margin:0;font-size:1.5rem;line-height:1.2;color:#0f172a}
 		.assoc-search-panel{margin-bottom:12px;}
+		.assoc-search-panel.assoc-search-collapsible{border:1px solid #d5e0ef;border-radius:12px;background:#f8fbff;padding:10px 12px}
+		.assoc-search-panel.assoc-search-collapsible .assoc-search-toggle{min-height:34px;padding:0 12px;border-radius:8px;border:1px solid #8ea7c7;background:#e6eef9;color:#0b3d91;font-weight:700}
+		.assoc-search-panel.assoc-search-collapsible .assoc-search-toggle:hover,.assoc-search-panel.assoc-search-collapsible .assoc-search-toggle:focus{background:#dbe8f8;border-color:#6f90ba}
+		.assoc-search-panel.assoc-search-collapsible:not(.is-open) > :not(.assoc-search-head){display:none !important}
+		.assoc-search-panel.assoc-search-collapsible:not(.is-open) .assoc-search-head{margin-bottom:0}
+		.assoc-search-panel.assoc-search-collapsible:not(.is-open) .assoc-search-actions a.button{display:none}
 		.assoc-search-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 10px}
 		.assoc-search-meta{min-width:0}
 		.assoc-search-title{margin:0 0 6px;font-size:1.04rem;color:#0f172a}
@@ -95,18 +96,25 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-events-search .assoc-search-field.is-date{grid-column:2}
 			.assoc-events-search .assoc-search-field.is-author{grid-column:3}
 			.assoc-events-search .assoc-search-field.is-status{grid-column:4}
-			.assoc-news-search .assoc-search-form{grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr))}
+			/* Notizie: align sizing with Calendar (Eventi) */
+			.assoc-news-search .assoc-search-form{grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr))}
 			.assoc-news-search .assoc-search-field{grid-row:1}
 			.assoc-news-search .assoc-search-field.is-q{grid-column:1}
 			.assoc-news-search .assoc-search-field.is-date{grid-column:2}
 			.assoc-news-search .assoc-search-field.is-author{grid-column:3}
-			.assoc-news-search .assoc-search-field.is-association{grid-column:4}
-			.assoc-news-search .assoc-search-field.is-status{grid-column:5}
+			.assoc-news-search .assoc-search-field.is-status{grid-column:4}
+			/* Place Associazione on a second row, full width for clarity */
+			.assoc-news-search .assoc-search-field.is-association{grid-row:2;grid-column:1 / span 2}
 			.assoc-users-search .assoc-search-form{grid-template-columns:repeat(3,minmax(0,1fr))}
 			.assoc-users-search .assoc-search-field{grid-row:1}
 			.assoc-users-search .assoc-search-field.is-q{grid-column:1}
 			.assoc-users-search .assoc-search-field.is-role{grid-column:2}
 			.assoc-users-search .assoc-search-field.is-status{grid-column:3}
+			/* Cronologia: two compact fields side by side, each 1/4 width */
+			.assoc-cronologia-search .assoc-search-form{grid-template-columns:repeat(4,minmax(0,1fr))}
+			.assoc-cronologia-search .assoc-search-field{grid-row:1}
+			.assoc-cronologia-search .assoc-search-field.is-type{grid-column:1}
+			.assoc-cronologia-search .assoc-search-field.is-q{grid-column:2}
 			.assoc-associations-search .assoc-search-form{grid-template-columns:repeat(6,minmax(0,1fr))}
 			.assoc-associations-search .assoc-search-field{grid-row:1}
 			.assoc-associations-search .assoc-search-field.is-q{grid-column:1}
@@ -156,6 +164,7 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-table-users .assoc-action-group{grid-template-columns:3.2rem 3.2rem;justify-content:center}
 			.assoc-table-users .assoc-action-chip{width:3.2rem;font-size:10px;padding:0 2px}
 			.assoc-admin-table th.assoc-col-category,.assoc-admin-table td.assoc-col-category{word-break:break-word;overflow-wrap:anywhere}
+			.assoc-admin-table td.assoc-col-category .assoc-category-activities{display:block;font-weight:800;color:#0f172a}
 			.assoc-association-name{display:block;font-weight:800}
 			.assoc-association-location{display:block;margin-top:2px;font-size:.78rem;line-height:1.25;font-weight:600;color:#475569;word-break:break-word;overflow-wrap:anywhere}
 		.assoc-admin-table td.assoc-col-actions{vertical-align:middle;padding-top:10px;padding-bottom:10px}
@@ -204,23 +213,16 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-admin-notice-error{border-color:#dc2626;background:#fee2e2;color:#991b1b}
 			@media (max-width: 1100px){
 				.assoc-events-search .assoc-search-form{grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr))}
-				.assoc-news-search .assoc-search-form{grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr))}
+				.assoc-news-search .assoc-search-form{grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr))}
 				.assoc-users-search .assoc-search-form{grid-template-columns:repeat(3,minmax(0,1fr))}
 				.assoc-associations-search .assoc-search-form{grid-template-columns:repeat(3,minmax(0,1fr))}
+				.assoc-cronologia-search .assoc-search-form{grid-template-columns:repeat(4,minmax(0,1fr))}
 				.assoc-associations-search .assoc-search-field.is-q{grid-column:1}
 				.assoc-associations-search .assoc-search-field.is-category{grid-column:2}
 				.assoc-associations-search .assoc-search-field.is-province{grid-column:3}
 				.assoc-associations-search .assoc-search-field.is-region{grid-column:1}
 				.assoc-associations-search .assoc-search-field.is-city{grid-column:2}
 				.assoc-associations-search .assoc-search-field.is-status{grid-column:3}
-			}
-			@media (max-width: 900px){
-				body.assoc-reserved-page .entry-content > .wp-block-shortcode,
-				body.assoc-reserved-page .entry-content > .assoc-reserved-nav,
-				body.assoc-reserved-page .entry-content > .assoc-search-panel,
-				body.assoc-reserved-page .entry-content > .assoc-portal-section{
-					width:100%;
-				}
 			}
 			@media (max-width: 700px){
 				.assoc-reserved-nav-head .assoc-reserved-nav-logout{position:static;display:inline-flex;margin:0 auto 8px}
@@ -256,6 +258,9 @@ function culturacsi_portal_reserved_inline_styles(): void {
 		.assoc-details-label { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; letter-spacing: 0.025em; }
 		.assoc-details-value { font-size: 0.95rem; color: #0f172a; font-weight: 500; word-break: break-word; }
 		.assoc-details-full { grid-column: 1 / -1; }
+		/* Keep admin row-details readable even if theme CSS overrides inline span defaults. */
+		.assoc-row-details .assoc-details-label { display: block !important; color: #0b3d91 !important; font-weight: 700 !important; margin: 0 0 4px 0 !important; text-transform: none !important; }
+		.assoc-row-details .assoc-details-value { display: block !important; color: #0f172a !important; line-height: 1.35 !important; }
 		.assoc-modal-avatar { width: 80px; height: 80px; border-radius: 999px; object-fit: cover; margin-bottom: 15px; border: 3px solid #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 		
 		.assoc-modal-loader { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-radius: 50%; border-top-color: #0b3d91; animation: assocSpin 0.8s linear infinite; margin: 40px auto; }
@@ -266,12 +271,45 @@ function culturacsi_portal_reserved_inline_styles(): void {
 		.assoc-admin-table tbody tr:hover td { background-color: #f1f7ff !important; }
 		.assoc-admin-table td.assoc-col-actions { position: relative; z-index: 5; } /* Actions should stay clickable separately */
 		.assoc-action-group { position: relative; z-index: 10; }
+		/* Inline row details (dropdown) */
+		.assoc-row-details td{ background:#f8fafc !important; padding:0 !important; }
+		.assoc-row-details-inner{ padding:16px 18px; }
+		.assoc-row-details-footer{ padding:12px 18px; border-top:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:center; gap:12px; }
 		@media (max-width: 640px) {
 			.assoc-details-grid { grid-template-columns: 1fr; }
 		}
 	</style>
 	<script id="culturacsi-reserved-autosubmit">
 		document.addEventListener('DOMContentLoaded', function() {
+			// Ensure AJAX nonce is available even if modal HTML is not rendered
+			try { if (!window.assocPortalNonce) { window.assocPortalNonce = "<?php echo esc_js( wp_create_nonce( 'culturacsi_portal_ajax' ) ); ?>"; } } catch(e) {}
+			const searchPanels = document.querySelectorAll('.assoc-search-panel');
+			searchPanels.forEach(function(panel) {
+				if (!panel || panel.dataset.csiCollapsible === '1') { return; }
+				const head = panel.querySelector('.assoc-search-head');
+				if (!head) { return; }
+				let actions = head.querySelector('.assoc-search-actions');
+				if (!actions) {
+					actions = document.createElement('p');
+					actions.className = 'assoc-search-actions';
+					head.appendChild(actions);
+				}
+				const toggle = document.createElement('button');
+				toggle.type = 'button';
+				toggle.className = 'assoc-search-toggle';
+				toggle.textContent = 'Apri ricerca';
+				toggle.setAttribute('aria-expanded', 'false');
+				toggle.addEventListener('click', function() {
+					const willOpen = !panel.classList.contains('is-open');
+					panel.classList.toggle('is-open', willOpen);
+					toggle.textContent = willOpen ? 'Chiudi ricerca' : 'Apri ricerca';
+					toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+				});
+				actions.insertBefore(toggle, actions.firstChild);
+				panel.classList.add('assoc-search-collapsible');
+				panel.classList.remove('is-open');
+				panel.dataset.csiCollapsible = '1';
+			});
 			const searchForms = document.querySelectorAll('.assoc-search-form');
 			searchForms.forEach(form => {
 				const inputs = form.querySelectorAll('input, select');
@@ -288,57 +326,63 @@ function culturacsi_portal_reserved_inline_styles(): void {
 				});
 			});
 
-			/* Modal Logic */
-			const modal = document.getElementById('assoc-portal-modal');
-			if (modal) {
-				const closeBtn = modal.querySelector('.assoc-modal-close');
-				const overlay = modal.querySelector('.assoc-modal-overlay');
-				const content = document.getElementById('assoc-modal-content');
-				const footer = document.getElementById('assoc-modal-footer');
-				const title = document.getElementById('assoc-modal-title');
-
-				const openModal = (id, type, rowTitle) => {
-					modal.classList.add('is-open');
-					document.body.style.overflow = 'hidden';
-					title.textContent = rowTitle || 'Dettagli';
-					content.innerHTML = '<div class="assoc-modal-loader"></div>';
-					footer.innerHTML = '';
-
-					fetch(`/wp-admin/admin-ajax.php?action=culturacsi_get_modal_data&id=${id}&type=${type}&nonce=${window.assocPortalNonce}`)
-						.then(response => response.json())
-						.then(res => {
-							if (res.success) {
-								content.innerHTML = res.data.html;
-								footer.innerHTML = res.data.footer;
-							} else {
-								content.innerHTML = `<p style="padding:20px;text-align:center;color:#ef4444;">${res.data}</p>`;
-							}
-						})
-						.catch(() => {
-							content.innerHTML = `<p style="padding:20px;text-align:center;color:#ef4444;">Errore di caricamento.</p>`;
-						});
-				};
-
-				const closeModal = () => {
-					modal.classList.remove('is-open');
-					document.body.style.overflow = '';
-				};
-
-				closeBtn?.addEventListener('click', closeModal);
-				overlay?.addEventListener('click', closeModal);
-				document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
-
-				document.addEventListener('click', (e) => {
-					const row = e.target.closest('.assoc-admin-table tbody tr[data-id]');
-					if (!row) return;
-					if (e.target.closest('.assoc-action-group') || e.target.closest('a') || e.target.closest('button')) return;
-
-					const id = row.getAttribute('data-id');
-					const type = row.getAttribute('data-type');
-					const rowTitle = row.querySelector('.assoc-col-title')?.textContent.trim();
-					openModal(id, type, rowTitle);
-				});
+			/* Inline Row Details (Dropdown expansion) */
+			function removeOpenDetailsInTbody(tbody){
+				const open = tbody.querySelectorAll('tr.assoc-row-details');
+				open.forEach(el => el.remove());
 			}
+			function toggleRowDetails(row){
+				const id = row.getAttribute('data-id');
+				const type = row.getAttribute('data-type');
+				if(!id || !type) return;
+				const next = row.nextElementSibling;
+				if(next && next.classList.contains('assoc-row-details')){ next.remove(); return; }
+				const tbody = row.parentElement;
+				removeOpenDetailsInTbody(tbody);
+				const colSpan = row.children.length || 8;
+				const cache = (window.assocRowCache = window.assocRowCache || {});
+				const cacheKey = `${type}:${id}`;
+				const detailsRow = document.createElement('tr');
+				detailsRow.className = 'assoc-row-details';
+				detailsRow.setAttribute('data-for-id', id);
+				detailsRow.innerHTML = `<td colspan="${colSpan}"><div class="assoc-row-details-inner"><div class=\"assoc-modal-loader\"></div></div><div class=\"assoc-row-details-footer\" id=\"assoc-row-details-footer-${id}\"></div></td>`;
+				row.insertAdjacentElement('afterend', detailsRow);
+				// Serve from cache if available
+				if (cache[cacheKey]){
+					const inner = detailsRow.querySelector('.assoc-row-details-inner');
+					const footer = detailsRow.querySelector(`#assoc-row-details-footer-${id}`);
+					inner.innerHTML = cache[cacheKey].html;
+					footer.innerHTML = cache[cacheKey].footer || '';
+					// Normalize labels if needed (e.g., Attività)
+					try{ inner.querySelectorAll('.assoc-details-label').forEach(l=>{ const t=(l.textContent||'').trim(); if(t.startsWith('Attivit')) l.textContent='Attività'; }); }catch(e){}
+					return;
+				}
+				fetch(`/wp-admin/admin-ajax.php?action=culturacsi_get_modal_data&id=${id}&type=${type}&nonce=${window.assocPortalNonce}`)
+					.then(r=>r.json())
+					.then(res=>{
+						const inner = detailsRow.querySelector('.assoc-row-details-inner');
+						const footer = detailsRow.querySelector(`#assoc-row-details-footer-${id}`);
+						if(res && res.success){
+							inner.innerHTML = res.data.html;
+							footer.innerHTML = res.data.footer || '';
+							cache[cacheKey] = { html: res.data.html, footer: res.data.footer || '' };
+							try{ inner.querySelectorAll('.assoc-details-label').forEach(l=>{ const t=(l.textContent||'').trim(); if(t.startsWith('Attivit')) l.textContent='Attività'; }); }catch(e){}
+						}else{
+							inner.innerHTML = `<p style=\"padding:20px;text-align:center;color:#ef4444;\">${res?.data || 'Errore di caricamento.'}</p>`;
+							footer.innerHTML = '';
+						}
+					})
+					.catch(()=>{
+						const inner = detailsRow.querySelector('.assoc-row-details-inner');
+						inner.innerHTML = `<p style=\"padding:20px;text-align:center;color:#ef4444;\">Errore di caricamento.</p>`;
+					});
+			}
+			document.addEventListener('click', (e)=>{
+				const row = e.target.closest('.assoc-admin-table tbody tr[data-id]');
+				if(!row) return;
+				if(e.target.closest('.assoc-action-group') || e.target.closest('a') || e.target.closest('button')) return;
+				toggleRowDetails(row);
+			});
 		});
 	</script>
 	<?php
@@ -412,13 +456,13 @@ add_action( 'admin_head', 'culturacsi_admin_bar_logo_styles' );
 function culturacsi_news_external_url_meta_box(): void {
 	add_meta_box(
 		'culturacsi_news_external_url',
-		'Original News URL',
+		'URL Notizia Originale',
 		static function( WP_Post $post ): void {
 			wp_nonce_field( 'culturacsi_news_external_url_save', 'culturacsi_news_external_url_nonce' );
 			$url = (string) get_post_meta( $post->ID, '_hebeae_external_url', true );
-			echo '<label for="culturacsi_news_external_url_field" style="display:block;font-weight:600;margin-bottom:6px">External URL</label>';
+			echo '<label for="culturacsi_news_external_url_field" style="display:block;font-weight:600;margin-bottom:6px">URL Esterno</label>';
 			echo '<input type="url" id="culturacsi_news_external_url_field" name="culturacsi_news_external_url_field" value="' . esc_attr( $url ) . '" placeholder="https://..." style="width:100%;">';
-			echo '<p class="description">If set, frontend links for this news item open the original website.</p>';
+			echo '<p class="description">Se impostato, i link frontend per questa notizia apriranno il sito originale.</p>';
 		},
 		'news',
 		'normal',
@@ -556,3 +600,142 @@ function culturacsi_remove_unused_admin_menus(): void {
 }
 add_action( 'admin_menu', 'culturacsi_remove_unused_admin_menus', 999 );
 
+
+/**
+ * Render a "Processing" modal for portal forms to provide premium UX.
+ */
+function culturacsi_portal_render_submit_modal(): void {
+	if ( is_admin() ) return;
+	?>
+	<style>
+		#assoc-submit-modal { display: none; position: fixed; inset: 0; z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
+		#assoc-submit-modal.is-open { display: flex; }
+		#assoc-submit-modal .assoc-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(5px); }
+		#assoc-submit-modal .assoc-modal-container { position: relative; background: #fff; width: 100%; max-width: 400px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; overflow: hidden; }
+		.assoc-submit-modal .assoc-modal-content { padding: 40px 24px; position: relative; z-index: 2; }
+		.assoc-submit-status-icon { font-size: 3.5rem; margin-bottom: 20px; display: block; line-height: 1; }
+		.assoc-submit-status-text { font-size: 1.2rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 8px; }
+		.assoc-submit-status-subtext { font-size: 0.95rem; color: #64748b; line-height: 1.5; display: block; }
+		.assoc-modal-loader-big { width: 50px; height: 50px; border: 4px solid #f1f5f9; border-radius: 50%; border-top-color: #0b3d91; animation: assocSubmitSpin 0.8s linear infinite; margin: 0 auto 20px; }
+		@keyframes assocSubmitSpin { to { transform: rotate(360deg); } }
+	</style>
+	<div id="assoc-submit-modal" class="assoc-modal assoc-submit-modal">
+		<div class="assoc-modal-overlay"></div>
+		<div class="assoc-modal-container">
+			<div class="assoc-modal-content">
+				<!-- Content injected by JS -->
+			</div>
+		</div>
+	</div>
+	<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		/**
+		 * Safely render a status panel using DOM APIs (no innerHTML for dynamic strings) to prevent XSS.
+		 */
+		function showSubmitStatus(content, modal, icon, title, message, retryLabel) {
+			content.innerHTML = '';
+			const wrap = document.createElement('div');
+			wrap.className = 'assoc-submit-status';
+			if (icon) {
+				const iconEl = document.createElement('span');
+				iconEl.className = 'assoc-submit-status-icon';
+				iconEl.textContent = icon;
+				wrap.appendChild(iconEl);
+			}
+			const titleEl = document.createElement('span');
+			titleEl.className = 'assoc-submit-status-text';
+			titleEl.textContent = title;
+			wrap.appendChild(titleEl);
+			const msgEl = document.createElement('span');
+			msgEl.className = 'assoc-submit-status-subtext';
+			msgEl.textContent = message;
+			wrap.appendChild(msgEl);
+			if (retryLabel) {
+				const btnWrap = document.createElement('div');
+				btnWrap.style.marginTop = '20px';
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'button assoc-modal-reset';
+				btn.textContent = retryLabel;
+				btn.onclick = () => modal.classList.remove('is-open');
+				btnWrap.appendChild(btn);
+				wrap.appendChild(btnWrap);
+			}
+			content.appendChild(wrap);
+		}
+
+		document.addEventListener('submit', function(e) {
+			const form = e.target.closest('.assoc-portal-form');
+			if (!form || form.classList.contains('assoc-auth-form')) return;
+			if (e.submitter && e.submitter.classList.contains('bypass-modal')) return;
+
+			e.preventDefault();
+			const modal = document.getElementById('assoc-submit-modal');
+			if (!modal) return;
+			const content = modal.querySelector('.assoc-modal-content');
+			const action = form.getAttribute('action') || window.location.href;
+			const redirectUrl = form.dataset.redirectUrl || window.location.href;
+
+			content.innerHTML = `
+				<div class="assoc-submit-status">
+					<div class="assoc-modal-loader-big"></div>
+					<span class="assoc-submit-status-text">Elaborazione in corso...</span>
+					<span class="assoc-submit-status-subtext">Stiamo salvando i dati, attendi un istante.</span>
+				</div>
+			`;
+			modal.classList.add('is-open');
+
+			const formData = new FormData(form);
+			if (e.submitter && e.submitter.name) {
+				formData.append(e.submitter.name, e.submitter.value || '1');
+			}
+			formData.append('is_portal_ajax', '1');
+
+			// Send is_portal_ajax via POST body only (not query string), matching $_POST check on server.
+			fetch(action, {
+				method: 'POST',
+				body: formData,
+				headers: { 'X-Requested-With': 'XMLHttpRequest' }
+			})
+			.then(async r => {
+				const text = await r.text();
+			if (!r.ok) {
+				throw new Error('Errore del server (' + r.status + '). Riprova tra qualche istante.');
+			}
+				try {
+					return JSON.parse(text);
+			} catch (parseErr) {
+				console.error('Portal JSON parse error:', parseErr, text);
+				throw new Error('Risposta non valida dal server. Controlla i log e riprova.');
+			}
+			})
+		.then(res => {
+			if (res && res.success) {
+				const msg = (typeof res.data === 'string' && res.data) ? res.data : 'I dati sono stati salvati correttamente.';
+				showSubmitStatus(content, modal, '✅', 'Operazione completata!', msg, null);
+				setTimeout(() => {
+					let finalUrl = redirectUrl;
+					if (res.data && typeof res.data === 'object' && res.data.redirect) {
+							try {
+								var rUrl = new URL(res.data.redirect, window.location.origin);
+								if (rUrl.origin === window.location.origin) finalUrl = rUrl.href;
+							} catch(e) {}
+						}
+					window.location.href = finalUrl;
+				}, 1600);
+			} else {
+				const errMsg = (typeof res?.data === 'string' && res.data) ? res.data : 'Errore durante il salvataggio.';
+				showSubmitStatus(content, modal, '❌', 'Impossibile procedere', errMsg, 'Riprova');
+			}
+		})
+		.catch(err => {
+			console.error('Portal submit error:', err);
+			const errMsg = (err && err.message) ? err.message : 'Verifica la tua connessione e riprova.';
+			showSubmitStatus(content, modal, '⚠️', 'Errore di sistema', errMsg, 'Chiudi');
+		});
+		});
+	});
+	</script>
+	<?php
+}
+add_action( 'wp_footer', 'culturacsi_portal_render_submit_modal' );

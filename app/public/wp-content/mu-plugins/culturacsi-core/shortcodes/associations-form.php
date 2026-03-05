@@ -16,7 +16,35 @@ function culturacsi_portal_associations_form_shortcode(): string {
 	}
 
 	$message_html = '';
-	if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) && isset( $_POST['culturacsi_associations_form_submit'] ) ) {
+	$normalize_multivalue_text = static function ( $raw ): string {
+		$parts = preg_split( '/[\r\n,;|]+/', (string) $raw );
+		if ( ! is_array( $parts ) ) {
+			return '';
+		}
+		$values = array();
+		foreach ( $parts as $part ) {
+			$val = trim( sanitize_text_field( (string) $part ) );
+			if ( '' !== $val ) {
+				$values[] = $val;
+			}
+		}
+		return implode( ', ', array_values( array_unique( $values ) ) );
+	};
+	$normalize_multivalue_email = static function ( $raw ): string {
+		$parts = preg_split( '/[\r\n,;|\s]+/', (string) $raw );
+		if ( ! is_array( $parts ) ) {
+			return '';
+		}
+		$emails = array();
+		foreach ( $parts as $part ) {
+			$email = sanitize_email( trim( (string) $part ) );
+			if ( '' !== $email ) {
+				$emails[ strtolower( $email ) ] = $email;
+			}
+		}
+		return implode( ', ', array_values( $emails ) );
+	};
+	if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) && ( isset( $_POST['culturacsi_associations_form_submit'] ) || isset( $_REQUEST['is_portal_ajax'] ) ) ) {
 		if ( ! isset( $_POST['culturacsi_associations_form_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['culturacsi_associations_form_nonce'] ) ), 'culturacsi_associations_form_save' ) ) {
 			$message_html = culturacsi_portal_notice( 'Verifica di sicurezza non valida.', 'error' );
 		} else {
@@ -65,11 +93,14 @@ function culturacsi_portal_associations_form_shortcode(): string {
 						foreach ( $meta_fields as $key ) {
 							$raw = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : '';
 							$val = sanitize_text_field( $raw );
+							if ( 'phone' === $key ) {
+								$val = $normalize_multivalue_text( $raw );
+							}
 							if ( in_array( $key, array( 'website', 'facebook', 'instagram', 'youtube', 'tiktok', 'x' ), true ) ) {
 								$val = esc_url_raw( $val );
 							}
 							if ( 'email' === $key ) {
-								$val = sanitize_email( $val );
+								$val = $normalize_multivalue_email( $raw );
 							}
 							update_post_meta( $saved_id, $key, $val );
 						}
@@ -79,7 +110,11 @@ function culturacsi_portal_associations_form_shortcode(): string {
 						if ( isset( $_POST['tax_input']['activity_category'] ) && is_array( $_POST['tax_input']['activity_category'] ) ) {
 							$term_ids = array_map( 'intval', wp_unslash( $_POST['tax_input']['activity_category'] ) );
 						}
-						wp_set_post_terms( $saved_id, $term_ids, 'activity_category' );
+						if ( function_exists( 'culturacsi_activity_tree_set_post_terms' ) ) {
+							culturacsi_activity_tree_set_post_terms( (int) $saved_id, $term_ids );
+						} else {
+							wp_set_post_terms( $saved_id, $term_ids, 'activity_category' );
+						}
 
 						if ( ! empty( $_FILES['featured_image']['name'] ) ) {
 							require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -91,19 +126,26 @@ function culturacsi_portal_associations_form_shortcode(): string {
 							}
 						}
 
-						wp_safe_redirect(
-							add_query_arg(
-								array(
-									'association_id' => $saved_id,
-									'saved'          => '1',
-								),
-								culturacsi_portal_admin_association_form_url()
-							)
-						);
+
+
+						if ( isset( $_REQUEST['is_portal_ajax'] ) && '1' === (string) $_REQUEST['is_portal_ajax'] ) {
+							while ( ob_get_level() > 0 ) {
+								ob_end_clean();
+							}
+							wp_send_json_success( 'Associazione salvata correttamente.', 200 );
+						}
+						wp_safe_redirect( add_query_arg( array( 'saved' => '1' ), home_url( '/area-riservata/associazioni/' ) ) );
 						exit;
 					}
 				}
 			}
+		}
+
+		if ( isset( $_REQUEST['is_portal_ajax'] ) && '1' === (string) $_REQUEST['is_portal_ajax'] ) {
+			while ( ob_get_level() > 0 ) {
+				ob_end_clean();
+			}
+			wp_send_json_error( wp_strip_all_tags( $message_html ) ?: 'Errore durante il salvataggio.', 400 );
 		}
 	}
 
@@ -124,12 +166,33 @@ function culturacsi_portal_associations_form_shortcode(): string {
 
 	ob_start();
 	echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	if ( function_exists( 'culturacsi_portal_render_process_tutorial' ) ) {
+		echo culturacsi_portal_render_process_tutorial(
+			array(
+				'title'     => '',
+				'intro'     => 'Completa i dati essenziali dell\'associazione in modo semplice e ordinato.',
+				'summary'   => 'Tutorial rapido',
+				'checklist' => array(
+					array( 'label' => 'Nome associazione compilato', 'selectors' => array( '#post_title' ), 'mode' => 'all' ),
+					array( 'label' => 'Descrizione o sommario compilati', 'selectors' => array( '#post_excerpt', '#culturacsi_association_content' ), 'mode' => 'any' ),
+					array( 'label' => 'Categoria attivita selezionata', 'selectors' => array( 'input[name="tax_input[activity_category][]"]:checked' ), 'mode' => 'any' ),
+				),
+				'steps'     => array(
+					array( 'text' => 'Inserisci nome e stato dell\'associazione.' ),
+					array( 'text' => 'Compila descrizione, contatti e social.' ),
+					array( 'text' => 'Seleziona almeno una categoria attivita.' ),
+					array( 'text' => 'Salva l\'associazione.' ),
+				),
+			)
+		); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+	$root_url = home_url( '/area-riservata/associazioni/' );
 	?>
-	<form class="assoc-portal-form" method="post" enctype="multipart/form-data">
+	<form class="assoc-portal-form" method="post" enctype="multipart/form-data" data-redirect-url="<?php echo esc_url( $root_url ); ?>">
 		<?php wp_nonce_field( 'culturacsi_associations_form_save', 'culturacsi_associations_form_nonce' ); ?>
 		<input type="hidden" name="form_association_id" value="<?php echo esc_attr( (string) $association_id ); ?>">
 		<h2><?php echo esc_html( $association_id > 0 ? 'Modifica Associazione' : 'Crea Associazione' ); ?></h2>
-		<p><label for="post_title">Nome associazione *</label><input type="text" id="post_title" name="post_title" required value="<?php echo esc_attr( $association instanceof WP_Post ? (string) $association->post_title : '' ); ?>"></p>
+		<p><?php echo culturacsi_portal_label_with_tip( 'post_title', 'Nome associazione *', 'Inserisci il nome completo ufficiale.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><input type="text" id="post_title" name="post_title" required value="<?php echo esc_attr( $association instanceof WP_Post ? (string) $association->post_title : '' ); ?>"></p>
 		<p><label for="post_status">Stato</label>
 			<select id="post_status" name="post_status">
 				<option value="publish" <?php selected( $association instanceof WP_Post ? (string) $association->post_status : 'publish', 'publish' ); ?>>Pubblicato</option>
@@ -152,8 +215,8 @@ function culturacsi_portal_associations_form_shortcode(): string {
 		<p><label for="region">Regione</label><input type="text" id="region" name="region" value="<?php echo esc_attr( (string) ( get_post_meta( $association_id, 'region', true ) ?: get_post_meta( $association_id, 'regione', true ) ) ); ?>"></p>
 		<p><label for="comune">Comune</label><input type="text" id="comune" name="comune" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'comune', true ) ); ?>"></p>
 		<p><label for="address">Indirizzo</label><input type="text" id="address" name="address" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'address', true ) ); ?>"></p>
-		<p><label for="phone">Telefono</label><input type="text" id="phone" name="phone" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'phone', true ) ); ?>"></p>
-		<p><label for="email">Email</label><input type="email" id="email" name="email" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'email', true ) ); ?>"></p>
+		<p><label for="phone">Telefono</label><textarea id="phone" name="phone" rows="2" placeholder="Es. +39 333 1234567, 02 1234567"><?php echo esc_textarea( (string) get_post_meta( $association_id, 'phone', true ) ); ?></textarea><small>Puoi inserire piu numeri separati da virgola o una per riga.</small></p>
+		<p><label for="email">Email</label><textarea id="email" name="email" rows="2" placeholder="Es. info@dominio.it, segreteria@dominio.it"><?php echo esc_textarea( (string) get_post_meta( $association_id, 'email', true ) ); ?></textarea><small>Puoi inserire piu email separate da virgola o una per riga.</small></p>
 		<p><label for="website">Sito web</label><input type="url" id="website" name="website" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'website', true ) ); ?>"></p>
 		<p><label for="facebook">Facebook</label><input type="url" id="facebook" name="facebook" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'facebook', true ) ); ?>"></p>
 		<p><label for="instagram">Instagram</label><input type="url" id="instagram" name="instagram" value="<?php echo esc_attr( (string) get_post_meta( $association_id, 'instagram', true ) ); ?>"></p>
@@ -164,17 +227,21 @@ function culturacsi_portal_associations_form_shortcode(): string {
 			<legend>Categorie Attivita</legend>
 			<div class="category-checklist">
 				<?php
-				if ( ! function_exists( 'wp_terms_checklist' ) ) {
-					require_once ABSPATH . 'wp-admin/includes/template.php';
+				if ( function_exists( 'culturacsi_activity_tree_render_checklist' ) ) {
+					echo culturacsi_activity_tree_render_checklist( $selected_terms, 'tax_input[activity_category][]', (int) $association_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				} else {
+					if ( ! function_exists( 'wp_terms_checklist' ) ) {
+						require_once ABSPATH . 'wp-admin/includes/template.php';
+					}
+					wp_terms_checklist(
+						$association_id,
+						array(
+							'taxonomy'      => 'activity_category',
+							'selected_cats' => $selected_terms,
+							'checked_ontop' => false,
+						)
+					);
 				}
-				wp_terms_checklist(
-					$association_id,
-					array(
-						'taxonomy'      => 'activity_category',
-						'selected_cats' => $selected_terms,
-						'checked_ontop' => false,
-					)
-				);
 				?>
 			</div>
 		</fieldset>

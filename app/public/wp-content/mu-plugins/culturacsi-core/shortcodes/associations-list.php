@@ -24,8 +24,7 @@ function culturacsi_portal_associations_list_shortcode(): string {
 	$query_args = array(
 		'post_type'      => 'association',
 		'post_status'    => ( $is_site_admin && 'all' !== $filters['status'] ) ? array( $filters['status'] ) : array( 'publish', 'private', 'pending', 'draft' ),
-		'posts_per_page' => 1000,
-		'paged'          => $current_page,
+		'posts_per_page' => -1,
 		'orderby'        => 'title',
 		'order'          => 'ASC',
 	);
@@ -58,13 +57,8 @@ function culturacsi_portal_associations_list_shortcode(): string {
 		if ( 'category' === $sort_state['sort'] ) {
 			foreach ( $posts as $p ) {
 				if ( ! $p instanceof WP_Post ) continue;
-				$terms = get_the_terms( (int) $p->ID, 'activity_category' );
-				if ( is_array( $terms ) && ! is_wp_error( $terms ) ) {
-					$names = wp_list_pluck( $terms, 'name' );
-					$sort_keys[ $p->ID ] = implode( ', ', array_map( 'sanitize_text_field', $names ) );
-				} else {
-					$sort_keys[ $p->ID ] = '';
-				}
+				$activity_labels = function_exists( 'culturacsi_activity_labels_for_post' ) ? culturacsi_activity_labels_for_post( (int) $p->ID ) : array();
+				$sort_keys[ $p->ID ] = ! empty( $activity_labels ) ? implode( ', ', $activity_labels ) : '';
 			}
 		}
 
@@ -110,7 +104,8 @@ function culturacsi_portal_associations_list_shortcode(): string {
 	ob_start();
 	echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	echo '<div class="assoc-portal-associations-list assoc-portal-section">';
-	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Associazioni</h2><div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( add_query_arg( 'culturacsi_export', 'association', $_SERVER['REQUEST_URI'] ?? '' ) ) . '">Esporta CSV</a> ';
+	$export_url = function_exists( 'culturacsi_export_build_url' ) ? culturacsi_export_build_url( 'association', (string) ( $_SERVER['REQUEST_URI'] ?? '' ) ) : (string) add_query_arg( 'culturacsi_export', 'association', $_SERVER['REQUEST_URI'] ?? '' );
+	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Associazioni</h2><div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( $export_url ) . '">Esporta CSV</a> ';
 	if ( $is_site_admin ) {
 		echo '<a class="button button-primary" href="' . esc_url( culturacsi_portal_admin_association_form_url() ) . '">Crea Associazione</a>';
 		echo ' <button type="button" id="abf-open-struct-modal-portal" class="button">Struttura Settori</button>';
@@ -119,94 +114,483 @@ function culturacsi_portal_associations_list_shortcode(): string {
 	}
 		echo '</div></div>';
 		// Inline modal bootstrap script for portal editor (site admin only)
-		$nonce = wp_create_nonce( 'abf_settori_tree' );
-		echo '<script>(function(){
-			var openBtn=document.getElementById("abf-open-struct-modal-portal"); if(!openBtn)return;
-			var modal=null, overlay=null, content=null, footer=null, closeBtn=null, titleEl=null;
-			var ajaxurl = window.ajaxurl || ' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ';
-			var nonce = ' . wp_json_encode( $nonce ) . ';
+		$nonce        = wp_create_nonce( 'abf_settori_tree' );
+		$ajaxurl_json = wp_json_encode( admin_url( 'admin-ajax.php' ) );
+		$nonce_json   = wp_json_encode( $nonce );
+		echo <<<HTML
+<script>(function(){
+	var openBtn=document.getElementById("abf-open-struct-modal-portal"); if(!openBtn) return;
+	var modal=null, overlay=null, content=null, footer=null, closeBtn=null, titleEl=null;
+	var ajaxurl = window.ajaxurl || {$ajaxurl_json};
+	var nonce = {$nonce_json};
+	var tree = { macros: [] };
+	var nodeUidCounter = 1;
+	var pendingFocusId = "";
 
-			function ensureModal(){
-				if (modal && content && footer && titleEl) return true;
-				modal=document.getElementById("assoc-portal-modal");
-				if(!modal) return false;
-				overlay=modal.querySelector(".assoc-modal-overlay");
-				content=document.getElementById("assoc-modal-content");
-				footer=document.getElementById("assoc-modal-footer");
-				closeBtn=modal.querySelector(".assoc-modal-close");
-				titleEl=document.getElementById("assoc-modal-title");
-				if(overlay){ overlay.addEventListener("click", close); }
-				if(closeBtn){ closeBtn.addEventListener("click", close); }
-				return true;
+	function qn(t){ return document.createElement(t); }
+	function nextNodeUid(){ return "n" + (nodeUidCounter++); }
+	function ensureNodeUid(node){
+		if(!node || typeof node !== "object") return "";
+		if(!node._uid) node._uid = nextNodeUid();
+		return node._uid;
+	}
+	function compareLabels(a, b){
+		var al = (a || "").trim();
+		var bl = (b || "").trim();
+		return al.localeCompare(bl, "it", { sensitivity: "base", numeric: true });
+	}
+	function queueFocus(node){
+		pendingFocusId = (node && node._uid) ? String(node._uid) : "";
+	}
+	function applyPendingFocus(){
+		if(!pendingFocusId || !content) return;
+		var focusTarget = null;
+		var candidates = content.querySelectorAll("[data-node-id]");
+		for(var i = 0; i < candidates.length; i++){
+			if((candidates[i].getAttribute("data-node-id") || "") === pendingFocusId){
+				focusTarget = candidates[i];
+				break;
 			}
+		}
+		pendingFocusId = "";
+		if(!focusTarget) return;
+		try { focusTarget.focus({ preventScroll: true }); } catch(e) { focusTarget.focus(); }
+		if(typeof focusTarget.select === "function") focusTarget.select();
+		try { focusTarget.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" }); }
+		catch(e){ focusTarget.scrollIntoView(); }
+	}
 
-			function open(){ if(!ensureModal()) return; modal.classList.add('is-open'); titleEl.textContent="Editor Struttura"; loadTree(); }
-			function close(){ if(!ensureModal()) return; modal.classList.remove('is-open'); content.innerHTML=' . wp_json_encode( '' ) . '; footer.innerHTML=' . wp_json_encode( '' ) . '; }
-			openBtn.addEventListener("click", function(){ open(); });
+	function makeSettore(label){
+		return { _uid: nextNodeUid(), label: label || "", settori2: [ { _uid: nextNodeUid(), label: "" } ] };
+	}
 
-			var tree = { macros: [] };
+	function makeMacro(label){
+		return { _uid: nextNodeUid(), label: label || "", settori: [ makeSettore("") ] };
+	}
 
-			function loadTree(){
-				if(!ensureModal()) return;
-				content.textContent = "Caricamento…";
-				var form = new FormData(); form.append("action","abf_get_settori_tree"); form.append("_wpnonce", nonce);
-				fetch(ajaxurl,{method:"POST", body:form}).then(r=>r.json()).then(function(data){
-					if(!data || !data.success){ content.textContent=(data && data.message)||"Errore"; return; }
-					tree = data.data || {macros:[]}; render();
-				}).catch(function(){ content.textContent="Errore rete"; });
+	function addMacroAfter(index, label){
+		var macros = tree.macros = Array.isArray(tree.macros) ? tree.macros : [];
+		var next = makeMacro(label || "");
+		if (index < 0 || index >= macros.length) {
+			macros.push(next);
+		} else {
+			macros.splice(index + 1, 0, next);
+		}
+		return next;
+	}
+
+	function addMacroAlphabetical(label){
+		var macros = tree.macros = Array.isArray(tree.macros) ? tree.macros : [];
+		var wanted = (label || "").trim();
+		if(wanted === ""){
+			var next = makeMacro("");
+			macros.push(next);
+			return next;
+		}
+		for(var j = 0; j < macros.length; j++){
+			var existingLabel = (macros[j] && macros[j].label) ? String(macros[j].label).trim() : "";
+			if(existingLabel !== "" && compareLabels(wanted, existingLabel) === 0){
+				return macros[j];
 			}
+		}
+		var next = makeMacro(wanted);
+		var insertAt = macros.length;
+		for(var i = 0; i < macros.length; i++){
+			var currentLabel = (macros[i] && macros[i].label) ? String(macros[i].label).trim() : "";
+			if(currentLabel === "") continue;
+			if(compareLabels(wanted, currentLabel) < 0){
+				insertAt = i;
+				break;
+			}
+		}
+		macros.splice(insertAt, 0, next);
+		return next;
+	}
 
-			function qn(t){return document.createElement(t)}
-			function render(){
-				if(!ensureModal()) return;
-				content.innerHTML=' . wp_json_encode( '' ) . ';
-				footer.innerHTML=' . wp_json_encode( '' ) . ';
-				var wrap = qn("div");
-				var row = qn("div"); row.style.marginBottom="10px";
-				var mIn = qn("input"); mIn.type="text"; mIn.placeholder="Nuova Macro"; mIn.style.minWidth="260px";
-				var mBtn = qn("button"); mBtn.className="button"; mBtn.textContent="Aggiungi Macro"; mBtn.addEventListener("click", function(){ var v=mIn.value.trim(); if(!v)return; tree.macros.push({label:v, settori:[]}); mIn.value=' . wp_json_encode( '' ) . '; render(); });
-				row.appendChild(mIn); row.appendChild(mBtn); wrap.appendChild(row);
+	function addSettoreAfter(macroNode, index, label){
+		if (!macroNode || typeof macroNode !== "object") return;
+		var settori = macroNode.settori = Array.isArray(macroNode.settori) ? macroNode.settori : [];
+		var next = makeSettore(label || "");
+		if (index < 0 || index >= settori.length) {
+			settori.push(next);
+		} else {
+			settori.splice(index + 1, 0, next);
+		}
+		return next;
+	}
 
-				(tree.macros||[]).forEach(function(m,mi){
-					var box=qn("div"); box.style.border="1px solid #e5e5e5"; box.style.borderRadius="8px"; box.style.padding="10px"; box.style.marginBottom="12px";
-					var head=qn("div"); head.style.display="flex"; head.style.gap="8px"; head.style.alignItems="center";
-					var mE=qn("input"); mE.type="text"; mE.value=m.label||""; mE.style.minWidth="260px"; mE.addEventListener("input", function(e){ tree.macros[mi].label=e.target.value; });
-					var mDel=qn("button"); mDel.className="button-link-delete"; mDel.textContent="Rimuovi Macro"; mDel.addEventListener("click", function(){ tree.macros.splice(mi,1); render(); });
-					head.appendChild(mE); head.appendChild(mDel); box.appendChild(head);
+	function addSettore2After(settoreNode, index, label){
+		if (!settoreNode || typeof settoreNode !== "object") return;
+		var leaves = settoreNode.settori2 = Array.isArray(settoreNode.settori2) ? settoreNode.settori2 : [];
+		var next = { _uid: nextNodeUid(), label: label || "" };
+		if (index < 0 || index >= leaves.length) {
+			leaves.push(next);
+		} else {
+			leaves.splice(index + 1, 0, next);
+		}
+		return next;
+	}
 
-					var addS=qn("div"); addS.style.margin="8px 0"; var sIn=qn("input"); sIn.type="text"; sIn.placeholder="Nuovo Settore"; sIn.style.minWidth="240px";
-					var sBtn=qn("button"); sBtn.className="button"; sBtn.textContent="Aggiungi Settore"; sBtn.addEventListener("click", function(){ var v=sIn.value.trim(); if(!v)return; (m.settori=m.settori||[]).push({label:v, settori2:[]}); sIn.value=' . wp_json_encode( '' ) . '; render(); });
-					addS.appendChild(sIn); addS.appendChild(sBtn); box.appendChild(addS);
-
-					(m.settori||[]).forEach(function(s,si){
-						var row=qn("div"); row.style.margin="6px 0 6px 16px";
-						var sE=qn("input"); sE.type="text"; sE.value=s.label||""; sE.style.minWidth="220px"; sE.addEventListener("input", function(e){ s.label=e.target.value; });
-						var sDel=qn("button"); sDel.className="button-link-delete"; sDel.textContent="Rimuovi Settore"; sDel.addEventListener("click", function(){ m.settori.splice(si,1); render(); });
-						row.appendChild(sE); row.appendChild(sDel);
-						var addS2=qn("div"); addS2.style.margin="4px 0 4px 16px";
-						var s2In=qn("input"); s2In.type="text"; s2In.placeholder="Nuovo Settore 2"; s2In.style.minWidth="200px";
-						var s2Btn=qn("button"); s2Btn.className="button"; s2Btn.textContent="Aggiungi Settore 2"; s2Btn.addEventListener("click", function(){ var v=s2In.value.trim(); if(!v)return; (s.settori2=s.settori2||[]).push({label:v}); s2In.value=' . wp_json_encode( '' ) . '; render(); });
-						addS2.appendChild(s2In); addS2.appendChild(s2Btn); row.appendChild(addS2);
-
-						(s.settori2||[]).forEach(function(s2,s2i){
-							var r2=qn("div"); r2.style.margin="2px 0 2px 32px";
-							var s2E=qn("input"); s2E.type="text"; s2E.value=s2.label||""; s2E.style.minWidth="200px"; s2E.addEventListener("input", function(e){ s2.label=e.target.value; });
-							var s2Del=qn("button"); s2Del.className="button-link-delete"; s2Del.textContent="Rimuovi"; s2Del.addEventListener("click", function(){ s.settori2.splice(s2i,1); render(); });
-							r2.appendChild(s2E); r2.appendChild(s2Del); row.appendChild(r2);
-						});
-						box.appendChild(row);
-					});
-					wrap.appendChild(box);
+	function normalizeTreeShape(){
+		if (!tree || typeof tree !== "object") tree = { macros: [] };
+		if (!Array.isArray(tree.macros)) tree.macros = [];
+		tree.macros = tree.macros.map(function(macro){
+			macro = (macro && typeof macro === "object") ? macro : {};
+			ensureNodeUid(macro);
+			macro.label = (macro.label || "");
+			if (!Array.isArray(macro.settori)) macro.settori = [];
+			macro.settori = macro.settori.map(function(settore){
+				settore = (settore && typeof settore === "object") ? settore : {};
+				ensureNodeUid(settore);
+				settore.label = (settore.label || "");
+				if (!Array.isArray(settore.settori2)) settore.settori2 = [];
+				settore.settori2 = settore.settori2.map(function(leaf){
+					leaf = (leaf && typeof leaf === "object") ? leaf : {};
+					ensureNodeUid(leaf);
+					leaf.label = (leaf.label || "");
+					return leaf;
 				});
-				content.appendChild(wrap);
-				var saveBtn=document.createElement("button"); saveBtn.className="button button-primary"; saveBtn.textContent="Salva"; saveBtn.addEventListener("click", save);
-				footer.appendChild(saveBtn);
+				return settore;
+			});
+			return macro;
+		});
+	}
+
+	function makeIconButton(sign, title, className){
+		var b = qn("button");
+		b.type = "button";
+		b.className = "assoc-struct-icon-btn " + (className || "");
+		b.title = title || "";
+		b.setAttribute("aria-label", title || "");
+		b.textContent = sign;
+		return b;
+	}
+
+	function ensureEditorStyles(){
+		var styleId = "assoc-portal-struct-editor-style";
+		if (document.getElementById(styleId)) return;
+		var st = document.createElement("style");
+		st.id = styleId;
+		st.textContent = [
+			".assoc-struct-editor{--ab-blue-900:#123a6d;--ab-blue-800:#1f4f8e;--ab-blue-700:#2b67ad;--ab-blue-300:#b9d2ee;--ab-blue-200:#d4e4f5;--ab-blue-100:#ebf3fb;display:grid;gap:8px;color:#11263f;font-size:13px;line-height:1.2}",
+			".assoc-struct-row{display:grid;grid-template-columns:minmax(220px,1fr) auto minmax(150px,180px);align-items:center;gap:8px;padding:5px 8px;border:1px solid var(--ab-blue-300);border-radius:10px}",
+			".assoc-struct-row-macro{background:#e8f0fa;border-color:#a8c4e6}",
+			".assoc-struct-row-settore{background:#f1f6fd;border-color:#c2d8ef}",
+			".assoc-struct-row-settore2{background:#f7fbff;border-color:#d5e4f4}",
+			".assoc-struct-input{width:100%;max-width:100%;min-height:30px;padding:4px 10px;border:1px solid #9fbce0;border-radius:999px;background:#fff;color:#0f2744;font-size:12px;font-weight:600}",
+			".assoc-struct-input::placeholder{color:#516a86;opacity:1;font-weight:500}",
+			".assoc-struct-actions{display:inline-flex;gap:4px;justify-self:center}",
+			".assoc-struct-icon-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #7ea5cf;border-radius:7px;background:var(--ab-blue-700);color:#fff;font-size:19px;line-height:1;font-weight:800;cursor:pointer;padding:0}",
+			".assoc-struct-icon-btn:hover,.assoc-struct-icon-btn:focus{background:var(--ab-blue-800);border-color:#628ebd;color:#fff}",
+			".assoc-struct-icon-btn.is-minus{background:#ecf2f9;color:#1e456f;border-color:#98b6d8}",
+			".assoc-struct-icon-btn.is-minus:hover,.assoc-struct-icon-btn.is-minus:focus{background:#dbe8f6;color:#163a61;border-color:#7d9fc6}",
+			".assoc-struct-level{justify-self:end;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#365579}",
+			".assoc-struct-level.assoc-level-macro{color:#1b4675}",
+			".assoc-struct-level.assoc-level-settore{color:#2b5f98}",
+			".assoc-struct-level.assoc-level-settore2{color:#4b6788}",
+			".assoc-struct-card{border:1px solid #b9d0ea;border-radius:12px;background:#fff;overflow:hidden}",
+			".assoc-struct-children{display:grid;gap:6px;padding:6px 8px 8px 8px}",
+			".assoc-struct-children-macro{border-top:1px solid #d7e5f5;background:#fcfeff}",
+			".assoc-struct-settore-wrap{display:grid;gap:6px;padding-left:14px;border-left:2px solid #d3e3f4;margin-left:8px}",
+			".assoc-struct-settore2-wrap{display:grid;gap:5px;padding-left:14px;border-left:2px solid #e1ebf7;margin-left:8px}",
+			".assoc-struct-empty{padding:7px 9px;border:1px dashed #bed1e7;border-radius:8px;color:#35506f;background:#f5f9fe;font-size:12px}",
+			".assoc-struct-top-add{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:8px;align-items:center}",
+			".assoc-struct-top-add .button{min-height:30px;line-height:28px;padding:0 12px;font-weight:700}",
+			".assoc-struct-quick-add{display:inline-flex;align-items:center;justify-content:flex-start;gap:6px}",
+			".assoc-struct-quick-add .button{min-height:28px;line-height:26px;padding:0 10px;font-size:12px}",
+			"@media (max-width:900px){.assoc-struct-row{grid-template-columns:1fr auto;grid-template-areas:'input actions' 'level level'}.assoc-struct-row .assoc-struct-input{grid-area:input}.assoc-struct-row .assoc-struct-actions{grid-area:actions}.assoc-struct-row .assoc-struct-level{grid-area:level;justify-self:start}.assoc-struct-top-add{grid-template-columns:1fr}.assoc-struct-settore-wrap,.assoc-struct-settore2-wrap{padding-left:8px;margin-left:2px}}"
+		].join("");
+		document.head.appendChild(st);
+	}
+
+	function ensureModal(){
+		if (modal && content && footer && titleEl) return true;
+		ensureEditorStyles();
+		var styleId="assoc-portal-modal-inline-style";
+		if(!document.getElementById(styleId)){
+			var mst=document.createElement("style"); mst.id=styleId;
+			mst.textContent=".assoc-modal{display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;padding:8px}.assoc-modal.is-open{display:flex}.assoc-modal-overlay{position:absolute;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px)}.assoc-modal-container{position:relative;background:#fff;width:min(1180px,98vw);max-height:96vh;border-radius:14px;box-shadow:0 18px 38px -12px rgba(0,0,0,.32);overflow:hidden;display:flex;flex-direction:column}.assoc-modal-header{padding:9px 12px;border-bottom:1px solid #dbe4f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc}.assoc-modal-title{margin:0;font-size:1.05rem;font-weight:800;color:#0f172a}.assoc-modal-close{background:transparent;border:0;cursor:pointer;padding:4px 8px;border-radius:8px;color:#334155}.assoc-modal-close:hover{background:#e8eef8;color:#0f172a}.assoc-modal-content{padding:8px;overflow-y:auto;flex-grow:1}.assoc-modal-footer{padding:8px;border-top:1px solid #dbe4f0;background:#f8fafc;display:flex;justify-content:flex-end;gap:8px}";
+			document.head.appendChild(mst);
+		}
+		modal=document.getElementById("assoc-portal-modal");
+		if(!modal){
+			modal=document.createElement("div"); modal.id="assoc-portal-modal"; modal.className="assoc-modal";
+			modal.innerHTML="<div class=\"assoc-modal-overlay\"></div><div class=\"assoc-modal-container\"><header class=\"assoc-modal-header\"><h2 class=\"assoc-modal-title\" id=\"assoc-modal-title\">Dettagli</h2><button class=\"assoc-modal-close\" aria-label=\"Chiudi\">&#215;</button></header><main class=\"assoc-modal-content\" id=\"assoc-modal-content\"></main><footer class=\"assoc-modal-footer\" id=\"assoc-modal-footer\"></footer></div>";
+			document.body.appendChild(modal);
+		}
+		overlay=modal.querySelector(".assoc-modal-overlay");
+		content=document.getElementById("assoc-modal-content");
+		footer=document.getElementById("assoc-modal-footer");
+		closeBtn=modal.querySelector(".assoc-modal-close");
+		titleEl=document.getElementById("assoc-modal-title");
+		if(overlay){ overlay.addEventListener("click", close); }
+		if(closeBtn){ closeBtn.addEventListener("click", close); }
+		document.addEventListener("keydown", function(ev){ if(ev.key==="Escape" && modal && modal.classList.contains("is-open")) close(); });
+		return true;
+	}
+
+	function open(){
+		if(!ensureModal()) return;
+		modal.classList.add("is-open");
+		titleEl.textContent="Struttura Settori";
+		loadTree();
+	}
+
+	function close(){
+		if(!ensureModal()) return;
+		modal.classList.remove("is-open");
+		content.innerHTML="";
+		footer.innerHTML="";
+	}
+
+	openBtn.addEventListener("click", open);
+
+	function loadTree(){
+		if(!ensureModal()) return;
+		content.textContent = "Caricamento...";
+		var form = new FormData();
+		form.append("action","abf_get_settori_tree");
+		form.append("_wpnonce", nonce);
+		fetch(ajaxurl,{method:"POST", body:form}).then(function(r){ return r.json(); }).then(function(data){
+			if(!data || !data.success){ content.textContent=(data && data.message)||"Errore"; return; }
+			tree = data.data || {macros:[]};
+			normalizeTreeShape();
+			render();
+		}).catch(function(){ content.textContent="Errore rete"; });
+	}
+
+	function render(){
+		if(!ensureModal()) return;
+		normalizeTreeShape();
+		content.innerHTML="";
+		footer.innerHTML="";
+
+		var wrap = qn("div");
+		wrap.className = "assoc-struct-editor";
+
+		var addMacro = qn("div");
+		addMacro.className = "assoc-struct-top-add";
+		var macroInput = qn("input");
+		macroInput.type = "text";
+		macroInput.className = "assoc-struct-input";
+		macroInput.placeholder = "Nuova macro categoria";
+		var macroAddBtn = qn("button");
+		macroAddBtn.type = "button";
+		macroAddBtn.className = "button button-primary";
+		macroAddBtn.textContent = "Aggiungi Macro";
+		macroAddBtn.addEventListener("click", function(){
+			var v = (macroInput.value||"").trim();
+			if(!v) return;
+			var createdMacro = addMacroAlphabetical(v);
+			queueFocus(createdMacro);
+			macroInput.value = "";
+			render();
+		});
+		addMacro.appendChild(macroInput);
+		addMacro.appendChild(macroAddBtn);
+		wrap.appendChild(addMacro);
+
+		if(!Array.isArray(tree.macros) || tree.macros.length===0){
+			var empty = qn("div");
+			empty.className = "assoc-struct-empty";
+			empty.textContent = "Nessuna macro categoria. Aggiungi la prima voce.";
+			wrap.appendChild(empty);
+		}
+
+		(tree.macros||[]).forEach(function(m,mi){
+			var macroCard = qn("section");
+			macroCard.className = "assoc-struct-card";
+
+			var macroHead = qn("div");
+			macroHead.className = "assoc-struct-row assoc-struct-row-macro";
+			var macroEdit = qn("input");
+			macroEdit.type = "text";
+			macroEdit.className = "assoc-struct-input";
+			macroEdit.setAttribute("data-node-id", String(ensureNodeUid(m)));
+			macroEdit.value = m.label || "";
+			macroEdit.addEventListener("input", function(e){ tree.macros[mi].label = e.target.value; });
+			var macroActions = qn("div");
+			macroActions.className = "assoc-struct-actions";
+			var macroAdd = makeIconButton("+", "Aggiungi nuova macro categoria", "is-plus");
+			macroAdd.addEventListener("click", function(){
+				var created = addMacroAfter(mi, "");
+				queueFocus(created);
+				render();
+			});
+			var macroDelete = makeIconButton("-", "Rimuovi macro categoria", "is-minus");
+			macroDelete.addEventListener("click", function(){ tree.macros.splice(mi,1); render(); });
+			macroActions.appendChild(macroAdd);
+			macroActions.appendChild(macroDelete);
+			var macroLevel = qn("span");
+			macroLevel.className = "assoc-struct-level assoc-level-macro";
+			macroLevel.textContent = "Macro Categoria";
+			macroHead.appendChild(macroEdit);
+			macroHead.appendChild(macroActions);
+			macroHead.appendChild(macroLevel);
+			macroCard.appendChild(macroHead);
+
+			var macroBranch = qn("div");
+			macroBranch.className = "assoc-struct-children assoc-struct-children-macro";
+
+			if(!Array.isArray(m.settori) || m.settori.length===0){
+				var emptySettori = qn("div");
+				emptySettori.className = "assoc-struct-empty";
+				emptySettori.textContent = "Nessun settore in questa macro.";
+				var quickAddSettoreWrap = qn("div");
+				quickAddSettoreWrap.className = "assoc-struct-quick-add";
+				var quickAddSettore = qn("button");
+				quickAddSettore.type = "button";
+				quickAddSettore.className = "button button-small";
+				quickAddSettore.textContent = "Aggiungi primo settore";
+				quickAddSettore.addEventListener("click", function(){
+					var createdFirstSettore = addSettoreAfter(m, -1, "");
+					queueFocus(createdFirstSettore);
+					render();
+				});
+				quickAddSettoreWrap.appendChild(quickAddSettore);
+				macroBranch.appendChild(emptySettori);
+				macroBranch.appendChild(quickAddSettoreWrap);
 			}
 
-			function serialize(){ var out={}; (tree.macros||[]).forEach(function(m){ var ml=(m.label||"").trim(); if(!ml) return; if(!out[ml]) out[ml]={}; (m.settori||[]).forEach(function(s){ var sl=(s.label||"").trim(); if(!sl) return; if(!out[ml][sl]) out[ml][sl]=[]; (s.settori2||[]).forEach(function(s2){ var s2l=(s2.label||"").trim(); if(!s2l) return; out[ml][sl].push(s2l); }); }); }); return out; }
+			(m.settori||[]).forEach(function(s,si){
+				var settoreNode = qn("div");
+				settoreNode.className = "assoc-struct-settore-wrap";
 
-			function save(){ var form=new FormData(); form.append("action","abf_save_settori_tree"); form.append("_wpnonce", nonce); form.append("manual_nodes", JSON.stringify(serialize())); fetch(ajaxurl,{method:"POST", body:form}).then(r=>r.json()).then(function(data){ if(!data||!data.success){ alert((data&&data.message)||"Errore salvataggio"); return; } alert("Struttura salvata."); close(); }).catch(function(){ alert("Errore rete"); }); }
-		})();</script>';
+				var settoreHead = qn("div");
+				settoreHead.className = "assoc-struct-row assoc-struct-row-settore";
+				var settoreEdit = qn("input");
+				settoreEdit.type = "text";
+				settoreEdit.className = "assoc-struct-input";
+				settoreEdit.setAttribute("data-node-id", String(ensureNodeUid(s)));
+				settoreEdit.value = s.label || "";
+				settoreEdit.addEventListener("input", function(e){ s.label = e.target.value; });
+				var settoreActions = qn("div");
+				settoreActions.className = "assoc-struct-actions";
+				var settoreAdd = makeIconButton("+", "Aggiungi nuovo settore", "is-plus");
+				settoreAdd.addEventListener("click", function(){
+					var createdSettore = addSettoreAfter(m, si, "");
+					queueFocus(createdSettore);
+					render();
+				});
+				var settoreDelete = makeIconButton("-", "Rimuovi settore", "is-minus");
+				settoreDelete.addEventListener("click", function(){ m.settori.splice(si,1); render(); });
+				settoreActions.appendChild(settoreAdd);
+				settoreActions.appendChild(settoreDelete);
+				var settoreLevel = qn("span");
+				settoreLevel.className = "assoc-struct-level assoc-level-settore";
+				settoreLevel.textContent = "Settore";
+				settoreHead.appendChild(settoreEdit);
+				settoreHead.appendChild(settoreActions);
+				settoreHead.appendChild(settoreLevel);
+				settoreNode.appendChild(settoreHead);
+
+				var leafList = qn("div");
+				leafList.className = "assoc-struct-settore2-wrap";
+				if(!Array.isArray(s.settori2) || s.settori2.length===0){
+					var emptyLeaves = qn("div");
+					emptyLeaves.className = "assoc-struct-empty";
+					emptyLeaves.textContent = "Nessun settore 2 in questo settore.";
+					var quickAddSettore2Wrap = qn("div");
+					quickAddSettore2Wrap.className = "assoc-struct-quick-add";
+					var quickAddSettore2 = qn("button");
+					quickAddSettore2.type = "button";
+					quickAddSettore2.className = "button button-small";
+					quickAddSettore2.textContent = "Aggiungi primo settore 2";
+					quickAddSettore2.addEventListener("click", function(){
+						var createdSettore2 = addSettore2After(s, -1, "");
+						queueFocus(createdSettore2);
+						render();
+					});
+					quickAddSettore2Wrap.appendChild(quickAddSettore2);
+					leafList.appendChild(emptyLeaves);
+					leafList.appendChild(quickAddSettore2Wrap);
+				}
+				(s.settori2||[]).forEach(function(s2,s2i){
+					var leaf = qn("div");
+					leaf.className = "assoc-struct-row assoc-struct-row-settore2";
+					var leafEdit = qn("input");
+					leafEdit.type = "text";
+					leafEdit.className = "assoc-struct-input";
+					leafEdit.setAttribute("data-node-id", String(ensureNodeUid(s2)));
+					leafEdit.value = s2.label || "";
+					leafEdit.addEventListener("input", function(e){ s2.label = e.target.value; });
+					var leafActions = qn("div");
+					leafActions.className = "assoc-struct-actions";
+					var leafAdd = makeIconButton("+", "Aggiungi nuovo settore 2", "is-plus");
+					leafAdd.addEventListener("click", function(){
+						var createdLeaf = addSettore2After(s, s2i, "");
+						queueFocus(createdLeaf);
+						render();
+					});
+					var leafDelete = makeIconButton("-", "Rimuovi settore 2", "is-minus");
+					leafDelete.addEventListener("click", function(){ s.settori2.splice(s2i,1); render(); });
+					leafActions.appendChild(leafAdd);
+					leafActions.appendChild(leafDelete);
+					var leafLevel = qn("span");
+					leafLevel.className = "assoc-struct-level assoc-level-settore2";
+					leafLevel.textContent = "Settore 2";
+					leaf.appendChild(leafEdit);
+					leaf.appendChild(leafActions);
+					leaf.appendChild(leafLevel);
+					leafList.appendChild(leaf);
+				});
+				settoreNode.appendChild(leafList);
+				macroBranch.appendChild(settoreNode);
+			});
+
+			macroCard.appendChild(macroBranch);
+			wrap.appendChild(macroCard);
+		});
+
+		content.appendChild(wrap);
+
+		var closeBtnFooter = qn("button");
+		closeBtnFooter.type = "button";
+		closeBtnFooter.className = "button";
+		closeBtnFooter.textContent = "Chiudi";
+		closeBtnFooter.addEventListener("click", close);
+
+		var saveBtn = qn("button");
+		saveBtn.type = "button";
+		saveBtn.className = "button button-primary";
+		saveBtn.textContent = "Salva Struttura";
+		saveBtn.addEventListener("click", save);
+
+		footer.appendChild(closeBtnFooter);
+		footer.appendChild(saveBtn);
+		applyPendingFocus();
+	}
+
+	function serialize(){
+		var out={};
+		(tree.macros||[]).forEach(function(m){
+			var ml=(m.label||"").trim(); if(!ml) return;
+			if(!out[ml]) out[ml]={};
+			(m.settori||[]).forEach(function(s){
+				var sl=(s.label||"").trim(); if(!sl) return;
+				if(!out[ml][sl]) out[ml][sl]=[];
+				(s.settori2||[]).forEach(function(s2){
+					var s2l=(s2.label||"").trim(); if(!s2l) return;
+					out[ml][sl].push(s2l);
+				});
+			});
+		});
+		return out;
+	}
+
+	function save(){
+		var form=new FormData();
+		form.append("action","abf_save_settori_tree");
+		form.append("_wpnonce", nonce);
+		form.append("manual_nodes", JSON.stringify(serialize()));
+		fetch(ajaxurl,{method:"POST", body:form}).then(function(r){ return r.json(); }).then(function(data){
+			if(!data||!data.success){ alert((data&&data.message)||"Errore salvataggio"); return; }
+			alert("Struttura salvata.");
+			close();
+		}).catch(function(){ alert("Errore rete"); });
+	}
+})();</script>
+HTML;
 	echo '<style>.assoc-admin-table tr.is-pending-approval td { background-color: #fef2f2 !important; border-top: 2px solid #ef4444 !important; border-bottom: 2px solid #ef4444 !important; } .assoc-admin-table tr.is-pending-approval td:first-child { border-left: 2px solid #ef4444 !important; } .assoc-admin-table tr.is-pending-approval td:last-child { border-right: 2px solid #ef4444 !important; }</style>';
 	echo '<table class="widefat striped assoc-admin-table assoc-table-assocs"><colgroup><col style="width:4ch"><col style="width:42%"><col style="width:16%"><col style="width:6.2rem"><col style="width:140px"><col style="width:110px"></colgroup><thead><tr>';
 	echo culturacsi_portal_sortable_th( '#', 'index', $sort_state['sort'], $sort_state['dir'], 'a_sort', 'a_dir', $base_url, 'assoc-col-index', array( 'a_page' ) );
@@ -226,8 +610,12 @@ function culturacsi_portal_associations_list_shortcode(): string {
 			++$row_num;
 			$post_id     = (int) $post_item->ID;
 			$status_obj  = get_post_status_object( get_post_status( $post_id ) );
-			$terms       = wp_get_post_terms( $post_id, 'activity_category', array( 'fields' => 'names' ) );
-			$category    = ! empty( $terms ) ? implode( ', ', array_map( 'sanitize_text_field', $terms ) ) : '-';
+			$activity_labels = function_exists( 'culturacsi_activity_labels_for_post' ) ? culturacsi_activity_labels_for_post( $post_id ) : array();
+			if ( ! empty( $activity_labels ) ) {
+				$category = implode( ', ', $activity_labels );
+			} else {
+				$category = '-';
+			}
 			$city        = trim( (string) get_post_meta( $post_id, 'city', true ) );
 			if ( '' === $city ) {
 				$city = trim( (string) get_post_meta( $post_id, 'comune', true ) );
@@ -238,15 +626,24 @@ function culturacsi_portal_associations_list_shortcode(): string {
 				$region = trim( (string) get_post_meta( $post_id, 'regione', true ) );
 			}
 			$location_parts = array();
-			if ( '' !== $city ) {
-				$location_parts[] = 'Citta: ' . $city;
-			}
-			if ( '' !== $province ) {
-				$location_parts[] = 'Prov: ' . strtoupper( $province );
-			}
-			if ( '' !== $region ) {
-				$location_parts[] = 'Regione: ' . $region;
-			}
+			$seen_location  = array();
+			$push_location  = static function( string $label, string $value ) use ( &$location_parts, &$seen_location ): void {
+				$value = trim( $value );
+				if ( '' === $value ) {
+					return;
+				}
+				$norm = strtolower( function_exists( 'remove_accents' ) ? remove_accents( $value ) : $value );
+				$norm = preg_replace( '/\s+/u', ' ', $norm );
+				$norm = is_string( $norm ) ? trim( $norm ) : '';
+				if ( '' === $norm || isset( $seen_location[ $norm ] ) ) {
+					return;
+				}
+				$seen_location[ $norm ] = true;
+				$location_parts[]       = $label . ': ' . $value;
+			};
+			$push_location( 'Citta', $city );
+			$push_location( 'Prov', strtoupper( $province ) );
+			$push_location( 'Regione', $region );
 			$location_summary = implode( ' | ', $location_parts );
 			$edit_url    = $is_site_admin ? culturacsi_portal_admin_association_form_url( (int) $post_id ) : home_url( '/area-riservata/profilo/' );
 
@@ -258,7 +655,11 @@ function culturacsi_portal_associations_list_shortcode(): string {
 				echo '<span class="assoc-association-location">' . esc_html( $location_summary ) . '</span>';
 			}
 			echo '</td>';
-			echo '<td class="assoc-col-category">' . esc_html( $category ) . '</td>';
+			if ( '-' !== $category ) {
+				echo '<td class="assoc-col-category"><strong class="assoc-category-activities">' . esc_html( $category ) . '</strong></td>';
+			} else {
+				echo '<td class="assoc-col-category">-</td>';
+			}
 			echo '<td class="assoc-col-status assoc-col-status-compact"><span class="assoc-status-pill status-' . esc_attr( (string) get_post_status( $post_id ) ) . '">' . esc_html( $status_obj ? $status_obj->label : (string) get_post_status( $post_id ) ) . '</span></td>';
 			
 			// History column for Associations

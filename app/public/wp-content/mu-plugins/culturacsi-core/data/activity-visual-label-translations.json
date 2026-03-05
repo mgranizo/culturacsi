@@ -1,0 +1,620 @@
+{
+  "Accademia": {
+    "it": "Accademia",
+    "en": "Academy",
+    "es": "Academia",
+    "fr": "Académie"
+  },
+  "Accademie": {
+    "it": "Accademie",
+    "en": "Academies",
+    "es": "Academias",
+    "fr": "Académies"
+  },
+  "Altre attività artistiche o culturali adattate": {
+    "it": "Altre attività artistiche o culturali adattate",
+    "en": "Other adapted artistic or cultural activities",
+    "es": "Otras actividades artísticas o culturales adaptadas",
+    "fr": "Autres activités artistiques ou culturelles adaptées"
+  },
+  "Ambiente": {
+    "it": "Ambiente",
+    "en": "Environment",
+    "es": "Ambiente",
+    "fr": "Environnement"
+  },
+  "Ambiente acquatico": {
+    "it": "Ambiente acquatico",
+    "en": "Aquatic environment",
+    "es": "Medio acuático",
+    "fr": "Milieu aquatique"
+  },
+  "Ambiente terrestre": {
+    "it": "Ambiente terrestre",
+    "en": "Terrestrial environment",
+    "es": "Medio ambiente terrestre",
+    "fr": "Environnement terrestre"
+  },
+  "ARTE": {
+    "it": "ARTE",
+    "en": "ART",
+    "es": "ARTE",
+    "fr": "ART"
+  },
+  "Arte digitale": {
+    "it": "Arte digitale",
+    "en": "Digital art",
+    "es": "arte digital",
+    "fr": "Art numérique"
+  },
+  "Arte Digitale": {
+    "it": "Arte Digitale",
+    "en": "Digital Art",
+    "es": "Arte digital",
+    "fr": "Art numérique"
+  },
+  "Arti Marziali Storiche e Tradizionali": {
+    "it": "Arti Marziali Storiche e Tradizionali",
+    "en": "Historical and Traditional Martial Arts",
+    "es": "Artes marciales históricas y tradicionales",
+    "fr": "Arts martiaux historiques et traditionnels"
+  },
+  "ARTI PERFORMATIVE / DANZA E MOVIMENTO": {
+    "it": "ARTI PERFORMATIVE / DANZA E MOVIMENTO",
+    "en": "PERFORMING ARTS / DANCE AND MOVEMENT",
+    "es": "ARTES ESCÉNICAS / DANZA Y MOVIMIENTO",
+    "fr": "ARTS DU SPECTACLE / DANSE ET MOUVEMENT"
+  },
+  "Arti Visive": {
+    "it": "Arti Visive",
+    "en": "Visual Arts",
+    "es": "Artes Visuales",
+    "fr": "Arts visuels"
+  },
+  "Attività aeree": {
+    "it": "Attività aeree",
+    "en": "Aerial activities",
+    "es": "Actividades aéreas",
+    "fr": "Activités aériennes"
+  },
+  "ATTIVITÀ CULTURALI E RICREATIVE": {
+    "it": "ATTIVITÀ CULTURALI E RICREATIVE",
+    "en": "CULTURAL AND RECREATIONAL ACTIVITIES",
+    "es": "ACTIVIDADES CULTURALES Y RECREATIVAS",
+    "fr": "ACTIVITÉS CULTURELLES ET RÉCRÉATIVES"
+  },
+  "Attività Culturali e Ricreative": {
+    "it": "Attività Culturali e Ricreative",
+    "en": "Cultural and Recreational Activities",
+    "es": "Actividades culturales y recreativas",
+    "fr": "Activités culturelles et récréatives"
+  },
+  "ATTIVITÀ DEDICATE ALLE FRAGILITÀ": {
+    "it": "ATTIVITÀ DEDICATE ALLE FRAGILITÀ",
+    "en": "ACTIVITIES DEDICATED TO FRAGILITIES",
+    "es": "ACTIVIDADES DEDICADAS A LAS FRAGILIDADES",
+    "fr": "DES ACTIVITÉS DÉDIÉES AUX FRAGILITÉS"
+  },
+  "Attività di Supporto": {
+    "it": "Attività di Supporto",
+    "en": "Support Activities",
+    "es": "Actividades de apoyo",
+    "fr": "Activités de soutien"
+  },
+  "Attività folkloristiche": {
+    "it": "Attività folkloristiche",
+    "en": "Folkloristic activities",
+    "es": "Actividades folklóricas",
+    "fr": "Activités folkloriques"
+  },
+  "Attività subacquee": {
+    "it": "Attività subacquee",
+    "en": "Underwater activities",
+    "es": "Actividades submarinas",
+    "fr": "Activités sous-marines"
+  },
+  "Attività subacquee inclusive": {
+    "it": "Attività subacquee inclusive",
+    "en": "Inclusive underwater activities",
+    "es": "Actividades subacuáticas inclusivas",
+    "fr": "Activités sous-marines inclusives"
+  },
+  "Attività Terapeutiche": {
+    "it": "Attività Terapeutiche",
+    "en": "Therapeutic Activities",
+    "es": "Actividades Terapéuticas",
+    "fr": "Activités thérapeutiques"
+  },
+  "Attività velistiche": {
+    "it": "Attività velistiche",
+    "en": "Sailing activities",
+    "es": "Actividades de vela",
+    "fr": "Activités de voile"
+  },
+  "Attività velistiche e Surfing": {
+    "it": "Attività velistiche e Surfing",
+    "en": "Sailing and Surfing activities",
+    "es": "Actividades de vela y surf",
+    "fr": "Activités de voile et de surf"
+  },
+  "Auto Storiche": {
+    "it": "Auto Storiche",
+    "en": "Historic Cars",
+    "es": "Coches Históricos",
+    "fr": "Voitures historiques"
+  },
+  "Auto storiche e moto d’epoca": {
+    "it": "Auto storiche e moto d’epoca",
+    "en": "Historic cars and vintage motorcycles",
+    "es": "Autos históricos y motos de época",
+    "fr": "Voitures historiques et motos d’époque"
+  },
+  "Backgammon": {
+    "it": "Backgammon",
+    "en": "Backgammon",
+    "es": "Backgammon",
+    "fr": "Backgammon"
+  },
+  "Bocce": {
+    "it": "Bocce",
+    "en": "Bowls",
+    "es": "Bochas",
+    "fr": "Boules"
+  },
+  "Bocce e boccette": {
+    "it": "Bocce e boccette",
+    "en": "Bowls and flasks",
+    "es": "Cuencos y matraces",
+    "fr": "Bols et flacons"
+  },
+  "Break Dance": {
+    "it": "Break Dance",
+    "en": "Break Dance",
+    "es": "break dance",
+    "fr": "Break-Dance"
+  },
+  "Breakdance": {
+    "it": "Breakdance",
+    "en": "Breakdancing",
+    "es": "breakdance",
+    "fr": "Breakdance"
+  },
+  "Bridge": {
+    "it": "Bridge",
+    "en": "Bridge",
+    "es": "Bridge",
+    "fr": "Bridge"
+  },
+  "Burraco": {
+    "it": "Burraco",
+    "en": "Burraco",
+    "es": "Burraco",
+    "fr": "Burraco"
+  },
+  "Canto": {
+    "it": "Canto",
+    "en": "Singing",
+    "es": "Canto",
+    "fr": "Chant"
+  },
+  "Centri Polivalenti": {
+    "it": "Centri Polivalenti",
+    "en": "Multipurpose Centers",
+    "es": "Centros Polivalentes",
+    "fr": "Centres polyvalents"
+  },
+  "Cicloturismo": {
+    "it": "Cicloturismo",
+    "en": "Cycle tourism",
+    "es": "Cicloturismo",
+    "fr": "Cyclotourisme"
+  },
+  "Cinema": {
+    "it": "Cinema",
+    "en": "Cinema",
+    "es": "Cine",
+    "fr": "Cinéma"
+  },
+  "CINOFILIA": {
+    "it": "CINOFILIA",
+    "en": "Cynophilia",
+    "es": "Cinofilia",
+    "fr": "Cynophilie"
+  },
+  "Cinofilia": {
+    "it": "Cinofilia",
+    "en": "Kinophilia",
+    "es": "Cinefilia",
+    "fr": "Kinophilie"
+  },
+  "Collezionismo": {
+    "it": "Collezionismo",
+    "en": "Collectibles",
+    "es": "Coleccionables",
+    "fr": "Objets de collection"
+  },
+  "Collezionismo e Cultura del Dettaglio": {
+    "it": "Collezionismo e Cultura del Dettaglio",
+    "en": "Collecting and Detail Culture",
+    "es": "Coleccionismo y cultura del detalle",
+    "fr": "Collectionnisme et culture du détail"
+  },
+  "Comunicazione": {
+    "it": "Comunicazione",
+    "en": "Communication",
+    "es": "Comunicación",
+    "fr": "Communication"
+  },
+  "CULTURA": {
+    "it": "CULTURA",
+    "en": "CULTURE",
+    "es": "CULTURA",
+    "fr": "CULTURE"
+  },
+  "Cultura Enogastronomica Identitaria": {
+    "it": "Cultura Enogastronomica Identitaria",
+    "en": "Identity Food and Wine Culture",
+    "es": "Identidad Cultura Enogastronómica",
+    "fr": "Identité Culture Gastronomique et Vinicole"
+  },
+  "Cultura Motoristica Storica": {
+    "it": "Cultura Motoristica Storica",
+    "en": "Historical Motoring Culture",
+    "es": "Cultura histórica del automovilismo",
+    "fr": "Culture automobile historique"
+  },
+  "CULTURE DI NICCHIA": {
+    "it": "CULTURE DI NICCHIA",
+    "en": "NICHE CULTURES",
+    "es": "CULTURAS NICHO",
+    "fr": "CULTURES DE NICHE"
+  },
+  "Dama e Scacchi": {
+    "it": "Dama e Scacchi",
+    "en": "Checkers and Chess",
+    "es": "Damas y Ajedrez",
+    "fr": "Dames et Échecs"
+  },
+  "Danza": {
+    "it": "Danza",
+    "en": "Dance",
+    "es": "Bailar",
+    "fr": "Danse"
+  },
+  "Danza Aerea": {
+    "it": "Danza Aerea",
+    "en": "Aerial Dance",
+    "es": "Danza Aérea",
+    "fr": "Danse Aérienne"
+  },
+  "Danza aerea": {
+    "it": "Danza aerea",
+    "en": "Aerial dance",
+    "es": "Danza aérea",
+    "fr": "Danse aérienne"
+  },
+  "Danza con disabili": {
+    "it": "Danza con disabili",
+    "en": "Dance with people with disabilities",
+    "es": "Danza con personas con discapacidad",
+    "fr": "Danse avec des personnes en situation de handicap"
+  },
+  "ECOSISTEMA": {
+    "it": "ECOSISTEMA",
+    "en": "ECOSYSTEM",
+    "es": "ECOSISTEMA",
+    "fr": "ÉCOSYSTÈME"
+  },
+  "Editoria": {
+    "it": "Editoria",
+    "en": "Publishing",
+    "es": "Publicación",
+    "fr": "Édition"
+  },
+  "Enogastronomia": {
+    "it": "Enogastronomia",
+    "en": "Food and Wine",
+    "es": "Enogastronomía",
+    "fr": "Gastronomie et œnologie"
+  },
+  "Equitazione": {
+    "it": "Equitazione",
+    "en": "Equitation",
+    "es": "Equitación",
+    "fr": "Équitation"
+  },
+  "Equitazione e Benessere": {
+    "it": "Equitazione e Benessere",
+    "en": "Horse riding and wellness",
+    "es": "Equitación y bienestar",
+    "fr": "Equitation et bien-être"
+  },
+  "Escursionismo e Trekking": {
+    "it": "Escursionismo e Trekking",
+    "en": "Hiking and Trekking",
+    "es": "Senderismo y Trekking",
+    "fr": "Randonnée et Trekking"
+  },
+  "Fotografia e Pittura": {
+    "it": "Fotografia e Pittura",
+    "en": "Photography and Painting",
+    "es": "Fotografía y Pintura",
+    "fr": "Photographie et peinture"
+  },
+  "Ginnastica Artistica": {
+    "it": "Ginnastica Artistica",
+    "en": "Artistic Gymnastics",
+    "es": "Gimnasia Artística",
+    "fr": "Gymnastique Artistique"
+  },
+  "Ginnastica Ritmica": {
+    "it": "Ginnastica Ritmica",
+    "en": "Rhythmic Gymnastics",
+    "es": "Gimnasia rítmica",
+    "fr": "Gymnastique rythmique"
+  },
+  "Giochi popolari": {
+    "it": "Giochi popolari",
+    "en": "Popular games",
+    "es": "Juegos populares",
+    "fr": "Jeux populaires"
+  },
+  "Giochi Popolari": {
+    "it": "Giochi Popolari",
+    "en": "Popular Games",
+    "es": "Juegos populares",
+    "fr": "Jeux populaires"
+  },
+  "Letteratura": {
+    "it": "Letteratura",
+    "en": "Literature",
+    "es": "Literatura",
+    "fr": "Littérature"
+  },
+  "Meditazione Mentale": {
+    "it": "Meditazione Mentale",
+    "en": "Mental Meditation",
+    "es": "Meditación mental",
+    "fr": "Méditation mentale"
+  },
+  "Meditazione Spirituale": {
+    "it": "Meditazione Spirituale",
+    "en": "Spiritual Meditation",
+    "es": "Meditación Espiritual",
+    "fr": "Méditation spirituelle"
+  },
+  "Meditazione spirituale e mentale": {
+    "it": "Meditazione spirituale e mentale",
+    "en": "Spiritual and mental meditation",
+    "es": "Meditación espiritual y mental.",
+    "fr": "Méditation spirituelle et mentale"
+  },
+  "Meditazione Spirituale e Mentale": {
+    "it": "Meditazione Spirituale e Mentale",
+    "en": "Spiritual and Mental Meditation",
+    "es": "Meditación espiritual y mental",
+    "fr": "Méditation spirituelle et mentale"
+  },
+  "MEDITAZIONE SPIRITUALE E MENTALE": {
+    "it": "MEDITAZIONE SPIRITUALE E MENTALE",
+    "en": "SPIRITUAL AND MENTAL MEDITATION",
+    "es": "MEDITACIÓN ESPIRITUAL Y MENTAL",
+    "fr": "MÉDITATION SPIRITUELLE ET MENTALE"
+  },
+  "Modellismo (statico e dinamico)": {
+    "it": "Modellismo (statico e dinamico)",
+    "en": "Model making (static and dynamic)",
+    "es": "Modelismo (estático y dinámico)",
+    "fr": "Réalisation de modèles (statiques et dynamiques)"
+  },
+  "Moto d’Epoca": {
+    "it": "Moto d’Epoca",
+    "en": "Vintage Motorcycles",
+    "es": "Motos de época",
+    "fr": "Motos d’époque"
+  },
+  "Musica": {
+    "it": "Musica",
+    "en": "Music",
+    "es": "Música",
+    "fr": "Musique"
+  },
+  "Musica e Canto": {
+    "it": "Musica e Canto",
+    "en": "Music and Singing",
+    "es": "Música y canto",
+    "fr": "Musique et chant"
+  },
+  "Nord Walking": {
+    "it": "Nord Walking",
+    "en": "North Walking",
+    "es": "Caminando hacia el norte",
+    "fr": "Marche vers le Nord"
+  },
+  "Nordic Walking": {
+    "it": "Nordic Walking",
+    "en": "Nordic Walking",
+    "es": "Marcha nórdica",
+    "fr": "Marche nordique"
+  },
+  "Parapendio e Paracadutismo": {
+    "it": "Parapendio e Paracadutismo",
+    "en": "Paragliding and Skydiving",
+    "es": "Parapente y Paracaidismo",
+    "fr": "Parapente et parachutisme"
+  },
+  "Parapendio e paracadutismo": {
+    "it": "Parapendio e paracadutismo",
+    "en": "Paragliding and parachuting",
+    "es": "Parapente y paracaidismo",
+    "fr": "Parapente et parachutisme"
+  },
+  "Pattinaggio Artistico": {
+    "it": "Pattinaggio Artistico",
+    "en": "Figure Skating",
+    "es": "Patinaje artístico",
+    "fr": "Patinage artistique"
+  },
+  "Pattinaggio artistico": {
+    "it": "Pattinaggio artistico",
+    "en": "Figure skating",
+    "es": "patinaje artístico",
+    "fr": "Patinage artistique"
+  },
+  "poesia": {
+    "it": "poesia",
+    "en": "Poetry",
+    "es": "Poesía",
+    "fr": "Poésie"
+  },
+  "Poesia": {
+    "it": "Poesia",
+    "en": "Poetry",
+    "es": "Poesía",
+    "fr": "Poésie"
+  },
+  "Pro Loco": {
+    "it": "Pro Loco",
+    "en": "Pro Loco",
+    "es": "Pro Loco",
+    "fr": "Pro Locomotive"
+  },
+  "Rievocazioni storiche": {
+    "it": "Rievocazioni storiche",
+    "en": "Historical reenactments",
+    "es": "Recreaciones históricas",
+    "fr": "Reconstitutions historiques"
+  },
+  "Rievocazioni Storiche": {
+    "it": "Rievocazioni Storiche",
+    "en": "Historical reenactments",
+    "es": "Recreaciones históricas",
+    "fr": "Reconstitutions historiques"
+  },
+  "Scherma Antica": {
+    "it": "Scherma Antica",
+    "en": "Ancient Fencing",
+    "es": "Cercado antiguo",
+    "fr": "Clôture ancienne"
+  },
+  "Sci & Alpinismo": {
+    "it": "Sci & Alpinismo",
+    "en": "Skiing & Mountaineering",
+    "es": "Esquí y montañismo",
+    "fr": "Ski et alpinisme"
+  },
+  "Scii alpinismo": {
+    "it": "Scii alpinismo",
+    "en": "Ski mountaineering",
+    "es": "esquí de montaña",
+    "fr": "Ski-alpinisme"
+  },
+  "Scultura": {
+    "it": "Scultura",
+    "en": "Sculpture",
+    "es": "Escultura",
+    "fr": "Sculpture"
+  },
+  "Scultura e arti visive": {
+    "it": "Scultura e arti visive",
+    "en": "Sculpture and visual arts",
+    "es": "Escultura y artes visuales",
+    "fr": "Sculpture et arts visuels"
+  },
+  "Subbuteo": {
+    "it": "Subbuteo",
+    "en": "Subbuteo",
+    "es": "Subbuteo",
+    "fr": "Subbuteo"
+  },
+  "Surfing & Kayak": {
+    "it": "Surfing & Kayak",
+    "en": "Surfing & Kayaking",
+    "es": "Surf y kayak",
+    "fr": "Surf et kayak"
+  },
+  "Surfing, Windsurfing e Kayak": {
+    "it": "Surfing, Windsurfing e Kayak",
+    "en": "Surfing, Windsurfing and Kayaking",
+    "es": "Surf, Windsurf y Kayak",
+    "fr": "Surf, planche à voile et kayak"
+  },
+  "Tango": {
+    "it": "Tango",
+    "en": "Tango",
+    "es": "Tango",
+    "fr": "Tango"
+  },
+  "Teatro e spettacolo": {
+    "it": "Teatro e spettacolo",
+    "en": "Theater and entertainment",
+    "es": "Teatro y entretenimiento",
+    "fr": "Théâtre et divertissement"
+  },
+  "Teatro e Spettacolo": {
+    "it": "Teatro e Spettacolo",
+    "en": "Theater and Entertainment",
+    "es": "Teatro y entretenimiento",
+    "fr": "Théâtre et divertissement"
+  },
+  "Tradizioni Popolari e Identità Locale": {
+    "it": "Tradizioni Popolari e Identità Locale",
+    "en": "Popular Traditions and Local Identity",
+    "es": "Tradiciones populares e identidad local",
+    "fr": "Traditions populaires et identité locale"
+  },
+  "VALORIZZAZIONE DEL TERRITORIO": {
+    "it": "VALORIZZAZIONE DEL TERRITORIO",
+    "en": "ENHANCEMENT OF THE TERRITORY",
+    "es": "MEJORAMIENTO DEL TERRITORIO",
+    "fr": "MISE EN VALEUR DU TERRITOIRE"
+  },
+  "Volo": {
+    "it": "Volo",
+    "en": "Flight",
+    "es": "Vuelo",
+    "fr": "Vol"
+  },
+  "Volontariato": {
+    "it": "Volontariato",
+    "en": "Volunteering",
+    "es": "Voluntariado",
+    "fr": "Volontariat"
+  },
+  "Volontariato, Beneficenza & Protezione Civile": {
+    "it": "Volontariato, Beneficenza & Protezione Civile",
+    "en": "Volunteering, Charity & Civil Protection",
+    "es": "Voluntariado, Caridad y Protección Civil",
+    "fr": "Bénévolat, charité et protection civile"
+  },
+  "Volontariato, Beneficenza e Protezione civile": {
+    "it": "Volontariato, Beneficenza e Protezione civile",
+    "en": "Volunteering, Charity and Civil Protection",
+    "es": "Voluntariado, Beneficencia y Protección Civil",
+    "fr": "Bénévolat, charité et protection civile"
+  },
+  "Arti Marziali": {
+    "it": "Arti Marziali",
+    "en": "Martial Arts",
+    "es": "Artes Marciales",
+    "fr": "Arts martiaux"
+  },
+  "Attività Velistiche e Surfing": {
+    "it": "Attività Velistiche e Surfing",
+    "en": "Sailing and Surfing activities",
+    "es": "Actividades de vela y surf",
+    "fr": "Activités de voile et de surf"
+  },
+  "Giochi da tavolo": {
+    "it": "Giochi da tavolo",
+    "en": "Board Games",
+    "es": "Juegos de mesa",
+    "fr": "Jeux de société"
+  },
+  "Ginnastica": {
+    "it": "Ginnastica",
+    "en": "Gymnastics",
+    "es": "Gimnasia",
+    "fr": "Gymnastique"
+  }
+}

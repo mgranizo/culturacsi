@@ -9,7 +9,8 @@ function culturacsi_portal_cronologia_list_shortcode(): string {
 	
 	global $wpdb;
 	$table_name = culturacsi_logging_get_table_name();
-	if ( $wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name ) {
+	$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+	if ( $table_name !== $table_exists ) {
 		return '<p>Database della cronologia non trovato.</p>';
 	}
 
@@ -34,11 +35,24 @@ function culturacsi_portal_cronologia_list_shortcode(): string {
 	$order_dir = $sort_state['dir'] === 'asc' ? 'ASC' : 'DESC';
 
 	// Filters
-	$where = "1=1";
+	$where_parts = array( '1=1' );
+	$where_bindings = array();
 	$q = isset( $_GET['c_q'] ) ? sanitize_text_field( wp_unslash( $_GET['c_q'] ) ) : '';
 	if ( '' !== $q ) {
 		$like = '%' . $wpdb->esc_like( $q ) . '%';
-		$where .= $wpdb->prepare( " AND (l.details LIKE %s OR u.display_name LIKE %s)", $like, $like );
+		$where_parts[]   = '(l.details LIKE %s OR u.display_name LIKE %s)';
+		$where_bindings[] = $like;
+		$where_bindings[] = $like;
+	}
+
+	// Object type filter: news, event, user, association
+	$type = isset( $_GET['c_type'] ) ? sanitize_key( wp_unslash( $_GET['c_type'] ) ) : '';
+	$allowed_types = array( 'news', 'event', 'user', 'association' );
+	if ( in_array( $type, $allowed_types, true ) ) {
+		$where_parts[] = 'l.object_type = %s';
+		$where_bindings[] = $type;
+	} else {
+		$type = '';
 	}
 	
 	if ( ! $is_site_admin ) {
@@ -47,123 +61,264 @@ function culturacsi_portal_cronologia_list_shortcode(): string {
 			return '<p>Associazione non trovata.</p>';
 		}
 		
-		$allowed_objects = array( "(l.object_type = 'association' AND l.object_id = " . (int) $assoc_id . ")" );
+		$allowed_objects_parts = array();
+		$allowed_objects_parts[] = '(l.object_type = %s AND l.object_id = %d)';
+		$allowed_objects_bindings = array( 'association', (int) $assoc_id );
 		
 		$event_ids = get_posts( array( 'post_type' => 'event', 'meta_query' => array( array( 'key' => 'organizer_association_id', 'value' => $assoc_id ) ), 'fields' => 'ids', 'posts_per_page' => -1 ) );
 		if ( ! empty( $event_ids ) ) {
-			$allowed_objects[] = "(l.object_type = 'event' AND l.object_id IN (" . implode( ',', array_map( 'intval', $event_ids ) ) . "))";
+			$event_ids = array_values( array_filter( array_map( 'intval', (array) $event_ids ) ) );
+			if ( ! empty( $event_ids ) ) {
+				$event_placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
+				$allowed_objects_parts[] = "(l.object_type = %s AND l.object_id IN ({$event_placeholders}))";
+				$allowed_objects_bindings[] = 'event';
+				$allowed_objects_bindings = array_merge( $allowed_objects_bindings, $event_ids );
+			}
 		}
 		
 		$news_ids = get_posts( array( 'post_type' => 'news', 'meta_query' => array( array( 'key' => 'organizer_association_id', 'value' => $assoc_id ) ), 'fields' => 'ids', 'posts_per_page' => -1 ) );
 		if ( ! empty( $news_ids ) ) {
-			$allowed_objects[] = "(l.object_type = 'news' AND l.object_id IN (" . implode( ',', array_map( 'intval', $news_ids ) ) . "))";
+			$news_ids = array_values( array_filter( array_map( 'intval', (array) $news_ids ) ) );
+			if ( ! empty( $news_ids ) ) {
+				$news_placeholders = implode( ', ', array_fill( 0, count( $news_ids ), '%d' ) );
+				$allowed_objects_parts[] = "(l.object_type = %s AND l.object_id IN ({$news_placeholders}))";
+				$allowed_objects_bindings[] = 'news';
+				$allowed_objects_bindings = array_merge( $allowed_objects_bindings, $news_ids );
+			}
 		}
 		
 		$user_ids = get_users( array( 'meta_query' => array( array( 'key' => 'association_post_id', 'value' => $assoc_id ) ), 'fields' => 'ID' ) );
 		if ( ! empty( $user_ids ) ) {
-			$allowed_objects[] = "(l.object_type = 'user' AND l.object_id IN (" . implode( ',', array_map( 'intval', $user_ids ) ) . "))";
+			$user_ids = array_values( array_filter( array_map( 'intval', (array) $user_ids ) ) );
+			if ( ! empty( $user_ids ) ) {
+				$user_placeholders = implode( ', ', array_fill( 0, count( $user_ids ), '%d' ) );
+				$allowed_objects_parts[] = "(l.object_type = %s AND l.object_id IN ({$user_placeholders}))";
+				$allowed_objects_bindings[] = 'user';
+				$allowed_objects_bindings = array_merge( $allowed_objects_bindings, $user_ids );
+			}
 		}
 		
-		$where .= " AND (" . implode( " OR ", $allowed_objects ) . ")";
+		$where_parts[] = '( ' . implode( ' OR ', $allowed_objects_parts ) . ' )';
+		$where_bindings = array_merge( $where_bindings, $allowed_objects_bindings );
 	}
 
-	$total_items = (int) $wpdb->get_var( "SELECT COUNT(l.id) FROM $table_name l LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID WHERE $where" );
+	$where_sql = implode( ' AND ', $where_parts );
+	$count_sql = "SELECT COUNT(l.id) FROM {$table_name} l LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID WHERE {$where_sql}";
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared dynamically with safe placeholders.
+	$count_prepared = ! empty( $where_bindings ) ? $wpdb->prepare( $count_sql, $where_bindings ) : $count_sql;
+
+	$total_items = (int) $wpdb->get_var( $count_prepared );
 	$max_pages   = max( 1, (int) ceil( $total_items / $per_page ) );
-	
-	$logs = $wpdb->get_results( 
-		"SELECT l.*, u.display_name as user_name 
-		 FROM $table_name l 
-		 LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID 
-		 WHERE $where 
-		 ORDER BY $orderby_sql $order_dir 
-		 LIMIT $per_page OFFSET $offset" 
-	);
+
+	$list_sql = "SELECT l.*, COALESCE(NULLIF(u.display_name, ''), NULLIF(l.user_display_name, ''), NULLIF(l.user_login, ''), IF(l.user_id > 0, CONCAT('ID ', l.user_id), 'Sistema')) AS user_name
+		 FROM {$table_name} l
+		 LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID
+		 WHERE {$where_sql}
+		 ORDER BY {$orderby_sql} {$order_dir}
+		 LIMIT %d OFFSET %d";
+	$list_bindings = array_merge( $where_bindings, array( (int) $per_page, (int) $offset ) );
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared dynamically with safe placeholders.
+	$list_prepared = $wpdb->prepare( $list_sql, $list_bindings );
+	$logs = $wpdb->get_results( $list_prepared );
 	
 	$base_url = culturacsi_portal_reserved_current_page_url();
 
 	ob_start();
 	echo '<div class="assoc-portal-cronologia-list assoc-portal-section">';
-	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Cronologia (Audit Log)</h2>';
-	echo '<div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( add_query_arg( 'culturacsi_export', 'cronologia', $_SERVER['REQUEST_URI'] ?? '' ) ) . '">Esporta CSV</a></div></div>';
 	
-	echo '<div class="assoc-search-panel" style="margin-bottom:20px;">
-		<form method="get" action="' . esc_url( $base_url ) . '" class="assoc-search-form" style="display:flex;gap:10px;align-items:center;">
-			<input type="text" name="c_q" value="' . esc_attr( $q ) . '" placeholder="Cerca...">
-			<button type="submit" class="button">Cerca</button>
-			<a href="' . esc_url( $base_url ) . '" class="button">Azzera</a>
-		</form>
-	</div>';
+	echo '<div class="assoc-search-panel assoc-cronologia-search">'
+		. '<div class="assoc-search-head">'
+		. '<div class="assoc-search-meta">'
+		. '<h3 class="assoc-search-title">Ricerca Cronologia</h3>'
+		. '<p class="assoc-search-count">Elementi trovati: ' . esc_html( (string) $total_items ) . '</p>'
+		. '</div>'
+		. '<p class="assoc-search-actions"><a class="button" href="' . esc_url( $base_url ) . '">Azzera</a></p>'
+		. '</div>'
+		. '<form method="get" action="' . esc_url( $base_url ) . '" class="assoc-search-form">'
+		. '<p class="assoc-search-field is-type">'
+		. '<label for="c_type">Tipo</label>'
+		. '<select id="c_type" name="c_type">'
+		. '<option value=""' . selected( $type, '', false ) . '>Tutti</option>'
+		. '<option value="news"' . selected( $type, 'news', false ) . '>Notizie</option>'
+		. '<option value="event"' . selected( $type, 'event', false ) . '>Eventi</option>'
+		. '<option value="user"' . selected( $type, 'user', false ) . '>Utenti</option>'
+		. '<option value="association"' . selected( $type, 'association', false ) . '>Associazioni</option>'
+		. '</select>'
+		. '</p>'
+		. '<p class="assoc-search-field is-q">'
+		. '<label for="c_q">Cerca</label>'
+		. '<input type="text" id="c_q" name="c_q" value="' . esc_attr( $q ) . '" placeholder="Testo libero">'
+		. '</p>'
+		. '</form>'
+		. '</div>';
 
-	echo '<table class="widefat striped assoc-admin-table assoc-table-cronologia"><thead><tr>';
-	echo culturacsi_portal_sortable_th( 'ID', 'id', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, '', array( 'c_page' ) );
-	echo culturacsi_portal_sortable_th( 'Data e Ora', 'created_at', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, '', array( 'c_page' ) );
-	echo culturacsi_portal_sortable_th( 'Utente', 'user_name', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, '', array( 'c_page' ) );
-	echo culturacsi_portal_sortable_th( 'Azione', 'action', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, '', array( 'c_page' ) );
-	echo culturacsi_portal_sortable_th( 'Tipo', 'object_type', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, '', array( 'c_page' ) );
-	echo culturacsi_portal_sortable_th( 'ID Ogg.', 'object_id', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, '', array( 'c_page' ) );
-	echo '<th>Dettagli</th>';
+	if ( function_exists( 'culturacsi_portal_render_process_tutorial' ) ) {
+		echo culturacsi_portal_render_process_tutorial(
+			array(
+				'title'   => '',
+				'summary' => 'Come usare questa sezione',
+				'open'    => false,
+				'steps'   => array(
+					array( 'text' => 'Filtra per tipo e testo per ridurre i risultati.' ),
+					array( 'text' => 'Clicca una riga per vedere i dettagli dell\'azione.' ),
+					array( 'text' => 'Usa Esporta CSV per analisi esterne.' ),
+				),
+			)
+		); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+	
+	$export_url = function_exists( 'culturacsi_export_build_url' ) ? culturacsi_export_build_url( 'cronologia', (string) ( $_SERVER['REQUEST_URI'] ?? '' ) ) : (string) add_query_arg( 'culturacsi_export', 'cronologia', $_SERVER['REQUEST_URI'] ?? '' );
+	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Cronologia (Audit Log)</h2>';
+	echo '<div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( $export_url ) . '">Esporta CSV</a></div></div>';
+
+	echo '<style>
+		/* Align with shared admin list aesthetics */
+		.assoc-table-cronologia td,.assoc-table-cronologia th{padding:6px 10px!important;line-height:1.35}
+		.assoc-table-cronologia td:first-child{width:3.5ch;min-width:3.5ch;max-width:3.5ch;white-space:nowrap;text-align:right;color:#94a3b8;font-size:11px}
+		.cron-data-row{cursor:pointer;user-select:none}
+		.cron-data-row:hover td{background:rgba(59,130,246,.06)!important}
+		.cron-detail-row{display:none}
+		.cron-detail-row.is-open{display:table-row}
+		.cron-detail-row td{background:#f8fafc!important;padding:10px 12px!important;border-top:none!important}
+		.cron-detail-inner{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 20px;font-size:.9rem}
+		.cron-detail-inner dt{color:#64748b;font-weight:600;margin-bottom:1px}
+		.cron-detail-inner dd{color:#1e293b;margin:0 0 4px;word-break:break-word}
+		.cron-detail-inner a{color:#0b3d91;text-decoration:underline}
+	</style>';
+	echo '<table class="widefat striped assoc-admin-table assoc-table-cronologia"><colgroup><col style="width:3.5ch"><col style="width:11rem"><col style="width:30%"><col style="width:12rem"><col style="width:10rem"><col style="width:7rem"></colgroup><thead><tr>';
+	echo culturacsi_portal_sortable_th( 'ID', 'id', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-index', array( 'c_page' ) );
+	echo culturacsi_portal_sortable_th( 'Data e Ora', 'created_at', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-date', array( 'c_page' ) );
+	echo culturacsi_portal_sortable_th( 'Utente', 'user_name', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-user', array( 'c_page' ) );
+	echo culturacsi_portal_sortable_th( 'Azione', 'action', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-status', array( 'c_page' ) );
+	echo culturacsi_portal_sortable_th( 'Tipo', 'object_type', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-type', array( 'c_page' ) );
+	echo culturacsi_portal_sortable_th( 'ID Ogg.', 'object_id', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-index', array( 'c_page' ) );
 	echo '</tr></thead><tbody>';
 	
 	if ( ! empty( $logs ) ) {
 		foreach ( $logs as $log ) {
-			echo '<tr>';
-			echo '<td>' . esc_html( $log->id ) . '</td>';
-			echo '<td>' . esc_html( date_i18n( 'd/m/Y H:i:s', strtotime( $log->created_at ) ) ) . '</td>';
-			echo '<td><strong>' . esc_html( $log->user_name ?: 'Utente ' . $log->user_id ) . '</strong><br><small style="color:#64748b;">IP: ' . esc_html( $log->ip_address ) . '</small></td>';
-			$action_labels = array(
-				'create_post' => 'CREATO',
-				'update_post' => 'MODIFICATO',
-				'trash_post'  => 'ELIMINATO',
-				'wp_insert_user' => 'REGISTRATO (UTENTE)',
-				'update_user' => 'MODIFICATO (UTENTE)',
-				'approve'     => 'APPROVATO',
-				'reject'      => 'RIFIUTATO',
-				'hold'        => 'IN ATTESA',
-				'login'       => 'ACCESSO (LOGIN)'
-			);
-			$display_action = isset( $action_labels[ $log->action ] ) ? $action_labels[ $log->action ] : strtoupper( $log->action );
-			echo '<td><span class="assoc-status-pill">' . esc_html( $display_action ) . '</span></td>';
-			$display_type = $log->object_type;
-			if ( $display_type === 'event' ) $display_type = 'Evento';
-			elseif ( $display_type === 'news' ) $display_type = 'Notizia';
-			elseif ( $display_type === 'user' ) $display_type = 'Utente';
-			elseif ( $display_type === 'association' ) $display_type = 'Associazione';
+			$log_id  = (int) $log->id;
+			$detail_id = 'cron-detail-' . $log_id;
 
-			echo '<td>' . esc_html( $display_type ) . '</td>';
-			
-			$obj_link = '#';
-			if ( $log->object_id > 0 ) {
-				if ( $log->object_type === 'user' ) {
-					$obj_link = culturacsi_portal_admin_user_form_url( $log->object_id );
-				} elseif ( $log->object_type === 'association' ) {
-					$obj_link = culturacsi_portal_admin_association_form_url( $log->object_id );
-				} elseif ( $log->object_type === 'event' ) {
-					$obj_link = home_url( '/area-riservata/eventi/nuovo/?event_id=' . $log->object_id );
-				} elseif ( $log->object_type === 'news' ) {
-					$obj_link = home_url( '/area-riservata/notizie/nuova/?news_id=' . $log->object_id );
-				}
+			$action_labels = array(
+				'create_post'    => 'CREATO',
+				'update_post'    => 'MODIFICATO',
+				'trash_post'     => 'ELIMINATO',
+				'wp_insert_user' => 'REGISTRATO',
+				'update_user'    => 'MODIFICATO',
+				'approve'        => 'APPROVATO',
+				'reject'         => 'RIFIUTATO',
+				'hold'           => 'IN ATTESA',
+				'login'          => 'LOGIN',
+			);
+			$display_action = $action_labels[ $log->action ] ?? strtoupper( $log->action );
+
+			$display_type = match( $log->object_type ) {
+				'event'       => 'Evento',
+				'news'        => 'Notizia',
+				'user'        => 'Utente',
+				'association' => 'Associazione',
+				default       => esc_html( $log->object_type ),
+			};
+
+			$obj_link = '';
+			if ( (int) $log->object_id > 0 ) {
+				$obj_link = match( $log->object_type ) {
+					'user'        => culturacsi_portal_admin_user_form_url( $log->object_id ),
+					'association' => culturacsi_portal_admin_association_form_url( $log->object_id ),
+					'event'       => home_url( '/area-riservata/eventi/nuovo/?event_id=' . $log->object_id ),
+					'news'        => home_url( '/area-riservata/notizie/nuova/?news_id=' . $log->object_id ),
+					default       => '',
+				};
 			}
-			echo '<td><a href="' . esc_url( $obj_link ) . '">#' . esc_html( $log->object_id ) . '</a></td>';
-			echo '<td><div style="font-size:12px;line-height:1.4;background:#f8fafc;padding:5px;border-radius:4px;word-break:break-word;">' . esc_html( $log->details ) . '</div></td>';
+
+			// ── Main summary row (clickable) ──────────────────────────────
+			echo '<tr class="cron-data-row" data-target="' . esc_attr( $detail_id ) . '" aria-expanded="false">';
+			echo '<td>' . esc_html( $log->id ) . '</td>';
+			echo '<td style="white-space:nowrap;">' . esc_html( mysql2date( 'd/m/Y H:i', $log->created_at ) ) . '</td>';
+			// Robust user display fallback with small in-memory cache
+			static $usr_cache = array();
+			$user_cell = '';
+			if ( ! empty( $log->user_name ) ) {
+				$user_cell = (string) $log->user_name;
+			} elseif ( (int) $log->user_id > 0 ) {
+				$uid = (int) $log->user_id;
+				if ( ! isset( $usr_cache[ $uid ] ) ) {
+					$u = get_userdata( $uid );
+					$usr_cache[ $uid ] = ( $u instanceof WP_User ) ? ( $u->display_name ?: $u->user_login ?: ( 'ID ' . $uid ) ) : ( 'ID ' . $uid );
+				}
+				$user_cell = $usr_cache[ $uid ];
+			} else {
+				$user_cell = 'Sistema';
+			}
+			echo '<td>' . esc_html( $user_cell ) . '</td>';
+			echo '<td><span class="assoc-status-pill">' . esc_html( $display_action ) . '</span></td>';
+			echo '<td>' . esc_html( $display_type ) . '</td>';
+			echo '<td style="color:#64748b;">' . ( (int) $log->object_id > 0 ? '#' . esc_html( $log->object_id ) : '—' ) . '</td>';
 			echo '</tr>';
+
+			// ── Detail panel row (hidden until click) ────────────────────
+			echo '<tr class="cron-detail-row" id="' . esc_attr( $detail_id ) . '">';
+			echo '<td colspan="6">';
+			echo '<dl class="cron-detail-inner">';
+
+			echo '<div><dt>Data e ora</dt><dd>' . esc_html( mysql2date( 'd/m/Y H:i:s', $log->created_at ) ) . '</dd></div>';
+			echo '<div><dt>Utente</dt><dd>' . esc_html( $log->user_name ?: ( $log->user_id ? 'ID ' . $log->user_id : '—' ) ) . '</dd></div>';
+			echo '<div><dt>Indirizzo IP</dt><dd>' . esc_html( $log->ip_address ?: '—' ) . '</dd></div>';
+			echo '<div><dt>Azione</dt><dd>' . esc_html( $action_labels[ $log->action ] ?? $log->action ) . '</dd></div>';
+			echo '<div><dt>Tipo oggetto</dt><dd>' . esc_html( $display_type ) . '</dd></div>';
+
+			if ( (int) $log->object_id > 0 ) {
+				$link_html = $obj_link
+					? '<a href="' . esc_url( $obj_link ) . '">#' . esc_html( $log->object_id ) . ' &rarr; Apri</a>'
+					: '#' . esc_html( $log->object_id );
+				echo '<div><dt>ID oggetto</dt><dd>' . $link_html . '</dd></div>'; // phpcs:ignore
+			}
+
+			if ( '' !== trim( (string) $log->details ) ) {
+				echo '<div style="grid-column:1/-1"><dt>Dettagli</dt><dd>' . esc_html( $log->details ) . '</dd></div>';
+			}
+
+			echo '</dl>';
+			echo '</td></tr>';
 		}
 	} else {
-		echo '<tr><td colspan="7">Nessuna cronologia trovata.</td></tr>';
+		echo '<tr><td colspan="6">Nessuna cronologia trovata.</td></tr>';
 	}
 	echo '</tbody></table>';
 
+	// Toggle JS — pure vanilla, no deps
+	echo '<script>
+	(function(){
+		var table = document.querySelector(".assoc-table-cronologia");
+		if(!table) return;
+		table.addEventListener("click", function(e){
+			var row = e.target.closest(".cron-data-row");
+			if(!row) return;
+			var targetId = row.getAttribute("data-target");
+			var detail = document.getElementById(targetId);
+			if(!detail) return;
+			var isOpen = detail.classList.contains("is-open");
+			detail.classList.toggle("is-open", !isOpen);
+			row.classList.toggle("is-open", !isOpen);
+			row.setAttribute("aria-expanded", String(!isOpen));
+		});
+	})();
+	</script>';
+
 	if ( $max_pages > 1 ) {
 		echo '<div class="assoc-pagination" style="margin-top:20px; text-align:right;">';
-		$page_links = paginate_links(
-			array(
-				'base'      => add_query_arg( 'c_page', '%#%', $base_url ),
-				'format'    => '',
-				'prev_text' => '&laquo; Precedente',
-				'next_text' => 'Successivo &raquo;',
-				'total'     => $max_pages,
-				'current'   => $current_page,
-			)
-		);
+		$add_args = array();
+		if ( '' !== $q ) { $add_args['c_q'] = $q; }
+		if ( '' !== $type ) { $add_args['c_type'] = $type; }
+		$page_links = paginate_links( array(
+			'base'      => add_query_arg( 'c_page', '%#%', $base_url ),
+			'format'    => '',
+			'prev_text' => '&laquo; Precedente',
+			'next_text' => 'Successivo &raquo;',
+			'total'     => $max_pages,
+			'current'   => $current_page,
+			'add_args'  => $add_args,
+		) );
 		if ( $page_links ) {
 			echo $page_links; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}

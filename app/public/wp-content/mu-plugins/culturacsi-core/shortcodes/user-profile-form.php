@@ -13,7 +13,7 @@ function culturacsi_portal_user_profile_shortcode(): string {
 	}
 
 	$message_html = '';
-	if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) && isset( $_POST['culturacsi_user_profile_submit'] ) ) {
+	if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) && ( isset( $_POST['culturacsi_user_profile_submit'] ) || isset( $_REQUEST['is_portal_ajax'] ) ) ) {
 		if ( ! isset( $_POST['culturacsi_user_profile_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['culturacsi_user_profile_nonce'] ) ), 'culturacsi_user_profile_save' ) ) {
 			$message_html = culturacsi_portal_notice( 'Verifica di sicurezza non valida. Riprova.', 'error' );
 		} else {
@@ -73,22 +73,61 @@ function culturacsi_portal_user_profile_shortcode(): string {
 					}
 
 					if ( ! current_user_can( 'manage_options' ) ) {
-						// For association managers, flag as saved (no pending workflow for profile).
-						$message_html = culturacsi_portal_notice( 'Profilo aggiornato con successo.' . $avatar_msg, 'success' );
+						if ( function_exists( 'culturacsi_portal_apply_user_role_moderation' ) ) {
+							culturacsi_portal_apply_user_role_moderation( (int) $user_id, 'association_pending', 'pending' );
+						}
+						$message_html = culturacsi_portal_notice( 'Profilo aggiornato e inviato per approvazione del Site Admin.' . $avatar_msg, 'success' );
 						$user = get_userdata( $user_id );
 					} else {
 						$message_html = culturacsi_portal_notice( 'Profilo utente aggiornato.' . $avatar_msg, 'success' );
 						$user = get_userdata( $user_id );
 					}
+					if ( isset( $_REQUEST['is_portal_ajax'] ) && '1' === (string) $_REQUEST['is_portal_ajax'] ) {
+						while ( ob_get_level() > 0 ) {
+							ob_end_clean();
+						}
+						wp_send_json_success( 'Profilo salvato correttamente.', 200 );
+					}
 				}
 			}
 		}
+
+		if ( isset( $_REQUEST['is_portal_ajax'] ) && '1' === (string) $_REQUEST['is_portal_ajax'] ) {
+			while ( ob_get_level() > 0 ) {
+				ob_end_clean();
+			}
+			wp_send_json_error( wp_strip_all_tags( $message_html ) ?: 'Errore durante il salvataggio.', 400 );
+		}
 	}
 
+	$root_url = home_url( '/area-riservata/utenti/' );
 	ob_start();
 	echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	?>
-	<form class="assoc-portal-form" method="post" enctype="multipart/form-data">
+	<style>
+		.password-toggle-wrapper { position: relative; display: flex; align-items: center; }
+		.password-toggle-wrapper input[type="password"],
+		.password-toggle-wrapper input[type="text"] { padding-right: 40px; flex: 1; }
+		.password-toggle-btn { position: absolute; right: 8px; background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 12px; color: #64748b; }
+		.password-toggle-btn:hover { color: #2563eb; }
+	</style>
+	<script>
+	(function() {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.querySelectorAll('.password-toggle-wrapper').forEach(function(wrapper) {
+				var btn = wrapper.querySelector('.password-toggle-btn');
+				var input = wrapper.querySelector('input[type="password"], input[type="text"]');
+				if (!btn || !input) return;
+				btn.addEventListener('click', function() {
+					var isPass = input.type === 'password';
+					input.type = isPass ? 'text' : 'password';
+					btn.textContent = isPass ? 'Nascondi' : 'Mostra';
+				});
+			});
+		});
+	})();
+	</script>
+	<form class="assoc-portal-form" method="post" enctype="multipart/form-data" data-redirect-url="<?php echo esc_url( $root_url ); ?>">
 		<?php wp_nonce_field( 'culturacsi_user_profile_save', 'culturacsi_user_profile_nonce' ); ?>
 		<h2>Profilo Utente</h2>
 		<p><label for="user_login">Username</label><input type="text" id="user_login" readonly value="<?php echo esc_attr( (string) $user->user_login ); ?>"></p>
@@ -113,8 +152,10 @@ function culturacsi_portal_user_profile_shortcode(): string {
 		<?php endif; ?>
 		<p><label for="user_avatar">Carica nuova foto</label><input type="file" id="user_avatar" name="user_avatar" accept="image/*"></p>
 
-		<p><label for="pass1">Nuova Password (opzionale)</label><input type="password" id="pass1" name="pass1" autocomplete="new-password"></p>
-		<p><label for="pass2">Conferma Nuova Password</label><input type="password" id="pass2" name="pass2" autocomplete="new-password"></p>
+		<p><label for="pass1">Nuova Password (opzionale)</label></p>
+		<div class="password-toggle-wrapper"><input type="password" id="pass1" name="pass1" autocomplete="new-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
+		<p><label for="pass2">Conferma Nuova Password</label></p>
+		<div class="password-toggle-wrapper"><input type="password" id="pass2" name="pass2" autocomplete="new-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
 		<p><button type="submit" name="culturacsi_user_profile_submit" class="button button-primary">Salva Profilo</button></p>
 	</form>
 	<?php

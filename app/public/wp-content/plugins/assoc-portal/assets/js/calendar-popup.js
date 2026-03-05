@@ -25,9 +25,44 @@ document.addEventListener('DOMContentLoaded', function () {
     var modalBody = modal.querySelector('#event-modal-body');
     var closeButton = modal.querySelector('.event-modal-close');
 
+    function stripEventIdFromUrlString(urlString) {
+        if (!urlString) return urlString;
+        try {
+            var url = new URL(urlString, window.location.origin);
+            url.searchParams.delete('ev_event_id');
+            return url.toString();
+        } catch (e) {
+            return urlString;
+        }
+    }
+
+    function clearEventIdFromCurrentLocation() {
+        if (!window.history || typeof window.history.replaceState !== 'function') return;
+        try {
+            var url = new URL(window.location.href);
+            if (!url.searchParams.has('ev_event_id')) return;
+            url.searchParams.delete('ev_event_id');
+            var next = url.pathname + (url.search ? url.search : '') + url.hash;
+            window.history.replaceState({}, document.title, next);
+        } catch (e) {}
+    }
+
+    function clearEventIdFromCalendarNavigation() {
+        document.querySelectorAll('.calendar-header a.prev-month, .calendar-header a.next-month, .calendar-results-pagination a').forEach(function (link) {
+            var href = link.getAttribute('href') || '';
+            if (!href) return;
+            link.setAttribute('href', stripEventIdFromUrlString(href));
+        });
+        document.querySelectorAll('form.calendar-header-picker input[name="ev_event_id"], form.assoc-portal-calendar-filters input[name="ev_event_id"]').forEach(function (input) {
+            if (input && input.parentNode) input.parentNode.removeChild(input);
+        });
+    }
+
     function closeModal() {
         modal.style.display = 'none';
         document.body.classList.remove('event-modal-open');
+        clearEventIdFromCurrentLocation();
+        clearEventIdFromCalendarNavigation();
     }
 
     function openModal() {

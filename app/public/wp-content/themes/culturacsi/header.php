@@ -8,6 +8,14 @@
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
+<?php
+$culturacsi_tr = static function( $label ) {
+    if ( function_exists( 'culturacsi_it_runtime_label_map' ) ) {
+        return culturacsi_it_runtime_label_map( $label );
+    }
+    return $label;
+};
+?>
 
 <div class="site-outer">
 
@@ -33,11 +41,11 @@
                     </div>
                     <div class="logo-center">
                         <img src="<?php echo get_template_directory_uri(); ?>/images/CULTURA.png" alt="CULTURACSI Logo" class="main-logo-img">
-                        <div class="site-tagline">Associazione di Cultura Sport e Tempo Libero</div>
+                        <div class="site-tagline"><?php echo esc_html( $culturacsi_tr( 'Associazione di Cultura Sport e Tempo Libero' ) ); ?></div>
                     </div>
                     <div class="user-area">
                         <a href="<?php echo esc_url( home_url( '/area-riservata/' ) ); ?>" class="area-riservata-btn">
-                            AREA RISERVATA <i class="fas fa-lock"></i>
+                            <?php echo esc_html( $culturacsi_tr( 'AREA RISERVATA' ) ); ?> <i class="fas fa-lock"></i>
                         </a>
                     </div>
                 </div>

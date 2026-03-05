@@ -9,6 +9,13 @@ if (!defined('ABSPATH')) exit;
 if (!defined('AB_SETTORI_HERO_OVERRIDES_OPTION')) {
   define('AB_SETTORI_HERO_OVERRIDES_OPTION', 'ab_settori_hero_image_overrides');
 }
+if (!defined('ABF_PLUGIN_FILE')) {
+  define('ABF_PLUGIN_FILE', __FILE__);
+}
+
+require_once plugin_dir_path(__FILE__) . 'inc/sync-tree-canonicalization.php';
+require_once plugin_dir_path(__FILE__) . 'inc/settori-click-routing.php';
+require_once plugin_dir_path(__FILE__) . 'inc/sync-post-to-db.php';
 
 /**
  * Optional override:
@@ -153,35 +160,13 @@ function ab_assoc_is_placeholder_label(string $value): bool {
 function abf_get_settori_settings(): array {
   $raw = get_option(AB_SETTORI_TREE_OPTION, []);
   if (!is_array($raw)) $raw = [];
+  // The Struttura Settori tree is authoritative across all workflows.
+  // Legacy transformation rules (hide/rename/move) are intentionally ignored.
   $hidden = [];
-  $rawHidden = isset($raw['hidden']) && is_array($raw['hidden']) ? $raw['hidden'] : [];
-  foreach ($rawHidden as $label) {
-    $key = ab_assoc_normalize_key((string)$label);
-    if ($key !== '') $hidden[$key] = true;
-  }
-  // Renames: [from => to]
   $renames = [];
-  $rawRenames = isset($raw['renames']) && is_array($raw['renames']) ? $raw['renames'] : [];
-  foreach ($rawRenames as $from => $to) {
-    $k = ab_assoc_normalize_key((string)$from);
-    $v = trim((string)$to);
-    if ($k !== '' && $v !== '') $renames[$k] = $v;
-  }
-  // Moves: list of [from_path, to_path]
   $moves = [];
-  $rawMoves = isset($raw['moves']) && is_array($raw['moves']) ? $raw['moves'] : [];
-  foreach ($rawMoves as $pair) {
-    if (!is_array($pair)) continue;
-    $from = isset($pair['from']) ? trim((string)$pair['from']) : '';
-    $to   = isset($pair['to']) ? trim((string)$pair['to']) : '';
-    if ($from === '' || $to === '') continue;
-    $moves[] = [
-      'from' => $from,
-      'to'   => $to,
-      'from_key' => ab_assoc_normalize_key($from),
-    ];
-  }
-  $applyOnImport = !empty($raw['apply_on_import']);
+  $applyOnImport = true;
+  $manualMode = 'override';
   // Manual nodes: curated tree additions not sourced from rows
   $manualNodes = [];
   if (isset($raw['manual_nodes']) && is_array($raw['manual_nodes'])) {
@@ -192,6 +177,7 @@ function abf_get_settori_settings(): array {
     'renames' => $renames,
     'moves' => $moves,
     'apply_on_import' => $applyOnImport,
+    'manual_mode' => $manualMode,
     'manual_nodes' => $manualNodes,
   ];
 }
@@ -320,6 +306,117 @@ function abf_manual_nodes_paths(): array {
   return $paths;
 }
 
+function abf_sanitize_manual_nodes(array $nodes): array {
+  $clean = [];
+
+  foreach ($nodes as $macro => $settoriMap) {
+    $macroLabel = trim((string)$macro);
+    if ($macroLabel === '' || ab_assoc_is_placeholder_label($macroLabel)) continue;
+    if (!isset($clean[$macroLabel])) $clean[$macroLabel] = [];
+    if (!is_array($settoriMap)) continue;
+
+    foreach ($settoriMap as $settore => $settore2List) {
+      $settoreLabel = trim((string)$settore);
+      if ($settoreLabel === '' || ab_assoc_is_placeholder_label($settoreLabel)) continue;
+      if (!isset($clean[$macroLabel][$settoreLabel])) $clean[$macroLabel][$settoreLabel] = [];
+
+      $s2Set = [];
+      if (is_array($settore2List)) {
+        foreach ($settore2List as $settore2) {
+          $settore2Label = trim((string)$settore2);
+          if ($settore2Label === '' || ab_assoc_is_placeholder_label($settore2Label)) continue;
+          $s2Set[$settore2Label] = true;
+        }
+      }
+
+      $settore2Values = array_keys($s2Set);
+      sort($settore2Values, SORT_NATURAL | SORT_FLAG_CASE);
+      $clean[$macroLabel][$settoreLabel] = $settore2Values;
+    }
+
+    uksort($clean[$macroLabel], 'strnatcasecmp');
+  }
+
+  uksort($clean, 'strnatcasecmp');
+  return $clean;
+}
+
+function abf_tree_add_path(array &$tree, string $macro, string $settore = '', string $settore2 = ''): void {
+  $macro = trim($macro);
+  $settore = trim($settore);
+  $settore2 = trim($settore2);
+  if ($macro === '' || ab_assoc_is_placeholder_label($macro)) return;
+
+  if (!isset($tree[$macro])) $tree[$macro] = [];
+  if ($settore === '' || ab_assoc_is_placeholder_label($settore)) return;
+
+  if (!isset($tree[$macro][$settore])) $tree[$macro][$settore] = [];
+  if ($settore2 === '' || ab_assoc_is_placeholder_label($settore2)) return;
+
+  $tree[$macro][$settore][$settore2] = true;
+}
+
+function abf_collect_editor_tree_nodes(): array {
+  $tree = [];
+
+  foreach (abf_all_categories() as $categoryPath) {
+    $parts = ab_split_category((string)$categoryPath);
+    $macro = isset($parts[0]) ? (string)$parts[0] : '';
+    $settore = isset($parts[1]) ? (string)$parts[1] : '';
+    $settore2 = isset($parts[2]) ? (string)$parts[2] : '';
+    abf_tree_add_path($tree, $macro, $settore, $settore2);
+  }
+
+  foreach ($tree as $macro => $settoriMap) {
+    foreach ($settoriMap as $settore => $settore2Set) {
+      $settore2Values = array_keys((array)$settore2Set);
+      sort($settore2Values, SORT_NATURAL | SORT_FLAG_CASE);
+      $tree[$macro][$settore] = $settore2Values;
+    }
+    uksort($tree[$macro], 'strnatcasecmp');
+  }
+
+  uksort($tree, 'strnatcasecmp');
+  return $tree;
+}
+
+/**
+ * Authoritative activity tree resolver.
+ *
+ * Source order:
+ * 1) Manual nodes saved by the Struttura Settori editor (single source of truth).
+ * 2) Shared culturacsi activity-tree resolver.
+ * 3) Legacy fallback from distinct stored category paths.
+ */
+function abf_get_authoritative_tree_nodes(): array {
+  $nodes = [];
+
+  if (function_exists('abf_get_manual_nodes')) {
+    $nodes = (array)abf_get_manual_nodes();
+  }
+
+  if (function_exists('abf_sanitize_manual_nodes')) {
+    $nodes = (array)abf_sanitize_manual_nodes((array)$nodes);
+  }
+
+  // Shared canonical resolver (culturacsi-core) is the next fallback.
+  // This keeps all consumers aligned on the same activity tree source.
+  if (empty($nodes) && function_exists('culturacsi_activity_tree_get_nodes')) {
+    $nodes = (array)culturacsi_activity_tree_get_nodes();
+    if (function_exists('abf_sanitize_manual_nodes')) {
+      $nodes = (array)abf_sanitize_manual_nodes((array)$nodes);
+    }
+  }
+
+  // Legacy fallback: derive from stored DB categories only when no canonical
+  // tree is available.
+  if (empty($nodes) && function_exists('abf_collect_editor_tree_nodes')) {
+    $nodes = (array)abf_collect_editor_tree_nodes();
+  }
+
+  return (array)$nodes;
+}
+
 function ab_assoc_category_from_levels(string $macro, string $settore, string $settore2): string {
   $macro = trim($macro);
   $settore = trim($settore);
@@ -384,7 +481,8 @@ function ab_assoc_category_paths_from_row(array $row): array {
 
 function ab_assoc_collect_category_activity_labels(array $categoryPaths): array {
   $categories = [];
-  $activities = [];
+  $activities_s1 = [];
+  $activities_s2 = [];
 
   foreach ($categoryPaths as $categoryPath) {
     $parts = ab_split_category((string)$categoryPath);
@@ -400,19 +498,29 @@ function ab_assoc_collect_category_activity_labels(array $categoryPaths): array 
       $categories[ab_assoc_normalize_key($categoryLabel)] = $categoryLabel;
     }
 
-    if ($settore2 !== '' && !ab_assoc_is_placeholder_label($settore2)) {
-      $act = trim((string)$settore2);
-      // Skip trivial tokens (e.g., single letters like "M")
-      $alpha = (string)preg_replace('/[^\p{L}]+/u', '', $act);
-      $len = function_exists('mb_strlen') ? (int)mb_strlen($alpha, 'UTF-8') : (int)strlen($alpha);
+    $act1 = ($settore !== '' && !ab_assoc_is_placeholder_label($settore)) ? trim((string)$settore) : '';
+    $act2 = ($settore2 !== '' && !ab_assoc_is_placeholder_label($settore2)) ? trim((string)$settore2) : '';
+
+    if ($act2 !== '') {
+      $alpha = (string)preg_replace('/[^\p{L}]+/u', '', $act2);
+      $len = (int)(function_exists('mb_strlen') ? mb_strlen($alpha, 'UTF-8') : strlen($alpha));
       if ($len >= 3) {
-        $activities[ab_assoc_normalize_key($act)] = $act;
+        $activities_s2[ab_assoc_normalize_key($act2)] = $act2;
+      }
+    }
+    if ($act1 !== '') {
+      $alpha = (string)preg_replace('/[^\p{L}]+/u', '', $act1);
+      $len = (int)(function_exists('mb_strlen') ? mb_strlen($alpha, 'UTF-8') : strlen($alpha));
+      if ($len >= 3) {
+        $activities_s1[ab_assoc_normalize_key($act1)] = $act1;
       }
     }
   }
 
   $categoryLabels = array_values($categories);
-  $activityLabels = array_values($activities);
+  // Settore is a fallback for Settore 2. Only show Settore if no Settore 2 entries exist.
+  $activityLabels = !empty($activities_s2) ? array_values($activities_s2) : array_values($activities_s1);
+
   sort($categoryLabels, SORT_NATURAL | SORT_FLAG_CASE);
   sort($activityLabels, SORT_NATURAL | SORT_FLAG_CASE);
 
@@ -441,6 +549,7 @@ function ab_assoc_build_source_key_from_row(array $row): array {
   $region = trim((string)($row['region'] ?? ''));
   $province = trim((string)($row['province'] ?? ''));
   $city = trim((string)($row['city'] ?? ''));
+  $locationRaw = trim((string)($row['location_raw'] ?? ''));
 
   $baseKey = ab_assoc_source_key($organization, $province, $city, $region);
 
@@ -454,8 +563,12 @@ function ab_assoc_build_source_key_from_row(array $row): array {
   $urlsRaw = trim((string)($row['urls'] ?? ''));
 
   $disc = '';
+  // When explicit city/province are missing, use raw location first.
+  if ($disc === '' && $locationRaw !== '') {
+    $disc = ab_assoc_normalize_key($locationRaw);
+  }
   // Prefer FULL email (local@domain) as discriminator when location is unknown.
-  if ($emailsRaw !== '') {
+  if ($disc === '' && $emailsRaw !== '') {
     $parts = preg_split('/[|,;\r\n\s]+/', $emailsRaw);
     if (is_array($parts)) {
       foreach ($parts as $p) {
@@ -508,16 +621,162 @@ function ab_assoc_build_source_key_from_row(array $row): array {
   return [$strict, $baseKey];
 }
 
+function ab_assoc_entity_key_should_ignore_csv_col(string $colKey): bool {
+  $key = ab_sync_norm_header($colKey);
+  if ($key === '') return true;
+  // Identity must be association-level (name/location/contact), not activity-level.
+  if (in_array($key, [
+    'macro', 'macro_categoria', 'macro_categorie', 'macrocategoria', 'macro_category', 'macro_categoria_acsi',
+    'settore', 'settore_1', 'settore1', 'settori', 'settori_1', 'settori1',
+    'settore_2', 'settore2', 'settori_2', 'settori2', 'sotto_settore', 'sottosettore',
+  ], true)) return true;
+  if (in_array($key, ['categoria', 'category'], true)) return true;
+  if (strpos($key, 'attivit') !== false) return true;
+  if (strpos($key, 'macro') !== false && strpos($key, 'categor') !== false) return true;
+  return false;
+}
+
+function ab_assoc_identity_normalize(string $value): string {
+  $value = trim($value);
+  if ($value === '') return '';
+  $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+  if (function_exists('remove_accents')) {
+    $value = remove_accents($value);
+  }
+  $value = strtolower($value);
+  $value = preg_replace('/\s+/u', ' ', $value);
+  return trim((string)$value);
+}
+
+/**
+ * Stable association identity from CSV data, excluding activity dimensions.
+ */
+function ab_assoc_entity_key_from_row(array $row): string {
+  $explicit = trim((string)($row['entity_key'] ?? ''));
+  if ($explicit !== '') return $explicit;
+
+  // Identity rule:
+  // same association name + same location => same association.
+  // Location hierarchy: city/province/region, fallback to location_raw.
+  $org = ab_assoc_identity_normalize((string)($row['organization'] ?? ''));
+  if ($org === '') return '';
+
+  $region = ab_assoc_identity_normalize((string)($row['region'] ?? ''));
+  $province = ab_assoc_identity_normalize((string)($row['province'] ?? ''));
+  $city = ab_assoc_identity_normalize((string)($row['city'] ?? ''));
+  $locationRaw = ab_assoc_identity_normalize((string)($row['location_raw'] ?? ''));
+
+  $hasStructuredLocation = ($region !== '' || $province !== '' || $city !== '');
+  $locPart = $hasStructuredLocation
+    ? implode('|', [$region, $province, $city])
+    : $locationRaw;
+
+  if ($locPart === '') {
+    // Last fallback only when no location info exists at all.
+    $contactSig = ab_assoc_contact_signature_from_row($row);
+    if ($contactSig !== '') $locPart = 'contact:' . $contactSig;
+  }
+
+  return substr(sha1($org . '|' . $locPart), 0, 20);
+}
+
+function ab_assoc_contact_signature_from_row(array $row): string {
+  $emails = [];
+  $emailsRaw = trim((string)($row['emails'] ?? ''));
+  if ($emailsRaw !== '') {
+    $parts = preg_split('/[|,;\r\n\s]+/', $emailsRaw);
+    if (is_array($parts)) {
+      foreach ($parts as $part) {
+        $email = strtolower((string)sanitize_email(trim((string)$part)));
+        if ($email !== '' && strpos($email, '@') !== false) {
+          $emails[$email] = true;
+        }
+      }
+    }
+  }
+
+  $urls = [];
+  $rawCandidates = [
+    (string)($row['website'] ?? ''),
+    (string)($row['facebook'] ?? ''),
+    (string)($row['instagram'] ?? ''),
+  ];
+
+  foreach ($rawCandidates as $candidate) {
+    $u = ab_assoc_normalize_url(trim((string)$candidate));
+    if ($u === '') continue;
+    $parsed = wp_parse_url($u);
+    if (!is_array($parsed)) continue;
+    $host = strtolower((string)($parsed['host'] ?? ''));
+    if ($host === '') continue;
+    $path = trim((string)($parsed['path'] ?? ''), '/');
+    $seg = '';
+    if ($path !== '') {
+      $parts = preg_split('/\/+/', $path);
+      if (is_array($parts)) {
+        foreach ($parts as $p) {
+          $p = trim((string)$p);
+          if ($p !== '') {
+            $seg = strtolower($p);
+            break;
+          }
+        }
+      }
+    }
+    $urls[$host . ($seg !== '' ? '/' . $seg : '')] = true;
+  }
+
+  $urlsRaw = trim((string)($row['urls'] ?? ''));
+  if ($urlsRaw !== '') {
+    $fromText = ab_assoc_extract_urls_from_text($urlsRaw);
+    foreach ($fromText as $urlRaw) {
+      $u = ab_assoc_normalize_url((string)$urlRaw);
+      if ($u === '') continue;
+      $parsed = wp_parse_url($u);
+      if (!is_array($parsed)) continue;
+      $host = strtolower((string)($parsed['host'] ?? ''));
+      if ($host === '') continue;
+      $path = trim((string)($parsed['path'] ?? ''), '/');
+      $seg = '';
+      if ($path !== '') {
+        $parts = preg_split('/\/+/', $path);
+        if (is_array($parts)) {
+          foreach ($parts as $p) {
+            $p = trim((string)$p);
+            if ($p !== '') {
+              $seg = strtolower($p);
+              break;
+            }
+          }
+        }
+      }
+      $urls[$host . ($seg !== '' ? '/' . $seg : '')] = true;
+    }
+  }
+
+  if (empty($emails) && empty($urls)) {
+    return '';
+  }
+
+  $emailKeys = array_keys($emails);
+  $urlKeys = array_keys($urls);
+  sort($emailKeys, SORT_NATURAL | SORT_FLAG_CASE);
+  sort($urlKeys, SORT_NATURAL | SORT_FLAG_CASE);
+
+  $payload = implode(',', $emailKeys) . '|' . implode(',', $urlKeys);
+  return substr(sha1($payload), 0, 12);
+}
+
 function ab_assoc_row_key_from_values(string $organization, string $region = '', string $province = '', string $city = '', string $category = ''): string {
   $org = ab_assoc_normalize_key($organization);
   if ($org === '') return '';
 
-  $category = ab_assoc_normalize_key($category);
   $region = ab_assoc_normalize_key($region);
   $province = ab_assoc_normalize_key($province);
   $city = ab_assoc_normalize_key($city);
 
-  return implode('|', [$org, $category, $region, $province, $city]);
+  // Category is intentionally excluded: one association record can have multiple activity categories.
+  return implode('|', [$org, $region, $province, $city]);
 }
 
 function ab_assoc_row_key(array $row): string {
@@ -867,9 +1126,26 @@ function ab_assoc_find_post_id(array $row): int {
   return 0;
 }
 
-function ab_assoc_post_matches_row(int $postId, string $rowKey, string $sourceKey = ''): bool {
+function ab_assoc_post_matches_row(int $postId, string $rowKey, string $sourceKey = '', string $entityKey = ''): bool {
   if ($postId <= 0) return false;
   if (get_post_type($postId) !== 'association') return false;
+
+  // Primary identity rule: same source key means same association chapter/location.
+  // This allows one association to have multiple activities without creating duplicates.
+  if ($sourceKey !== '') {
+    $candidateVariant = trim((string)get_post_meta($postId, '_ab_source_variant_key', true));
+    $candidateSource = trim((string)get_post_meta($postId, '_ab_source_key', true));
+    if (($candidateVariant !== '' && $candidateVariant === $sourceKey) || ($candidateSource !== '' && $candidateSource === $sourceKey)) {
+      return true;
+    }
+  }
+
+  if ($entityKey !== '') {
+    $candidateEntityKey = trim((string)get_post_meta($postId, '_ab_entity_key', true));
+    if ($candidateEntityKey !== '' && $candidateEntityKey !== $entityKey) {
+      return false;
+    }
+  }
 
   if ($rowKey === '') return true;
 
@@ -882,16 +1158,44 @@ function ab_assoc_post_matches_row(int $postId, string $rowKey, string $sourceKe
     return true;
   }
 
-  // New behavior: always accept a match by source key (organization + location),
-  // even when row keys (which include category) differ. This prevents creating
-  // duplicate association posts for the same entity that has multiple activities.
-  if ($sourceKey !== '') {
-    $candidateSource = trim((string)get_post_meta($postId, '_ab_source_key', true));
-    if ($candidateSource !== '' && $candidateSource === $sourceKey) {
-      return true;
-    }
+  return false;
+}
+
+function ab_assoc_has_linked_posts(int $associationId, string $postType): bool {
+  $associationId = (int)$associationId;
+  $postType = trim(strtolower($postType));
+  if ($associationId <= 0 || ($postType !== 'event' && $postType !== 'news')) {
+    return false;
   }
 
+  $cacheKey = ab_cache_key('ab_assoc_has_linked_posts_', [get_current_blog_id(), $associationId, $postType]);
+  $cached = get_transient($cacheKey);
+  if ($cached !== false) {
+    return (bool)$cached;
+  }
+
+  $statuses = $postType === 'event' ? ['publish', 'future'] : ['publish'];
+
+  $metaHit = get_posts([
+    'post_type' => $postType,
+    'post_status' => $statuses,
+    'fields' => 'ids',
+    'posts_per_page' => 1,
+    'no_found_rows' => true,
+    'update_post_meta_cache' => false,
+    'update_post_term_cache' => false,
+    'meta_query' => [[
+      'key' => 'organizer_association_id',
+      'value' => (string)$associationId,
+      'compare' => '=',
+    ]],
+  ]);
+  if (!empty($metaHit)) {
+    set_transient($cacheKey, 1, 5 * MINUTE_IN_SECONDS);
+    return true;
+  }
+
+  set_transient($cacheKey, 0, 5 * MINUTE_IN_SECONDS);
   return false;
 }
 
@@ -916,6 +1220,8 @@ function ab_assoc_build_profile(array $row): array {
   $logoHtml = '';
   $logoUrl = '';
   $associationPermalink = '';
+  $associationTitle = '';
+  $associationDescriptionHtml = '';
   $allCategories = trim((string)($row['all_categories'] ?? ''));
   if ($allCategories === '') {
     $allCategories = $category;
@@ -924,14 +1230,35 @@ function ab_assoc_build_profile(array $row): array {
   $categoryPaths = ab_assoc_category_paths_from_row($row);
   $categorySets = ab_assoc_collect_category_activity_labels($categoryPaths);
   $categoryGroups = $categorySets['categories'];
-  $activities = $categorySets['activities'];
+  $activities = ab_assoc_unique_nonempty_values((array)$categorySets['activities']);
+  $activityPaths = [];
+  $seenActivityPaths = [];
+  foreach ($categoryPaths as $pathRaw) {
+    $path = trim((string)$pathRaw);
+    if ($path === '' || ab_assoc_is_placeholder_label($path)) continue;
+    $parts = ab_split_category($path);
+    $parts = array_values(array_filter(array_map(static fn($part) => trim((string)$part), $parts), static fn($part) => $part !== '' && !ab_assoc_is_placeholder_label($part)));
+    if (empty($parts)) continue;
+    $normalizedPath = ab_join_category($parts);
+    if ($normalizedPath === '') continue;
+    $normKey = ab_assoc_normalize_key($normalizedPath);
+    if ($normKey === '' || isset($seenActivityPaths[$normKey])) continue;
+    $seenActivityPaths[$normKey] = true;
+    $activityPaths[] = $normalizedPath;
+  }
+  if (!empty($activityPaths)) {
+    usort($activityPaths, static fn(string $a, string $b): int => strnatcasecmp($a, $b));
+  }
   $categoryGroupsLabel = implode(' | ', $categoryGroups);
   $activityCategories = implode(', ', $activities);
 
   $associationId = ab_assoc_find_post_id($row);
   if ($associationId > 0) {
     $title = trim((string)get_the_title($associationId));
-    if ($title !== '') $organization = $title;
+    if ($title !== '') {
+      $organization = $title;
+      $associationTitle = $title;
+    }
 
     $metaComune = ab_assoc_first_meta_value($associationId, ['comune', 'city', 'citta', 'comune_citta']);
     $metaCity = ab_assoc_first_meta_value($associationId, ['city', 'citta', 'comune']);
@@ -957,6 +1284,16 @@ function ab_assoc_build_profile(array $row): array {
     $logoHtml = get_the_post_thumbnail($associationId, 'thumbnail', ['loading' => 'lazy']);
     $logoUrl = (string)get_the_post_thumbnail_url($associationId, 'large');
     $associationPermalink = (string)get_permalink($associationId);
+    $postObj = get_post($associationId);
+    if ($postObj instanceof WP_Post) {
+      $contentRaw = trim((string)$postObj->post_content);
+      $excerptRaw = trim((string)$postObj->post_excerpt);
+      if ($contentRaw !== '') {
+        $associationDescriptionHtml = wp_kses_post(apply_filters('the_content', $postObj->post_content));
+      } elseif ($excerptRaw !== '') {
+        $associationDescriptionHtml = wp_kses_post(wpautop($excerptRaw));
+      }
+    }
   }
 
   $emails = ab_assoc_merge_emails($emails, '');
@@ -972,14 +1309,30 @@ function ab_assoc_build_profile(array $row): array {
     }
   }
 
-  $eventsUrl = home_url('/calendario/');
-  $newsUrl = home_url('/notizie/');
+  $eventsUrl = '';
+  $newsUrl = '';
   if ($associationId > 0) {
-    $eventsUrl = add_query_arg(['associazione_id' => $associationId], $eventsUrl);
-    $newsUrl = add_query_arg(['associazione_id' => $associationId], $newsUrl);
+    if (ab_assoc_has_linked_posts($associationId, 'event')) {
+      $eventsUrl = add_query_arg(
+        [
+          'ev_associazione' => $associationId,
+          // Backward-compatible fallback consumed by calendar browser.
+          'associazione_id' => $associationId,
+        ],
+        home_url('/calendario/')
+      );
+    }
+    if (ab_assoc_has_linked_posts($associationId, 'news')) {
+      $newsUrl = add_query_arg(
+        [
+          'news_assoc' => $associationId,
+        ],
+        home_url('/notizie/')
+      );
+    }
   }
 
-  $locParts = array_values(array_filter([$city, $province, $region], fn($v) => $v !== ''));
+  $locParts = ab_assoc_unique_nonempty_values([$city, $province, $region]);
   $location = implode(', ', $locParts);
 
   $buttonLinks = [];
@@ -988,7 +1341,7 @@ function ab_assoc_build_profile(array $row): array {
   if ($facebook !== '') $buttonLinks[] = ['label' => 'Facebook', 'url' => $facebook];
   if ($instagram !== '') $buttonLinks[] = ['label' => 'Instagram', 'url' => $instagram];
 
-  $mapParts = array_values(array_filter([$address, $city, $province, $region], fn($v) => $v !== ''));
+  $mapParts = ab_assoc_unique_nonempty_values([$address, $city, $province, $region]);
   if (empty($mapParts) && $locationRaw !== '') {
     $mapParts[] = $locationRaw;
   }
@@ -1010,6 +1363,8 @@ function ab_assoc_build_profile(array $row): array {
     'category_groups_label' => $categoryGroupsLabel,
     'activity_categories' => $activityCategories,
     'activities' => $activities,
+    'activity_paths' => $activityPaths,
+    'activity_paths_label' => implode(' | ', $activityPaths),
     'activities_label' => $activityCategories,
     'region' => $region,
     'province' => $province,
@@ -1030,10 +1385,13 @@ function ab_assoc_build_profile(array $row): array {
     'logo_html' => $logoHtml,
     'logo_url' => $logoUrl,
     'permalink' => $associationPermalink,
+    'association_title' => $associationTitle !== '' ? $associationTitle : $organization,
     'events_url' => (string)$eventsUrl,
     'news_url' => (string)$newsUrl,
     'map_query' => $mapQuery,
     'map_embed_url' => $mapEmbedUrl,
+    'description_html' => $associationDescriptionHtml !== '' ? $associationDescriptionHtml : ($descriptionHtml ?? ''),
+    'association_description_html' => $associationDescriptionHtml !== '' ? $associationDescriptionHtml : ($descriptionHtml ?? ''),
   ];
 }
 
@@ -1043,6 +1401,7 @@ function ab_assoc_render_card(array $row, string $cardClass = 'ab-card', bool $s
   $category = (string)$profile['category'];
   $allCategories = (string)$profile['all_categories'];
   $activities = is_array($profile['activities'] ?? null) ? $profile['activities'] : [];
+  $activityPaths = is_array($profile['activity_paths'] ?? null) ? $profile['activity_paths'] : [];
   $activitiesLabel = (string)($profile['activities_label'] ?? '');
   $location = (string)$profile['location'];
   $address = (string)$profile['address'];
@@ -1062,6 +1421,8 @@ function ab_assoc_render_card(array $row, string $cardClass = 'ab-card', bool $s
     'category_groups_label' => (string)($profile['category_groups_label'] ?? ''),
     'activity_categories' => (string)$profile['activity_categories'],
     'activities' => $activities,
+    'activity_paths' => $activityPaths,
+    'activity_paths_label' => (string)($profile['activity_paths_label'] ?? ''),
     'activities_label' => $activitiesLabel,
     'region' => (string)$profile['region'],
     'province' => (string)$profile['province'],
@@ -1079,10 +1440,13 @@ function ab_assoc_render_card(array $row, string $cardClass = 'ab-card', bool $s
     'x' => (string)$profile['x'],
     'links' => $buttonLinks,
     'permalink' => (string)$profile['permalink'],
+    'association_title' => (string)($profile['association_title'] ?? $organization),
     'events_url' => (string)$profile['events_url'],
     'news_url' => (string)$profile['news_url'],
     'map_embed_url' => (string)$profile['map_embed_url'],
     'map_query' => (string)$profile['map_query'],
+    'description_html' => (string)($profile['description_html'] ?? ''),
+    'association_description_html' => (string)($profile['association_description_html'] ?? ($profile['description_html'] ?? '')),
   ];
 
   $out = '<article class="' . esc_attr($cardClass . ' ab-assoc-card') . '" data-ab-assoc-card="1" tabindex="0" role="button" aria-label="' . esc_attr('Apri dettagli di ' . $organization) . '" aria-haspopup="dialog">';
@@ -1099,29 +1463,27 @@ function ab_assoc_render_card(array $row, string $cardClass = 'ab-card', bool $s
     if ($location !== '') $out .= '<div class="ab-muted">' . ab_h($location) . '</div>';
   }
 
-  if (!empty($activities)) {
+  $cardTags = !empty($activities) ? $activities : $activityPaths;
+  if (!empty($cardTags)) {
     $out .= '<div class="ab-assoc-tags">';
-    foreach ($activities as $activity) {
+    foreach ($cardTags as $activity) {
       $out .= '<span class="ab-assoc-tag">' . ab_h((string)$activity) . '</span>';
     }
     $out .= '</div>';
   }
 
   if ($address !== '') {
-    $out .= '<div style="margin-top:8px"><strong>Indirizzo:</strong> ' . ab_h($address) . '</div>';
+    $out .= '<div class="ab-assoc-meta-row"><span class="ab-assoc-meta-label">Indirizzo</span><span class="ab-assoc-meta-value">' . ab_h($address) . '</span></div>';
   }
   if ($phone !== '') {
-    $out .= '<div style="margin-top:8px"><strong>Telefono:</strong> ' . ab_h($phone) . '</div>';
+    $out .= '<div class="ab-assoc-meta-row"><span class="ab-assoc-meta-label">Telefono</span><span class="ab-assoc-meta-value">' . ab_h($phone) . '</span></div>';
   }
 
   if ($notes !== '') {
     $out .= '<div style="margin-top:8px">' . ab_h($notes) . '</div>';
   }
   if ($showCategoryPath) {
-    $pathLabel = $allCategories !== '' ? $allCategories : $category;
-    if ($pathLabel !== '') {
-      $out .= '<div class="abf-path">' . ab_h($pathLabel) . '</div>';
-    }
+    // Legacy flag kept for compatibility: full category paths are modal-only.
   }
 
   $json = wp_json_encode($modalData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
@@ -1151,6 +1513,19 @@ function ab_css(): string {
   .ab-assoc-name-wrap{min-width:0}
   .ab-assoc-name-wrap h4{margin:0 0 6px 0}
   .ab-assoc-tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .ab-assoc-meta-row{
+    margin-top:8px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:baseline
+  }
+  .ab-assoc-meta-label{
+    font-weight:700;
+    color:var(--abf-accent-color, var(--global-palette1, #2B6CB0))
+  }
+  .ab-assoc-meta-label::after{content:':'}
+  .ab-assoc-meta-value{color:var(--abf-text-color, var(--global-palette3, #1A202C))}
   .ab-assoc-tag{
     display:inline-flex;
     align-items:center;
@@ -1160,7 +1535,7 @@ function ab_css(): string {
     background:var(--abf-control-bg-soft, var(--global-palette8, #F7FAFC));
     color:var(--abf-text-color, var(--global-palette3, #1A202C));
     font-size:.74rem;
-    font-weight:600;
+    font-weight:700;
     line-height:1.25
   }
   .ab-assoc-links{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
@@ -1333,27 +1708,42 @@ function ab_css(): string {
   .abf-pager{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:var(--wp--preset--spacing--50, 1.5rem); padding-top:6px}
   .abf-pager-nav{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px}
   .abf-pager .ab-muted{color:var(--abf-muted-color)}
-  .abf-page-list{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px}
-  .abf-page-dot{
-    width:12px;
-    height:12px;
+  .abf-page-list{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px}
+  .abf-page-link{
+    min-width:36px;
+    height:34px;
+    padding:0 9px;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    border-radius:999px;
+    border-radius:8px;
     border:1px solid var(--global-palette6, #A0AEC0);
-    background:var(--global-palette7, #E2E8F0);
+    background:var(--global-palette8, #F7FAFC);
+    color:var(--abf-text-color);
+    font-size:.87rem;
+    font-weight:700;
     text-decoration:none;
     transition:all .18s ease
   }
-  .abf-page-dot:hover,.abf-page-dot:focus-visible{
+  .abf-page-link:hover,.abf-page-link:focus-visible{
     outline:none;
     border-color:var(--abf-accent-color);
-    background:color-mix(in srgb, var(--abf-accent-color) 18%, var(--abf-control-bg-soft))
+    color:var(--abf-accent-color);
+    background:color-mix(in srgb, var(--abf-accent-color) 15%, var(--abf-control-bg-soft))
   }
-  .abf-page-dot.is-current{
+  .abf-page-link.is-current{
     border-color:var(--abf-accent-color);
-    background:var(--abf-accent-color)
+    background:var(--abf-accent-color);
+    color:var(--global-palette9, #fff)
+  }
+  .abf-page-ellipsis{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:20px;
+    height:34px;
+    color:var(--abf-muted-color);
+    font-weight:700
   }
   .abf-sr-only{
     position:absolute!important;
@@ -1376,9 +1766,9 @@ function ab_css(): string {
   .ab-assoc-modal{width:min(920px,calc(100vw - 28px)); max-height:calc(100vh - 28px); overflow:auto; background:var(--global-palette9, #fff); border-radius:14px; box-shadow:0 20px 40px rgba(0,0,0,.26); color:var(--global-palette3, #1A202C); font-family:var(--global-body-font-family, inherit)}
   .ab-assoc-modal-header{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:14px 16px; border-bottom:1px solid var(--global-palette7, #E2E8F0)}
   .ab-assoc-modal-title-wrap{display:flex; gap:10px; align-items:flex-start}
-  .ab-assoc-modal-logo{width:64px; height:64px; border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,.12); background:#fff; display:none}
+  .ab-assoc-modal-logo{width:80px; height:80px; flex-shrink:0; border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,.12); background:#fff; display:none}
   .ab-assoc-modal-logo.is-visible{display:block}
-  .ab-assoc-modal-logo img{width:100%; height:100%; object-fit:cover; display:block}
+  .ab-assoc-modal-logo img{width:100%; height:100%; object-fit:contain; display:block}
   .ab-assoc-modal-title{margin:0; font-size:20px; line-height:1.2; color:var(--global-palette1, #2B6CB0)}
   .ab-assoc-modal-subtitle{margin-top:4px; color:var(--global-palette5, #4A5568); font-size:13px}
   .ab-assoc-modal-close{
@@ -1402,9 +1792,13 @@ function ab_css(): string {
   .ab-assoc-modal-fields{display:grid; grid-template-columns:1fr; gap:7px}
   .ab-assoc-modal-field{display:flex; gap:8px; font-size:14px}
   .ab-assoc-modal-field-label{font-weight:600; min-width:130px}
+  .ab-assoc-modal-field-value.is-emphasis{font-weight:700; color:var(--abf-text-color, var(--global-palette3, #1A202C))}
   .ab-assoc-modal-links{display:flex; flex-wrap:wrap; gap:7px; margin-top:8px}
   .ab-assoc-modal-links:empty{display:none}
   .ab-assoc-modal-map iframe{width:100%; min-height:280px; border:0; border-radius:10px}
+  .ab-assoc-modal-desc{grid-column:1 / -1; max-height:280px; overflow-y:auto; padding:12px; background:#fff; border-radius:10px; border:1px solid var(--global-palette7, #E2E8F0)}
+  .ab-assoc-modal-desc > :first-child{margin-top:0}
+  .ab-assoc-modal-desc > :last-child{margin-bottom:0}
   @media (max-width: 860px){
     .ab-assoc-modal-body{grid-template-columns:1fr}
     .ab-assoc-modal-field{flex-direction:column; gap:2px}
@@ -1424,13 +1818,55 @@ function ab_enqueue_assets(): void {
   wp_enqueue_style($handle);
   wp_add_inline_style($handle, ab_css());
 
+  $scriptBasePath = plugin_dir_path(__FILE__) . 'assets/js/';
+  $scriptVersion = static function (string $relativePath, string $fallback) use ($scriptBasePath): string {
+    $absolutePath = $scriptBasePath . ltrim($relativePath, '/');
+    return file_exists($absolutePath) ? (string)filemtime($absolutePath) : $fallback;
+  };
+
+  $coreHandle = 'associazioni-browser-live-core';
+  wp_register_script(
+    $coreHandle,
+    plugins_url('assets/js/settori-live/core.js', __FILE__),
+    [],
+    $scriptVersion('settori-live/core.js', '1.0.0'),
+    false
+  );
+
+  $heroHandle = 'associazioni-browser-live-hero';
+  wp_register_script(
+    $heroHandle,
+    plugins_url('assets/js/settori-live/hero.js', __FILE__),
+    [$coreHandle],
+    $scriptVersion('settori-live/hero.js', '1.0.0'),
+    false
+  );
+
+  $modalHandle = 'associazioni-browser-live-modal';
+  wp_register_script(
+    $modalHandle,
+    plugins_url('assets/js/settori-live/modal.js', __FILE__),
+    [$coreHandle],
+    $scriptVersion('settori-live/modal.js', '1.0.0'),
+    false
+  );
+
+  $filtersHandle = 'associazioni-browser-live-filters';
+  wp_register_script(
+    $filtersHandle,
+    plugins_url('assets/js/settori-live/filters.js', __FILE__),
+    [$coreHandle, $heroHandle, $modalHandle],
+    $scriptVersion('settori-live/filters.js', '1.0.0'),
+    false
+  );
+
   $scriptHandle = 'associazioni-browser-live';
   wp_register_script(
     $scriptHandle,
     plugins_url('assets/js/settori-browser-live.js', __FILE__),
-    [],
-    '1.7.8',
-    true
+    [$filtersHandle],
+    $scriptVersion('settori-browser-live.js', '1.9.0'),
+    false
   );
   wp_enqueue_script($scriptHandle);
 
@@ -1447,6 +1883,75 @@ function ab_enqueue_assets(): void {
     'before'
   );
 }
+
+/**
+ * Replace stale localhost media URLs in rendered frontend markup.
+ */
+function abf_normalize_localhost_media_urls_in_markup(string $markup): string {
+  if ($markup === '' || stripos($markup, 'localhost:10010') === false) {
+    return $markup;
+  }
+
+  $siteBase = rtrim((string)home_url('/'), '/');
+  if ($siteBase === '') {
+    return $markup;
+  }
+
+  $siteBaseEscaped = str_replace('/', '\\/', $siteBase);
+  $siteBaseEncoded = rawurlencode($siteBase);
+
+  return strtr($markup, [
+    'http://localhost:10010' => $siteBase,
+    'https://localhost:10010' => $siteBase,
+    'http:\\/\\/localhost:10010' => $siteBaseEscaped,
+    'https:\\/\\/localhost:10010' => $siteBaseEscaped,
+    'http%3A%2F%2Flocalhost%3A10010' => $siteBaseEncoded,
+    'https%3A%2F%2Flocalhost%3A10010' => $siteBaseEncoded,
+  ]);
+}
+
+function abf_filter_render_block_normalize_localhost_media_urls($blockContent, array $block = []) {
+  if (is_admin() || !is_string($blockContent) || $blockContent === '') {
+    return $blockContent;
+  }
+  return abf_normalize_localhost_media_urls_in_markup($blockContent);
+}
+add_filter('render_block', 'abf_filter_render_block_normalize_localhost_media_urls', 99, 2);
+
+function abf_filter_the_content_normalize_localhost_media_urls(string $content): string {
+  if (is_admin() || $content === '') {
+    return $content;
+  }
+  return abf_normalize_localhost_media_urls_in_markup($content);
+}
+add_filter('the_content', 'abf_filter_the_content_normalize_localhost_media_urls', 99);
+
+function abf_should_normalize_frontend_output(): bool {
+  if (is_admin()) return false;
+  if (defined('REST_REQUEST') && REST_REQUEST) return false;
+  if (function_exists('wp_doing_ajax') && wp_doing_ajax()) return false;
+  if (function_exists('wp_is_json_request') && wp_is_json_request()) return false;
+  if (function_exists('is_feed') && is_feed()) return false;
+  if (function_exists('is_robots') && is_robots()) return false;
+  if (function_exists('is_trackback') && is_trackback()) return false;
+
+  $requestUri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '';
+  if ($requestUri !== '' && stripos($requestUri, '/wp-json/') !== false) return false;
+
+  return true;
+}
+
+function abf_start_frontend_output_normalizer(): void {
+  static $started = false;
+  if ($started || !abf_should_normalize_frontend_output()) return;
+  $started = true;
+
+  ob_start(static function($buffer) {
+    if (!is_string($buffer) || $buffer === '') return $buffer;
+    return abf_normalize_localhost_media_urls_in_markup($buffer);
+  });
+}
+add_action('template_redirect', 'abf_start_frontend_output_normalizer', 0);
 
 /** Query-key helper to allow multiple shortcodes on one page without collisions. */
 function ab_qkey(string $id, string $suffix): string {
@@ -1476,7 +1981,7 @@ function ab_render_breadcrumb(string $id, string $root, array $selected_segments
 
   // Root crumb
   if ($root !== '') {
-    $parts[] = '<span class="ab-crumb-sep">›</span>';
+    $parts[] = '<span class="ab-crumb-sep">â€º</span>';
     $parts[] = '<a href="' . ab_link([
       $k_path => null, $k_region => null, $k_q => null, $k_city => null, $k_prov => null, $k_page => null
     ]) . '">' . ab_h($root) . '</a>';
@@ -1488,7 +1993,7 @@ function ab_render_breadcrumb(string $id, string $root, array $selected_segments
     $acc[] = $seg;
     $p = ab_join_category($acc);
 
-    $parts[] = '<span class="ab-crumb-sep">›</span>';
+    $parts[] = '<span class="ab-crumb-sep">â€º</span>';
     $parts[] = '<a href="' . ab_link([
       $k_path => $p,
       $k_region => null, $k_q => null, $k_city => null, $k_prov => null, $k_page => null
@@ -1496,7 +2001,7 @@ function ab_render_breadcrumb(string $id, string $root, array $selected_segments
   }
 
   if ($region !== '') {
-    $parts[] = '<span class="ab-crumb-sep">›</span>';
+    $parts[] = '<span class="ab-crumb-sep">â€º</span>';
     $parts[] = '<span class="ab-muted">' . ab_h($region) . '</span>';
   }
 
@@ -1534,13 +2039,28 @@ function ab_render_regions_subtree(
     return '<h3 style="margin-top:18px">Regioni</h3><p>Nessuna regione trovata per questa categoria.</p>';
   }
 
+  $identityGroupBy = implode(', ', [
+    "TRIM(COALESCE(organization,''))",
+    "TRIM(COALESCE(region,''))",
+    "TRIM(COALESCE(province,''))",
+    "TRIM(COALESCE(city,''))",
+    "CASE WHEN TRIM(COALESCE(region,''))='' AND TRIM(COALESCE(province,''))='' AND TRIM(COALESCE(city,''))='' THEN TRIM(COALESCE(location_raw,'')) ELSE '' END",
+  ]);
   $sql_regions = "
-    SELECT TRIM(region) AS region, COUNT(*) as cnt
-    FROM {$table_sql}
-    WHERE (category = %s OR category LIKE %s)
-      AND TRIM(COALESCE(region,'')) <> ''
-    GROUP BY TRIM(region)
-    ORDER BY TRIM(region) ASC
+    SELECT g.region, COUNT(*) as cnt
+    FROM (
+      SELECT
+        TRIM(COALESCE(region,'')) AS region,
+        TRIM(COALESCE(organization,'')) AS organization,
+        TRIM(COALESCE(province,'')) AS province,
+        TRIM(COALESCE(city,'')) AS city
+      FROM {$table_sql}
+      WHERE (category = %s OR category LIKE %s)
+        AND TRIM(COALESCE(region,'')) <> ''
+      GROUP BY {$identityGroupBy}
+    ) g
+    GROUP BY g.region
+    ORDER BY g.region ASC
   ";
   $regions = $wpdb->get_results($wpdb->prepare($sql_regions, [$leaf_full, $leaf_like]), ARRAY_A);
 
@@ -1759,7 +2279,22 @@ function ab_shortcode($atts): string {
       $params2[] = $prov;
     }
 
-    $sql_count = "SELECT COUNT(*) FROM {$table_sql} WHERE {$where2}";
+    $identityGroupBy = implode(', ', [
+      "TRIM(COALESCE(organization,''))",
+      "TRIM(COALESCE(region,''))",
+      "TRIM(COALESCE(province,''))",
+      "TRIM(COALESCE(city,''))",
+      "CASE WHEN TRIM(COALESCE(region,''))='' AND TRIM(COALESCE(province,''))='' AND TRIM(COALESCE(city,''))='' THEN TRIM(COALESCE(location_raw,'')) ELSE '' END",
+    ]);
+    $sql_count = "
+      SELECT COUNT(*)
+      FROM (
+        SELECT 1
+        FROM {$table_sql}
+        WHERE {$where2}
+        GROUP BY {$identityGroupBy}
+      ) c
+    ";
     $total = (int)$wpdb->get_var($wpdb->prepare($sql_count, $params2));
 
     $pages = max(1, (int)ceil($total / $per_page));
@@ -1767,9 +2302,21 @@ function ab_shortcode($atts): string {
     $offset = ($page - 1) * $per_page;
 
     $sql_rows = "
-      SELECT organization, category, region, city, province, location_raw, urls, emails, notes, source_block
+      SELECT
+        TRIM(COALESCE(organization,'')) AS organization,
+        MIN(category) AS category,
+        GROUP_CONCAT(DISTINCT category ORDER BY category ASC SEPARATOR ' | ') AS all_categories,
+        TRIM(COALESCE(region,'')) AS region,
+        TRIM(COALESCE(city,'')) AS city,
+        TRIM(COALESCE(province,'')) AS province,
+        MAX(TRIM(COALESCE(location_raw,''))) AS location_raw,
+        GROUP_CONCAT(DISTINCT NULLIF(TRIM(COALESCE(urls,'')), '') ORDER BY TRIM(COALESCE(urls,'')) ASC SEPARATOR ' | ') AS urls,
+        GROUP_CONCAT(DISTINCT NULLIF(TRIM(COALESCE(emails,'')), '') ORDER BY TRIM(COALESCE(emails,'')) ASC SEPARATOR ' | ') AS emails,
+        MAX(notes) AS notes,
+        MAX(source_block) AS source_block
       FROM {$table_sql}
       WHERE {$where2}
+      GROUP BY {$identityGroupBy}
       ORDER BY organization ASC
       LIMIT %d OFFSET %d
     ";
@@ -2047,7 +2594,8 @@ function abf_build_where(
   string $settore2,
   string $regione = '',
   string $provincia = '',
-  string $comune = ''
+  string $comune = '',
+  string $q = ''
 ): array {
   global $wpdb;
   $where = "1=1";
@@ -2058,8 +2606,10 @@ function abf_build_where(
 
   if ($macro !== '') {
     if ($hasMacroCol) {
-      $where .= " AND TRIM(COALESCE(`macro`,'')) = %s";
+      $where .= " AND (TRIM(COALESCE(`macro`,'')) = %s OR category = %s OR category LIKE %s)";
       $params[] = $macro;
+      $params[] = $macro;
+      $params[] = $wpdb->esc_like($macro . ' > ') . '%';
     } else {
       $where .= " AND (category = %s OR category LIKE %s)";
       $params[] = $macro;
@@ -2069,8 +2619,10 @@ function abf_build_where(
 
   if ($settore !== '') {
     if ($hasSettoreCol) {
-      $where .= " AND TRIM(COALESCE(`settore`,'')) = %s";
+      $where .= " AND (TRIM(COALESCE(`settore`,'')) = %s OR category LIKE %s OR category LIKE %s)";
       $params[] = $settore;
+      $params[] = '% > ' . $wpdb->esc_like($settore);
+      $params[] = '% > ' . $wpdb->esc_like($settore . ' > ') . '%';
     } else {
       $where .= " AND (category LIKE %s OR category LIKE %s)";
       $params[] = '% > ' . $wpdb->esc_like($settore);
@@ -2080,8 +2632,10 @@ function abf_build_where(
 
   if ($settore2 !== '') {
     if ($hasSettore2Col) {
-      $where .= " AND TRIM(COALESCE(`settore2`,'')) = %s";
+      $where .= " AND (TRIM(COALESCE(`settore2`,'')) = %s OR category LIKE %s OR category LIKE %s)";
       $params[] = $settore2;
+      $params[] = '% > % > ' . $wpdb->esc_like($settore2);
+      $params[] = '% > % > ' . $wpdb->esc_like($settore2 . ' > ') . '%';
     } else {
       $where .= " AND (category LIKE %s OR category LIKE %s)";
       $params[] = '% > % > ' . $wpdb->esc_like($settore2);
@@ -2102,6 +2656,15 @@ function abf_build_where(
     $params[] = $comune;
   }
 
+  if ($q !== '') {
+    $like = '%' . $wpdb->esc_like($q) . '%';
+    $where .= " AND (organization LIKE %s OR notes LIKE %s OR location_raw LIKE %s OR category LIKE %s)";
+    $params[] = $like;
+    $params[] = $like;
+    $params[] = $like;
+    $params[] = $like;
+  }
+
   return [$where, $params];
 }
 
@@ -2109,7 +2672,10 @@ function abf_distinct_level_values(string $field, array $filters = []): array {
   global $wpdb;
   $allowed = ['macro', 'settore', 'settore2'];
   if (!in_array($field, $allowed, true)) return [];
-  if (!ab_table_has_column($field)) return [];
+  $hasFieldColumn = ab_table_has_column($field);
+
+  $settings = abf_get_settori_settings();
+  $manualMode = (string)($settings['manual_mode'] ?? 'merge');
 
   $normalizedFilters = [];
   foreach ($filters as $filterField => $filterValue) {
@@ -2123,10 +2689,49 @@ function abf_distinct_level_values(string $field, array $filters = []): array {
   $cacheKey = ab_cache_key('abf_level_' . $field . '_', [
     get_current_blog_id(),
     ab_table(),
+    $manualMode,
     $normalizedFilters,
   ]);
   $cached = ab_cache_get($cacheKey);
   if ($cached !== false && is_array($cached)) return $cached;
+
+  $manual = abf_get_manual_nodes();
+  if ($manualMode === 'override' && !empty($manual)) {
+    $manualValues = [];
+    if ($field === 'macro') {
+      foreach ($manual as $m => $_sMap) {
+        $manualValues[(string)$m] = (string)$m;
+      }
+    } elseif ($field === 'settore') {
+      $needMacro = isset($normalizedFilters['macro']) ? (string)$normalizedFilters['macro'] : '';
+      foreach ($manual as $m => $sMap) {
+        if ($needMacro !== '' && $m !== $needMacro) continue;
+        foreach (array_keys((array)$sMap) as $s) {
+          $manualValues[(string)$s] = (string)$s;
+        }
+      }
+    } elseif ($field === 'settore2') {
+      $needMacro = isset($normalizedFilters['macro']) ? (string)$normalizedFilters['macro'] : '';
+      $needSettore = isset($normalizedFilters['settore']) ? (string)$normalizedFilters['settore'] : '';
+      foreach ($manual as $m => $sMap) {
+        if ($needMacro !== '' && $m !== $needMacro) continue;
+        foreach ((array)$sMap as $s => $s2List) {
+          if ($needSettore !== '' && $s !== $needSettore) continue;
+          foreach ((array)$s2List as $s2) {
+            $manualValues[(string)$s2] = (string)$s2;
+          }
+        }
+      }
+    }
+    $result = array_values($manualValues);
+    sort($result, SORT_NATURAL | SORT_FLAG_CASE);
+    ab_cache_set($cacheKey, $result, 1 * HOUR_IN_SECONDS);
+    return $result;
+  }
+
+  if (!$hasFieldColumn) {
+    return [];
+  }
 
   $table = ab_table_sql();
   $where = "1=1";
@@ -2160,7 +2765,6 @@ function abf_distinct_level_values(string $field, array $filters = []): array {
     $renamed[$lbl] = $lbl;
   }
   // Merge manual nodes for the requested level
-  $manual = abf_get_manual_nodes();
   if (!empty($manual)) {
     if ($field === 'macro') {
       foreach ($manual as $m => $sMap) { $renamed[(string)$m] = (string)$m; }
@@ -2189,7 +2793,9 @@ function abf_distinct_level_values(string $field, array $filters = []): array {
 }
 
 function abf_all_categories(): array {
-  $cacheKey = ab_cache_key('abf_categories_', [get_current_blog_id(), ab_table()]);
+  $settings = abf_get_settori_settings();
+  $manualMode = (string)($settings['manual_mode'] ?? 'merge');
+  $cacheKey = ab_cache_key('abf_categories_', [get_current_blog_id(), ab_table(), $manualMode]);
   $cached = ab_cache_get($cacheKey);
   if ($cached !== false && is_array($cached)) return $cached;
 
@@ -2199,9 +2805,11 @@ function abf_all_categories(): array {
   $rows = array_values(array_filter(array_map(fn($v) => trim((string)$v), $rows), fn($v) => $v !== ''));
   // Apply hidden-label filtering to each category path
   $rows = array_values(array_filter(array_map('abf_filter_category_path', $rows), fn($v) => $v !== ''));
-  // Merge curated manual nodes as categories as well
   $manual = abf_manual_nodes_paths();
-  if (!empty($manual)) {
+  if ($manualMode === 'override' && !empty($manual)) {
+    $rows = $manual;
+  } elseif (!empty($manual)) {
+    // Merge curated manual nodes as categories as well
     $rows = array_values(array_unique(array_merge($rows, $manual)));
   }
   sort($rows, SORT_NATURAL | SORT_FLAG_CASE);
@@ -2211,61 +2819,42 @@ function abf_all_categories(): array {
 }
 
 function abf_category_options(string $selectedMacro, string $selectedSettore): array {
-  $macroFromCols = abf_distinct_level_values('macro');
-  $settoreFromCols = abf_distinct_level_values('settore', ['macro' => $selectedMacro]);
-  $settore2FromCols = abf_distinct_level_values('settore2', ['macro' => $selectedMacro, 'settore' => $selectedSettore]);
-
-  if (!empty($macroFromCols) || !empty($settoreFromCols) || !empty($settore2FromCols)) {
-    return [
-      'macro' => $macroFromCols,
-      'settore' => $settoreFromCols,
-      'settore2' => $settore2FromCols,
-    ];
-  }
-
-  $cats = abf_all_categories();
-
+  $nodes = abf_get_authoritative_tree_nodes();
   $macros = [];
   $settori = [];
   $settori2 = [];
-
-  foreach ($cats as $cat) {
-    $parts = ab_split_category((string)$cat);
-    if (empty($parts)) continue;
-
-    $macro = $parts[0];
-    $macros[$macro] = true;
-
-    if (isset($parts[1]) && trim((string)$parts[1]) !== '') {
-      if ($selectedMacro === '' || $macro === $selectedMacro) {
-        $settori[$parts[1]] = true;
-      }
-    }
-
-    if (isset($parts[2]) && trim((string)$parts[2]) !== '') {
-      $matchesMacro = ($selectedMacro === '' || $macro === $selectedMacro);
-      $matchesSettore = ($selectedSettore === '' || (isset($parts[1]) && $parts[1] === $selectedSettore));
-      if ($matchesMacro && $matchesSettore) {
-        $settori2[$parts[2]] = true;
+  foreach ((array)$nodes as $m => $sMap) {
+    if (trim((string)$m) === '') continue;
+    $macros[$m] = true;
+    if ($selectedMacro === '' || $m === $selectedMacro) {
+      if (is_array($sMap)) {
+        foreach ($sMap as $s => $s2List) {
+          if (trim((string)$s) === '') continue;
+          $settori[$s] = true;
+          if ($selectedSettore === '' || $s === $selectedSettore) {
+            if (is_array($s2List)) {
+              foreach ($s2List as $s2) {
+                if (trim((string)$s2) === '') continue;
+                $settori2[$s2] = true;
+              }
+            }
+          }
+        }
       }
     }
   }
-
   $macroVals = array_keys($macros);
   $settoreVals = array_keys($settori);
   $settore2Vals = array_keys($settori2);
-
   sort($macroVals, SORT_NATURAL | SORT_FLAG_CASE);
   sort($settoreVals, SORT_NATURAL | SORT_FLAG_CASE);
   sort($settore2Vals, SORT_NATURAL | SORT_FLAG_CASE);
-
   return [
     'macro' => $macroVals,
     'settore' => $settoreVals,
     'settore2' => $settore2Vals,
   ];
 }
-
 function abf_distinct_values(string $field, string $where, array $params = []): array {
   global $wpdb;
   $allowed = ['region', 'province', 'city'];
@@ -2291,18 +2880,34 @@ function abf_collect_hero_label_map(): array {
     $map[$key][$label] = true;
   };
 
-  foreach (['macro', 'settore', 'settore2'] as $levelField) {
-    foreach (abf_distinct_level_values($levelField) as $levelValue) {
-      $addLabel((string)$levelValue);
+  // Canonical source of truth first: authoritative activity tree.
+  $treeNodes = [];
+  if (function_exists('abf_get_authoritative_tree_nodes')) {
+    $treeNodes = (array)abf_get_authoritative_tree_nodes();
+  }
+  if (!empty($treeNodes)) {
+    // Collect ALL activity-tree levels (macro, settore, settore2)
+    foreach ((array)$treeNodes as $macro => $settoriMap) {
+      $macroLabel = trim((string)$macro);
+      if ($macroLabel === '' || ab_assoc_is_placeholder_label($macroLabel)) continue;
+      $addLabel($macroLabel);
+
+      foreach ((array)$settoriMap as $settore => $settore2List) {
+        $settoreLabel = trim((string)$settore);
+        if ($settoreLabel === '' || ab_assoc_is_placeholder_label($settoreLabel)) continue;
+        $addLabel($settoreLabel);
+
+        foreach ((array)$settore2List as $settore2) {
+          $settore2Label = trim((string)$settore2);
+          if ($settore2Label === '' || ab_assoc_is_placeholder_label($settore2Label)) continue;
+          $addLabel($settore2Label);
+        }
+      }
     }
   }
 
-  foreach (abf_all_categories() as $category) {
-    $parts = ab_split_category((string)$category);
-    foreach ($parts as $part) {
-      $addLabel((string)$part);
-    }
-  }
+  // No fallback to row-derived labels: hero structure must come from the
+  // definitive Struttura Settori tree only.
 
   $result = [];
   foreach ($map as $key => $labelsMap) {
@@ -2375,7 +2980,7 @@ function abf_get_hero_override_url_map(): array {
     $attachmentId = (int)$attachmentId;
     if ($key === '' || $attachmentId <= 0) continue;
     if (!wp_attachment_is_image($attachmentId)) continue;
-    $url = wp_get_attachment_image_url($attachmentId, 'full');
+    $url = abf_get_hero_runtime_image_url($attachmentId);
     if (!is_string($url) || trim($url) === '') continue;
     $urls[(string)$key] = $url;
   }
@@ -2398,6 +3003,93 @@ function abf_sanitize_hero_image_overrides(array $raw): array {
   return $clean;
 }
 
+function abf_get_hero_runtime_image_url(int $attachmentId): string {
+  $attachmentId = (int)$attachmentId;
+  if ($attachmentId <= 0 || !wp_attachment_is_image($attachmentId)) return '';
+
+  $sizes = apply_filters('abf_hero_runtime_sizes', ['large', 'medium_large', 'medium', 'full'], $attachmentId);
+  if (!is_array($sizes)) $sizes = ['large', 'medium_large', 'medium', 'full'];
+
+  foreach ($sizes as $size) {
+    $sizeKey = is_string($size) ? trim($size) : '';
+    if ($sizeKey === '') continue;
+    $url = wp_get_attachment_image_url($attachmentId, $sizeKey);
+    if (is_string($url) && trim($url) !== '') {
+      return $url;
+    }
+  }
+
+  return '';
+}
+
+function abf_attachment_file_exists(int $attachment_id): bool {
+  if ($attachment_id <= 0) return false;
+  $file = get_attached_file($attachment_id);
+  if (!$file || !is_string($file)) return false;
+  return file_exists($file);
+}
+
+function abf_auto_match_hero_images(): array {
+  $cached = get_transient('ab_hero_auto_suggestions');
+  if ($cached !== false && is_array($cached)) {
+    return $cached;
+  }
+  global $wpdb;
+  $treeNodes = [];
+  if (function_exists('abf_get_authoritative_tree_nodes')) {
+    $treeNodes = (array)abf_get_authoritative_tree_nodes();
+  }
+  $suggestions = [];
+
+  $labelMap = abf_collect_hero_label_map();
+  foreach ($labelMap as $key => $labels) {
+    if ($key === '') continue;
+    $primaryLabel = trim((string)(is_array($labels) ? ($labels[0] ?? '') : ''));
+    if ($primaryLabel === '') continue;
+    $slug = sanitize_title($primaryLabel);
+
+    // Pass 1: Exact title match
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT ID FROM {$wpdb->posts} WHERE post_type='attachment' AND post_status='inherit' AND post_mime_type LIKE 'image/%%' AND post_title=%s LIMIT 1",
+      $primaryLabel
+    ), ARRAY_A);
+    if (!empty($rows)) {
+      $id = (int)$rows[0]['ID'];
+      if ($id > 0 && abf_attachment_file_exists($id)) {
+        $suggestions[$key] = $id;
+        continue;
+      }
+    }
+
+    // Pass 2: Slug match (post_name)
+    $rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT ID FROM {$wpdb->posts} WHERE post_type='attachment' AND post_status='inherit' AND post_mime_type LIKE 'image/%%' AND post_name=%s LIMIT 1",
+      $slug
+    ), ARRAY_A);
+    if (!empty($rows)) {
+      $id = (int)$rows[0]['ID'];
+      if ($id > 0 && abf_attachment_file_exists($id)) {
+        $suggestions[$key] = $id;
+        continue;
+      }
+    }
+
+    // Pass 3: Filename contains slug
+    $like = '%' . $wpdb->esc_like($slug) . '%';
+    $attachment_id = (int)$wpdb->get_var($wpdb->prepare(
+      "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key='_wp_attached_file' AND meta_value LIKE %s LIMIT 1",
+      $like
+    ));
+    if ($attachment_id > 0 && abf_attachment_file_exists($attachment_id)) {
+      $suggestions[$key] = $attachment_id;
+      continue;
+    }
+  }
+
+  set_transient('ab_hero_auto_suggestions', $suggestions, HOUR_IN_SECONDS);
+  return $suggestions;
+}
+
 function abf_get_hero_image_map(): array {
   $keys = abf_collect_hero_keys();
   if (empty($keys)) return [];
@@ -2418,7 +3110,7 @@ function abf_get_hero_image_map(): array {
 
   $cacheKey = ab_cache_key('ab_hero_map_', [
     get_current_blog_id(),
-    'matcher_v4',
+    'override_v1',
     md5(wp_json_encode($keys)),
     md5(wp_json_encode($overrides)),
     $heroVersion,
@@ -2430,383 +3122,52 @@ function abf_get_hero_image_map(): array {
     return $cached;
   }
 
+  $suggestions = abf_auto_match_hero_images();
   $map = [];
-  $keySet = array_fill_keys($keys, true);
-  $scoreByKey = [];
-  $attachmentCandidates = [];
 
-  $keyVariants = static function(string $raw): array {
-    $normalized = ab_assoc_normalize_key($raw);
-    if ($normalized === '') return [];
-    $variants = [$normalized => 100];
-    if (preg_match('/^(.*)-\d+$/', $normalized, $matches)) {
-      $base = trim((string)($matches[1] ?? ''));
-      if ($base !== '') $variants[$base] = 75;
-    }
-    return $variants;
-  };
-
-  $assign = static function(string $candidateRaw, int $baseScore, int $attachmentId, string $url, int $timestamp) use (&$map, &$scoreByKey, $keySet, $keyVariants): void {
-    foreach ($keyVariants($candidateRaw) as $candidateKey => $weight) {
-      if (!isset($keySet[$candidateKey])) continue;
-      $score = $baseScore + $weight;
-      if (!isset($scoreByKey[$candidateKey])) {
-        $scoreByKey[$candidateKey] = ['score' => $score, 'ts' => $timestamp, 'id' => $attachmentId];
-        $map[$candidateKey] = $url;
-        continue;
-      }
-      $best = $scoreByKey[$candidateKey];
-      $bestScore = (int)($best['score'] ?? -1);
-      $bestTs = (int)($best['ts'] ?? 0);
-      $bestId = (int)($best['id'] ?? 0);
-      if ($score > $bestScore || ($score === $bestScore && ($timestamp > $bestTs || ($timestamp === $bestTs && $attachmentId > $bestId)))) {
-        $scoreByKey[$candidateKey] = ['score' => $score, 'ts' => $timestamp, 'id' => $attachmentId];
-        $map[$candidateKey] = $url;
-      }
-    }
-  };
-
-  $compactKey = static function(string $value): string {
-    return str_replace('-', '', ab_assoc_normalize_key($value));
-  };
-
-  $softKey = static function(string $value) use ($compactKey): string {
-    $key = $compactKey($value);
-    if ($key === '') return '';
-    // Tolerate minor spelling/typing differences by collapsing repeated letters.
-    $key = preg_replace('/(.)\1+/', '$1', $key);
-    return (string)$key;
-  };
-
-  $tokenizeKey = static function(string $value): array {
-    $normalized = ab_assoc_normalize_key($value);
-    if ($normalized === '') return [];
-    $stop = [
-      'di' => true, 'del' => true, 'della' => true, 'delle' => true, 'dei' => true, 'degli' => true,
-      'e' => true, 'ed' => true, 'il' => true, 'lo' => true, 'la' => true, 'le' => true, 'i' => true, 'gli' => true,
-      'attivita' => true, 'attivitae' => true, 'sport' => true, 'sportive' => true,
-    ];
-    $parts = preg_split('/-+/', $normalized);
-    if (!is_array($parts)) return [];
-    $out = [];
-    foreach ($parts as $part) {
-      $token = trim((string)$part);
-      if ($token === '' || isset($stop[$token])) continue;
-      $out[$token] = true;
-    }
-    return array_keys($out);
-  };
-
-  $matchScore = static function(string $wantedKey, string $candidateKey) use ($compactKey, $softKey, $tokenizeKey): int {
-    $wanted = ab_assoc_normalize_key($wantedKey);
-    $candidate = ab_assoc_normalize_key($candidateKey);
-    if ($wanted === '' || $candidate === '') return 0;
-    if ($wanted === $candidate) return 100;
-
-    $wantedCompact = $compactKey($wanted);
-    $candidateCompact = $compactKey($candidate);
-    if ($wantedCompact !== '' && $wantedCompact === $candidateCompact) return 98;
-
-    $wantedSoft = $softKey($wanted);
-    $candidateSoft = $softKey($candidate);
-    if ($wantedSoft !== '' && $wantedSoft === $candidateSoft) return 95;
-
-    $maxLen = max(strlen($wantedSoft), strlen($candidateSoft));
-    if ($maxLen > 0) {
-      $distance = levenshtein($wantedSoft, $candidateSoft);
-      if ($distance <= 1 && $maxLen >= 6) return 93;
-      if ($distance <= 2 && $maxLen >= 8) return 90;
-      if ($distance <= 3 && $maxLen >= 11) return 86;
-    }
-
-    if (
-      $wantedCompact !== '' && $candidateCompact !== '' &&
-      (strpos($candidateCompact, $wantedCompact) !== false || strpos($wantedCompact, $candidateCompact) !== false)
-    ) {
-      $shortLen = min(strlen($wantedCompact), strlen($candidateCompact));
-      if ($shortLen >= 9) return 88;
-      if ($shortLen >= 6) return 84;
-    }
-
-    $wantedTokens = $tokenizeKey($wanted);
-    $candidateTokens = $tokenizeKey($candidate);
-    if (!empty($wantedTokens) && !empty($candidateTokens)) {
-      $wantedSet = array_fill_keys($wantedTokens, true);
-      $candidateSet = array_fill_keys($candidateTokens, true);
-      $inter = array_intersect_key($wantedSet, $candidateSet);
-      $interCount = count($inter);
-      if ($interCount > 0) {
-        $union = count($wantedSet + $candidateSet);
-        $ratio = $union > 0 ? ($interCount / $union) : 0.0;
-        if ($ratio >= 0.80 && $interCount >= 2) return 89;
-        if ($ratio >= 0.65 && $interCount >= 2) return 85;
-      }
-    }
-
-    return 0;
-  };
-
-  $sqlAll = "
-    SELECT p.ID, p.post_name, p.post_title, p.post_date_gmt, p.post_date, pm.meta_value AS file_path
-    FROM {$postsTable} p
-    LEFT JOIN {$wpdb->postmeta} pm
-      ON pm.post_id = p.ID
-     AND pm.meta_key = '_wp_attached_file'
-    WHERE p.post_type = 'attachment'
-      AND p.post_status = 'inherit'
-      AND p.post_mime_type LIKE 'image/%'
-    ORDER BY p.post_date_gmt DESC, p.ID DESC
-    LIMIT 10000
-  ";
-  $rowsAll = $wpdb->get_results($sqlAll, ARRAY_A);
-  foreach ($rowsAll as $row) {
-    $id = (int)($row['ID'] ?? 0);
-    if ($id <= 0) continue;
-    $url = wp_get_attachment_image_url($id, 'full');
-    if (!$url) continue;
-
-    $timestamp = strtotime((string)($row['post_date_gmt'] ?? ''));
-    if (!$timestamp) $timestamp = strtotime((string)($row['post_date'] ?? ''));
-    if (!$timestamp) $timestamp = 0;
-
-    $assign((string)($row['post_title'] ?? ''), 300, $id, $url, $timestamp);
-    $assign((string)($row['post_name'] ?? ''), 260, $id, $url, $timestamp);
-
-    $candidateKeys = [];
-    foreach ([(string)($row['post_title'] ?? ''), (string)($row['post_name'] ?? '')] as $candidateRaw) {
-      foreach ($keyVariants($candidateRaw) as $candidateKey => $weight) {
-        if ($candidateKey !== '') $candidateKeys[$candidateKey] = true;
-      }
-    }
-    $filePath = trim((string)($row['file_path'] ?? ''));
-    if ($filePath !== '') {
-      $basename = pathinfo(wp_basename($filePath), PATHINFO_FILENAME);
-      $assign((string)$basename, 240, $id, $url, $timestamp);
-      foreach ($keyVariants((string)$basename) as $candidateKey => $weight) {
-        if ($candidateKey !== '') $candidateKeys[$candidateKey] = true;
-      }
-    }
-
-    if (!empty($candidateKeys)) {
-      $attachmentCandidates[] = [
-        'id' => $id,
-        'ts' => $timestamp,
-        'url' => $url,
-        'keys' => array_keys($candidateKeys),
-      ];
-    }
-  }
-
-  $missing = array_values(array_filter($keys, fn($key) => !isset($map[$key])));
-  if (!empty($missing) && !empty($attachmentCandidates)) {
-    foreach ($missing as $missingKey) {
-      $bestScore = 0;
-      $bestTs = 0;
-      $bestId = 0;
-      $bestUrl = '';
-
-      foreach ($attachmentCandidates as $candidate) {
-        $candidateUrl = (string)($candidate['url'] ?? '');
-        $candidateTs = (int)($candidate['ts'] ?? 0);
-        $candidateId = (int)($candidate['id'] ?? 0);
-        $candidateKeys = (array)($candidate['keys'] ?? []);
-        if ($candidateUrl === '' || empty($candidateKeys)) continue;
-
-        $rowBestScore = 0;
-        foreach ($candidateKeys as $candidateKey) {
-          $score = $matchScore($missingKey, (string)$candidateKey);
-          if ($score > $rowBestScore) $rowBestScore = $score;
-          if ($rowBestScore >= 100) break;
-        }
-
-        if (
-          $rowBestScore > $bestScore ||
-          ($rowBestScore === $bestScore && ($candidateTs > $bestTs || ($candidateTs === $bestTs && $candidateId > $bestId)))
-        ) {
-          $bestScore = $rowBestScore;
-          $bestTs = $candidateTs;
-          $bestId = $candidateId;
-          $bestUrl = $candidateUrl;
+  foreach ($keys as $key) {
+    // Priority 1: Manual override with file validation
+    if (isset($overrides[$key])) {
+      $attachmentId = (int)$overrides[$key];
+      if ($attachmentId > 0 && abf_attachment_file_exists($attachmentId)) {
+        $url = wp_get_attachment_image_url($attachmentId, 'full');
+        if (is_string($url) && trim($url) !== '') {
+          $map[$key] = $url;
+          continue;
         }
       }
-
-      // Keep fuzzy fallback conservative to avoid wrong image assignments.
-      if ($bestScore >= 89 && $bestUrl !== '') {
-        $map[$missingKey] = $bestUrl;
-      }
     }
-  }
 
-  $manualAliases = abf_hero_manual_aliases();
-  if (!empty($manualAliases) && !empty($attachmentCandidates)) {
-    $resolveTargetImageUrl = static function(string $targetImageLabel) use ($attachmentCandidates, $matchScore): string {
-      $targetImageLabel = trim($targetImageLabel);
-      if ($targetImageLabel === '') return '';
-      $targetBase = pathinfo($targetImageLabel, PATHINFO_FILENAME);
-      if (!is_string($targetBase) || trim($targetBase) === '') {
-        $targetBase = $targetImageLabel;
-      }
-
-      $bestScore = 0;
-      $bestTs = 0;
-      $bestId = 0;
-      $bestUrl = '';
-
-      foreach ($attachmentCandidates as $candidate) {
-        $candidateUrl = (string)($candidate['url'] ?? '');
-        $candidateTs = (int)($candidate['ts'] ?? 0);
-        $candidateId = (int)($candidate['id'] ?? 0);
-        $candidateKeys = (array)($candidate['keys'] ?? []);
-        if ($candidateUrl === '' || empty($candidateKeys)) continue;
-
-        $rowBestScore = 0;
-        foreach ($candidateKeys as $candidateKey) {
-          $score = $matchScore($targetBase, (string)$candidateKey);
-          if ($score > $rowBestScore) $rowBestScore = $score;
-          if ($rowBestScore >= 100) break;
-        }
-
-        if (
-          $rowBestScore > $bestScore ||
-          ($rowBestScore === $bestScore && ($candidateTs > $bestTs || ($candidateTs === $bestTs && $candidateId > $bestId)))
-        ) {
-          $bestScore = $rowBestScore;
-          $bestTs = $candidateTs;
-          $bestId = $candidateId;
-          $bestUrl = $candidateUrl;
+    // Priority 2: Auto-match suggestion with file validation
+    if (isset($suggestions[$key])) {
+      $attachmentId = (int)$suggestions[$key];
+      if ($attachmentId > 0 && abf_attachment_file_exists($attachmentId)) {
+        $url = wp_get_attachment_image_url($attachmentId, 'full');
+        if (is_string($url) && trim($url) !== '') {
+          $map[$key] = $url;
+          continue;
         }
       }
-
-      return ($bestScore >= 89) ? $bestUrl : '';
-    };
-
-    foreach ($manualAliases as $sourceKey => $targetImageLabel) {
-      if (!isset($keySet[$sourceKey])) continue;
-      $resolvedUrl = $resolveTargetImageUrl((string)$targetImageLabel);
-      if ($resolvedUrl !== '') {
-        $map[$sourceKey] = $resolvedUrl;
-      }
     }
-  }
 
-  if (!empty($overrides)) {
-    foreach ($overrides as $sourceKey => $attachmentId) {
-      if (!isset($keySet[$sourceKey])) continue;
-      $attachmentId = (int)$attachmentId;
-      if ($attachmentId <= 0) continue;
-      if (!wp_attachment_is_image($attachmentId)) continue;
-      $overrideUrl = wp_get_attachment_image_url($attachmentId, 'full');
-      if (is_string($overrideUrl) && trim($overrideUrl) !== '') {
-        $map[$sourceKey] = $overrideUrl;
-      }
-    }
+    // Priority 3: No image found â€” key absent from map
   }
 
   ab_cache_set($cacheKey, $map, 6 * HOUR_IN_SECONDS);
   return $map;
 }
 
-function abf_settori_click_lookup_map(): array {
-  $cacheKey = ab_cache_key('abf_settori_click_map_', [
-    get_current_blog_id(),
-    ab_table(),
-  ]);
-  $cached = ab_cache_get($cacheKey);
-  if ($cached !== false && is_array($cached)) {
-    return $cached;
-  }
-
-  $map = [];
-  $scores = [];
-
-  $assign = static function(string $label, string $macro, string $settore, string $settore2, int $score) use (&$map, &$scores): void {
-    $label = trim($label);
-    if ($label === '' || ab_assoc_is_placeholder_label($label)) return;
-
-    $key = ab_assoc_normalize_key($label);
-    if ($key === '') return;
-
-    if (!isset($scores[$key]) || $score > (int)$scores[$key]) {
-      $scores[$key] = $score;
-      $map[$key] = [
-        'macro' => trim($macro),
-        'settore' => trim($settore),
-        'settore2' => trim($settore2),
-      ];
-    }
-  };
-
-  foreach (abf_all_categories() as $category) {
-    $parts = ab_split_category((string)$category);
-    $macro = isset($parts[0]) ? trim((string)$parts[0]) : '';
-    $settore = isset($parts[1]) ? trim((string)$parts[1]) : '';
-    $settore2 = isset($parts[2]) ? trim((string)$parts[2]) : '';
-
-    if ($macro !== '') {
-      $assign($macro, $macro, '', '', 10);
-    }
-    if ($settore !== '') {
-      $assign($settore, $macro, $settore, '', 20);
-    }
-    if ($settore2 !== '') {
-      $assign($settore2, $macro, $settore, $settore2, 30);
-    }
-  }
-
-  foreach (abf_distinct_level_values('macro') as $macro) {
-    $assign((string)$macro, (string)$macro, '', '', 8);
-  }
-  foreach (abf_distinct_level_values('settore') as $settore) {
-    $assign((string)$settore, '', (string)$settore, '', 12);
-  }
-  foreach (abf_distinct_level_values('settore2') as $settore2) {
-    $assign((string)$settore2, '', '', (string)$settore2, 16);
-  }
-
-  ab_cache_set($cacheKey, $map, 1 * HOUR_IN_SECONDS);
-  return $map;
+function abf_invalidate_hero_image_caches(): void {
+  update_option('ab_settori_hero_cache_version', time(), false);
+  delete_transient('culturacsi_settori_pattern_content');
+  delete_transient('culturacsi_hero_preload_url');
+  delete_transient('ab_hero_auto_suggestions');
+  global $wpdb;
+  $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_ab_hero_map_%' OR option_name LIKE '_transient_timeout_ab_hero_map_%'");
 }
-
-function abf_enqueue_settori_pattern_links_script(): void {
-  if (is_admin()) return;
-  if (!(is_front_page() || is_home())) return;
-
-  $settoriPage = get_page_by_path('settori');
-  $settoriUrl = ($settoriPage instanceof WP_Post)
-    ? get_permalink((int)$settoriPage->ID)
-    : home_url('/settori/');
-
-  if (!is_string($settoriUrl) || trim($settoriUrl) === '') {
-    $settoriUrl = home_url('/settori/');
-  }
-
-  $handle = 'abf-settori-pattern-links';
-  wp_register_script(
-    $handle,
-    plugins_url('assets/js/settori-pattern-links.js', __FILE__),
-    [],
-    '1.0.0',
-    true
-  );
-  wp_enqueue_script($handle);
-
-  $config = [
-    'baseUrl' => (string)$settoriUrl,
-    'queryKeys' => [
-      'macro' => ab_qkey('settori', 'macro'),
-      'settore' => ab_qkey('settori', 'settore'),
-      'settore2' => ab_qkey('settori', 'settore2'),
-    ],
-    'lookup' => abf_settori_click_lookup_map(),
-  ];
-
-  wp_add_inline_script(
-    $handle,
-    'window.AB_SETTORI_PATTERN_LINKS = ' . wp_json_encode($config) . ';',
-    'before'
-  );
-}
-add_action('wp_enqueue_scripts', 'abf_enqueue_settori_pattern_links_script', 30);
+add_action('add_attachment', 'abf_invalidate_hero_image_caches');
+add_action('delete_attachment', 'abf_invalidate_hero_image_caches');
+add_action('edit_attachment', 'abf_invalidate_hero_image_caches');
 
 function abf_sanitize_class_list(string $classList): string {
   $items = preg_split('/\s+/', trim($classList));
@@ -2839,6 +3200,16 @@ function abf_sanitize_css_color(string $color): string {
 }
 
 function abf_render_selected_breadcrumb(array $selectedMap): string {
+  $translateVisual = static function(string $label): string {
+    $label = trim((string)$label);
+    if ($label === '') return '';
+    if (function_exists('culturacsi_translate_visual_label')) {
+      $translated = (string)culturacsi_translate_visual_label($label);
+      if (trim($translated) !== '') return $translated;
+    }
+    return $label;
+  };
+
   $items = [];
   foreach ($selectedMap as $value) {
     $value = trim((string)$value);
@@ -2847,10 +3218,10 @@ function abf_render_selected_breadcrumb(array $selectedMap): string {
   }
 
   $out = '<div class="abf-selected-breadcrumb" aria-live="polite">';
-  $out .= '<span class="abf-selected-label">Percorso selezionato:</span>';
+  $out .= '<span class="abf-selected-label">' . ab_h($translateVisual('Percorso selezionato:')) . '</span>';
 
   if (empty($items)) {
-    $out .= '<span class="abf-selected-item">Tutti i settori</span>';
+    $out .= '<span class="abf-selected-item">' . ab_h($translateVisual('Tutti i settori')) . '</span>';
     $out .= '</div>';
     return $out;
   }
@@ -2859,7 +3230,7 @@ function abf_render_selected_breadcrumb(array $selectedMap): string {
     if ($idx > 0) {
       $out .= '<span class="abf-selected-sep" aria-hidden="true">&rsaquo;</span>';
     }
-    $out .= '<span class="abf-selected-item">' . ab_h($item) . '</span>';
+    $out .= '<span class="abf-selected-item">' . ab_h($translateVisual($item)) . '</span>';
   }
 
   $out .= '</div>';
@@ -2899,6 +3270,21 @@ function ab_assoc_identity_key_from_row(array $row): string {
 
   $organization = ab_assoc_normalize_key((string)($row['organization'] ?? ''));
   return 'raw:' . implode('|', [$organization, $city, $province, $region, $locationRaw]);
+}
+
+function ab_assoc_unique_nonempty_values(array $values): array {
+  $seen = [];
+  $out = [];
+  foreach ($values as $valueRaw) {
+    $value = trim((string)$valueRaw);
+    if ($value === '') continue;
+    $key = ab_assoc_normalize_key($value);
+    if ($key === '') $key = strtolower($value);
+    if (isset($seen[$key])) continue;
+    $seen[$key] = true;
+    $out[] = $value;
+  }
+  return $out;
 }
 
 function ab_assoc_merge_duplicate_rows(array $rows): array {
@@ -3019,14 +3405,59 @@ function abf_shortcode($atts): string {
   $k_prov     = ab_qkey($id, 'provincia');
   $k_comune   = ab_qkey($id, 'comune');
   $k_page     = ab_qkey($id, 'page');
+  $k_search   = ab_qkey($id, 'q');
 
-  $macro = ab_get_qs($k_macro);
-  $settore = ab_get_qs($k_settore);
-  $settore2 = ab_get_qs($k_settore2);
-  $regione = ab_get_qs($k_regione);
+  $macro     = ab_get_qs($k_macro);
+  $settore   = ab_get_qs($k_settore);
+  $settore2  = ab_get_qs($k_settore2);
+  $regione   = ab_get_qs($k_regione);
   $provincia = ab_get_qs($k_prov);
-  $comune = ab_get_qs($k_comune);
-  $page = ab_get_int_qs($k_page, 1);
+  $comune    = ab_get_qs($k_comune);
+  $page      = ab_get_int_qs($k_page, 1);
+  $q         = ab_get_qs($k_search);
+
+  // Global fallbacks: if specific instance keys are missing, check global portal or hub keys.
+  if ($macro === '')     $macro     = ab_get_qs('a_macro') ?: ab_get_qs('ch_macro');
+  if ($settore === '')   $settore   = ab_get_qs('a_settore') ?: ab_get_qs('ch_settore') ?: ab_get_qs('ch_section'); 
+  if ($settore2 === '')  $settore2  = ab_get_qs('a_settore2') ?: ab_get_qs('ch_settore2');
+  if ($regione === '')   $regione   = ab_get_qs('a_regione') ?: ab_get_qs('ch_regione');
+  if ($provincia === '') $provincia = ab_get_qs('a_province');
+  if ($comune === '')    $comune    = ab_get_qs('a_city');
+  if ($q === '')         $q         = ab_get_qs('a_q') ?: ab_get_qs('ch_q') ?: ab_get_qs('news_q');
+
+
+
+  // Robust redirect hydration: if stale/cached links only provide abf_hero
+  // (or only partial levels), reconstruct missing levels from lookup map.
+  $heroKey = ab_assoc_normalize_key(ab_get_qs('abf_hero'));
+  if ($heroKey !== '') {
+    $heroLookup = abf_settori_click_lookup_map();
+    if (isset($heroLookup[$heroKey]) && is_array($heroLookup[$heroKey])) {
+      $heroEntry = (array)$heroLookup[$heroKey];
+      $heroMacro = trim((string)($heroEntry['macro'] ?? ''));
+      $heroSettore = trim((string)($heroEntry['settore'] ?? ''));
+      $heroSettore2 = trim((string)($heroEntry['settore2'] ?? ''));
+
+      if ($macro === '' && $heroMacro !== '') {
+        $macro = $heroMacro;
+      }
+      if ($settore === '' && $heroSettore !== '') {
+        $settore = $heroSettore;
+      }
+      if ($settore2 === '' && $heroSettore2 !== '') {
+        $settore2 = $heroSettore2;
+      }
+    }
+  }
+
+  // Canonicalize incoming filter labels and infer missing parent levels from the
+  // definitive activity tree. This guarantees that redirects carrying only
+  // Settore 2 (or variant casing/accents) still hydrate macro/settore selects.
+  $macro = ab_sync_canonical_tree_label('macro', $macro);
+  $settore = ab_sync_canonical_tree_label('settore', $settore);
+  $settore2 = ab_sync_canonical_tree_label('settore2', $settore2);
+  [$macro, $settore, $settore2] = ab_sync_resolve_levels_from_tree($macro, $settore, $settore2);
+  [$macro, $settore, $settore2] = abf_apply_tree_rules_to_segments($macro, $settore, $settore2);
 
   $perPage = (int)$atts['per_page'];
   if ($perPage < 10) $perPage = 10;
@@ -3068,34 +3499,80 @@ function abf_shortcode($atts): string {
   [$whereCom, $paramsCom] = abf_build_where($macro, $settore, $settore2, $regione, $provincia);
   $comuneOptions = abf_distinct_values('city', $whereCom, $paramsCom);
 
-  [$whereRows, $paramsRows] = abf_build_where($macro, $settore, $settore2, $regione, $provincia, $comune);
+  [$whereRows, $paramsRows] = abf_build_where($macro, $settore, $settore2, $regione, $provincia, $comune, $q);
   $table = ab_table_sql();
+  $identityGroupBy = implode(', ', [
+    "TRIM(COALESCE(organization,''))",
+    "TRIM(COALESCE(region,''))",
+    "TRIM(COALESCE(province,''))",
+    "TRIM(COALESCE(city,''))",
+    "TRIM(COALESCE(location_raw,''))",
+  ]);
 
-  $selectFields = ['organization', 'category', 'region', 'province', 'city', 'location_raw', 'urls', 'emails', 'notes', 'source_block'];
-  foreach (['macro', 'settore', 'settore2'] as $optionalField) {
-    if (ab_table_has_column($optionalField)) {
-      $selectFields[] = $optionalField;
-    }
-  }
-  $selectSql = implode(', ', $selectFields);
-
-  $sqlRows = "
-    SELECT {$selectSql}
-    FROM {$table}
-    WHERE {$whereRows}
-    ORDER BY organization ASC
+  $sqlCount = "
+    SELECT COUNT(*)
+    FROM (
+      SELECT 1
+      FROM {$table}
+      WHERE {$whereRows}
+      GROUP BY {$identityGroupBy}
+    ) c
   ";
-  $rawRows = !empty($paramsRows)
-    ? $wpdb->get_results($wpdb->prepare($sqlRows, $paramsRows), ARRAY_A)
-    : $wpdb->get_results($sqlRows, ARRAY_A);
-
-  // Keep one card per imported row. Do not collapse duplicates.
-  $allRows = is_array($rawRows) ? array_values($rawRows) : [];
-  $total = count($allRows);
+  $total = (int)(
+    !empty($paramsRows)
+      ? $wpdb->get_var($wpdb->prepare($sqlCount, $paramsRows))
+      : $wpdb->get_var($sqlCount)
+  );
   $pages = max(1, (int)ceil($total / $perPage));
   if ($page > $pages) $page = $pages;
   $offset = ($page - 1) * $perPage;
-  $rows = array_slice($allRows, $offset, $perPage);
+
+  $sqlRows = "
+    SELECT
+      TRIM(COALESCE(t.organization,'')) AS organization,
+      MIN(t.category) AS category,
+      GROUP_CONCAT(DISTINCT t.category ORDER BY t.category ASC SEPARATOR ' | ') AS all_categories,
+      TRIM(COALESCE(t.region,'')) AS region,
+      TRIM(COALESCE(t.province,'')) AS province,
+      TRIM(COALESCE(t.city,'')) AS city,
+      MAX(TRIM(COALESCE(t.location_raw,''))) AS location_raw,
+      GROUP_CONCAT(DISTINCT NULLIF(TRIM(COALESCE(t.urls,'')), '') ORDER BY TRIM(COALESCE(t.urls,'')) ASC SEPARATOR ' | ') AS urls,
+      GROUP_CONCAT(DISTINCT NULLIF(TRIM(COALESCE(t.emails,'')), '') ORDER BY TRIM(COALESCE(t.emails,'')) ASC SEPARATOR ' | ') AS emails,
+      MAX(t.notes) AS notes,
+      MAX(t.source_block) AS source_block
+    FROM {$table} t
+    INNER JOIN (
+      SELECT 
+        TRIM(COALESCE(organization,'')) AS id_org,
+        TRIM(COALESCE(region,'')) AS id_reg,
+        TRIM(COALESCE(province,'')) AS id_prov,
+        TRIM(COALESCE(city,'')) AS id_city,
+        TRIM(COALESCE(location_raw,'')) AS id_loc
+      FROM {$table}
+      WHERE {$whereRows}
+      GROUP BY id_org, id_reg, id_prov, id_city, id_loc
+      ORDER BY id_org ASC
+      LIMIT %d OFFSET %d
+    ) m ON 
+      TRIM(COALESCE(t.organization,'')) = m.id_org AND
+      TRIM(COALESCE(t.region,'')) = m.id_reg AND
+      TRIM(COALESCE(t.province,'')) = m.id_prov AND
+      TRIM(COALESCE(t.city,'')) = m.id_city AND
+      TRIM(COALESCE(t.location_raw,'')) = m.id_loc
+    GROUP BY m.id_org, m.id_reg, m.id_prov, m.id_city, m.id_loc
+    ORDER BY aggregation_org ASC
+  ";
+  
+  // Note: using t.organization in ORDER BY might be ambiguous after joining, 
+  // but since we group by id_org it should be fine.
+  // Actually, I'll use organization as the alias.
+  
+  // Fix the order by to use the group by columns if needed.
+  $sqlRows = str_replace('ORDER BY aggregation_org ASC', 'ORDER BY organization ASC', $sqlRows);
+
+  $rowParams = array_merge($paramsRows, [$perPage, $offset]);
+  $rows = $wpdb->get_results($wpdb->prepare($sqlRows, $rowParams), ARRAY_A);
+  if (!is_array($rows)) $rows = [];
 
   $out = '<div id="abf-wrap-' . esc_attr($id) . '" class="' . esc_attr($wrapperClass) . '" data-abf-live="1" data-abf-instance="' . esc_attr($id) . '"' . $wrapperStyle . '>';
   if ((string)$atts['show_title'] !== '0' && trim((string)$atts['title']) !== '') {
@@ -3120,14 +3597,29 @@ function abf_shortcode($atts): string {
     .abf-toolbar .abf-field label {
         color: white !important;
     }
-    .abf-toolbar .abf-field select {
+    .abf-toolbar .abf-field select,
+    .abf-toolbar .abf-field input {
         background-color: #d6e2ee !important;
         color: black !important;
+        border: 1px solid #ccc;
+        padding: 4px 8px;
+        border-radius: 4px;
+        width: 100%;
+        height: 42px;
+        box-sizing: border-box;
     }
     .abf-toolbar .abf-field-reset .abf-btn {
         background-color: #193a5b !important;
         color: white !important;
         border-color: #193a5b !important;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+        box-sizing: border-box;
+        text-decoration: none;
+        border-radius: 4px;
     }
     .abf-toolbar-row.top-row {
         display: grid;
@@ -3143,6 +3635,12 @@ function abf_shortcode($atts): string {
   $out .= '<form method="get" class="abf-form">';
   $out .= '<div class="abf-toolbar">';
   $out .= '<div class="abf-toolbar-row top-row">';
+ 
+  // Text search.
+  $out .= '<div class="abf-field">';
+  $out .= '<label>Cerca per nome o parola chiave</label>';
+  $out .= '<input type="text" id="abf-search-' . esc_attr($id) . '" name="' . esc_attr($k_search) . '" value="' . esc_attr($q) . '" placeholder="es. Judo, Roma..." data-abf-role="q">';
+  $out .= '</div>';
 
   // Macro categoria.
   $out .= '<div class="abf-field"><label>Macro categoria</label><select name="' . esc_attr($k_macro) . '" data-abf-role="macro">';
@@ -3152,6 +3650,7 @@ function abf_shortcode($atts): string {
     $out .= '<option value="' . esc_attr($opt) . '"' . $sel . '>' . ab_h($opt) . '</option>';
   }
   $out .= '</select></div>';
+
 
   // Settore.
   $out .= '<div class="abf-field"><label>Settore</label><select name="' . esc_attr($k_settore) . '" data-abf-role="settore">';
@@ -3200,7 +3699,7 @@ function abf_shortcode($atts): string {
   // Azzera next to the last dropdown.
   $out .= '<div class="abf-field abf-field-reset"><label>&nbsp;</label><a class="abf-btn" data-abf-reset="1" href="' . ab_link([
     $k_macro => null, $k_settore => null, $k_settore2 => null,
-    $k_regione => null, $k_prov => null, $k_comune => null, $k_page => null
+    $k_regione => null, $k_prov => null, $k_comune => null, $k_page => null, $k_search => null
   ]) . '">Azzera</a></div>';
   $out .= '</div>';
   
@@ -3217,7 +3716,7 @@ function abf_shortcode($atts): string {
   } else {
     $out .= '<div class="abf-grid">';
     foreach ($rows as $row) {
-      $out .= ab_assoc_render_card($row, 'abf-card', true);
+      $out .= ab_assoc_render_card($row, 'abf-card', false);
     }
     $out .= '</div>';
 
@@ -3232,6 +3731,7 @@ function abf_shortcode($atts): string {
           $k_regione => $regione ?: null,
           $k_prov => $provincia ?: null,
           $k_comune => $comune ?: null,
+          $k_search => $q ?: null,
           $k_page => $page - 1
         ]) . '">Prec</a>';
       } else {
@@ -3248,6 +3748,7 @@ function abf_shortcode($atts): string {
           $k_regione => $regione ?: null,
           $k_prov => $provincia ?: null,
           $k_comune => $comune ?: null,
+          $k_search => $q ?: null,
           $k_page => $page + 1
         ]) . '">Succ</a>';
       } else {
@@ -3256,20 +3757,40 @@ function abf_shortcode($atts): string {
       $out .= '</div>';
 
       $out .= '<div class="abf-page-list" aria-label="Pagine">';
-      for ($p = 1; $p <= $pages; $p++) {
+      $windowStart = max(1, $page - 2);
+      $windowEnd = min($pages, $page + 2);
+      $pageItems = [];
+      for ($p = $windowStart; $p <= $windowEnd; $p++) {
+        $pageItems[$p] = true;
+      }
+      $pageItems[1] = true;
+      $pageItems[$pages] = true;
+      $pageNumbers = array_keys($pageItems);
+      sort($pageNumbers, SORT_NUMERIC);
+
+      $lastPrinted = 0;
+      foreach ($pageNumbers as $p) {
+        $p = (int)$p;
+        if ($p <= 0) continue;
+        if ($lastPrinted > 0 && ($p - $lastPrinted) > 1) {
+          $out .= '<span class="abf-page-ellipsis" aria-hidden="true">...</span>';
+        }
+
         if ($p === $page) {
-          $out .= '<span class="abf-page-dot is-current" aria-current="page" aria-label="Pagina ' . ab_h((string)$p) . '"><span class="abf-sr-only">Pagina ' . ab_h((string)$p) . '</span></span>';
+          $out .= '<span class="abf-page-link is-current" aria-current="page" aria-label="Pagina ' . ab_h((string)$p) . '">' . ab_h((string)$p) . '</span>';
         } else {
-          $out .= '<a class="abf-page-dot" href="' . ab_link([
+          $out .= '<a class="abf-page-link" href="' . ab_link([
             $k_macro => $macro ?: null,
             $k_settore => $settore ?: null,
             $k_settore2 => $settore2 ?: null,
             $k_regione => $regione ?: null,
             $k_prov => $provincia ?: null,
             $k_comune => $comune ?: null,
+            $k_search => $q ?: null,
             $k_page => $p
-          ]) . '" aria-label="Vai alla pagina ' . ab_h((string)$p) . '"><span class="abf-sr-only">Pagina ' . ab_h((string)$p) . '</span></a>';
+          ]) . '" aria-label="Vai alla pagina ' . ab_h((string)$p) . '">' . ab_h((string)$p) . '</a>';
         }
+        $lastPrinted = $p;
       }
       $out .= '</div>';
       $out .= '</div>';
@@ -3370,7 +3891,7 @@ add_filter('the_content', 'abf_inject_into_settori_page', 30);
  * - SETTORE 2
  * - REGIONE
  * - PROVINCIA
- * - COMUNE-CITÀ
+ * - COMUNE-CITTÀ
  * - NOME ASSOCIAZIONE
  * - CONTATTI (EMIAL)
  * - SITIO WEB
@@ -3455,6 +3976,13 @@ function ab_sync_google_sheet_export_url(string $url): string {
   }
 
   return $url;
+}
+
+function ab_sync_resolve_csv_source_url(string $rawUrl): string {
+  $rawUrl = trim($rawUrl);
+  if ($rawUrl === '') return '';
+  // Normalize Google Drive/Sheets links to a stable CSV export URL.
+  return ab_sync_google_sheet_export_url($rawUrl);
 }
 
 function ab_sync_map_index(array $headerIndex, array $aliases): ?int {
@@ -3562,9 +4090,27 @@ function ab_sync_parse_csv(string $csv) {
     $idxSettore2 = ab_sync_map_index_by_tokens($headerIndex, ['settor', '2']);
   }
   $idxRegione = ab_sync_map_index($headerIndex, ['regione', 'region']);
+  if ($idxRegione === null) {
+    $idxRegione = ab_sync_map_index_by_tokens($headerIndex, ['region']);
+  }
   $idxProvincia = ab_sync_map_index($headerIndex, ['provincia', 'province']);
+  if ($idxProvincia === null) {
+    $idxProvincia = ab_sync_map_index_by_tokens($headerIndex, ['provin']);
+  }
   $idxComune = ab_sync_map_index($headerIndex, ['comune_citta', 'comune_cita', 'comune', 'citta']);
+  if ($idxComune === null) {
+    $idxComune = ab_sync_map_index_by_tokens($headerIndex, ['comun']);
+    if ($idxComune === null) {
+      $idxComune = ab_sync_map_index_by_tokens($headerIndex, ['citt']);
+    }
+  }
   $idxNome = ab_sync_map_index($headerIndex, ['nome_associazione', 'associazione', 'nome']);
+  if ($idxNome === null) {
+    $idxNome = ab_sync_map_index_by_tokens($headerIndex, ['associaz']);
+    if ($idxNome === null) {
+      $idxNome = ab_sync_map_index_by_tokens($headerIndex, ['nome']);
+    }
+  }
   $idxContatti = ab_sync_map_index($headerIndex, ['contatti']);
   $idxEmail = ab_sync_map_index($headerIndex, ['contatti_emial', 'contatti_email', 'email', 'emails']);
   $idxSito = ab_sync_map_index($headerIndex, ['sitio_web', 'sito_web', 'sito', 'website', 'web']);
@@ -3579,11 +4125,13 @@ function ab_sync_parse_csv(string $csv) {
   }
 
   $rows = [];
-  $rowKeyCounts = [];
+  $rawRows = 0;
+  $skippedNoName = 0;
   $line = 1;
   while (($data = fgetcsv($fp, 0, $delimiter)) !== false) {
     $line++;
     if (!is_array($data)) continue;
+    $rawRows++;
 
     $macro = ab_sync_get_col($data, $idxMacro);
     $settore = ab_sync_get_col($data, $idxSettore);
@@ -3607,50 +4155,35 @@ function ab_sync_parse_csv(string $csv) {
     $instagram = ab_sync_get_col($data, $idxSocialInstagram);
     if ($instagram === '') $instagram = ab_sync_get_col($data, $idxInstagram);
 
-    if ($nome === '') continue;
-
-    // Build category variants: interpret slash-separated tokens as multiple categories, not a single long one.
-    $splitTokens = static function(string $value): array {
-      $v = trim($value);
-      if ($v === '') return [''];
-      if (strpos($v, '/') === false) return [$v];
-      $parts = preg_split('~/+~', $v);
-      if (!is_array($parts)) return [$v];
-      $out = [];
-      foreach ($parts as $p) { $p = trim((string)$p); if ($p !== '') $out[$p] = true; }
-      $list = array_keys($out);
-      return !empty($list) ? $list : [''];
-    };
-
-    $macroTks = $splitTokens($macro);
-    $settoreTks = $splitTokens($settore);
-    $settore2Tks = $splitTokens($settore2);
-
-    $variants = [];
-    foreach ($macroTks as $mTk) {
-      foreach ($settoreTks as $sTk) {
-        foreach ($settore2Tks as $s2Tk) {
-          $path = ab_assoc_category_from_levels((string)$mTk, (string)$sTk, (string)$s2Tk);
-          if ($path === '') continue;
-          $variants[] = [
-            'macro' => (string)$mTk,
-            'settore' => (string)$sTk,
-            'settore2' => (string)$s2Tk,
-            'category' => $path,
-          ];
-        }
-      }
+    if ($nome === '') {
+      $skippedNoName++;
+      continue;
     }
-    if (empty($variants)) {
-      $single = ab_assoc_category_from_levels($macro, $settore, $settore2);
-      if ($single !== '') {
-        $variants[] = [
-          'macro' => $macro,
-          'settore' => $settore,
-          'settore2' => $settore2,
-          'category' => $single,
-        ];
-      }
+
+    // Keep one logical association row and keep all category paths in row metadata.
+    // Import rule: only Settore 2 is slash-splittable. Macro and Settore keep slash literal.
+    $variants = ab_sync_build_category_variants($macro, $settore, $settore2);
+    $categoryPaths = [];
+    foreach ($variants as $variant) {
+      $path = trim((string)($variant['category'] ?? ''));
+      if ($path === '') continue;
+      $categoryPaths[$path] = true;
+    }
+    $categoryPaths = ab_sync_filter_category_paths_to_tree(array_keys($categoryPaths), true);
+    $primaryVariant = !empty($variants) ? (array)$variants[0] : [
+      'macro' => $macro,
+      'settore' => $settore,
+      'settore2' => $settore2,
+      'category' => ab_assoc_category_from_levels($macro, $settore, $settore2),
+    ];
+    if (!empty($categoryPaths)) {
+      $primaryParts = ab_split_category((string)$categoryPaths[0]);
+      $primaryVariant = [
+        'macro' => isset($primaryParts[0]) ? (string)$primaryParts[0] : '',
+        'settore' => isset($primaryParts[1]) ? (string)$primaryParts[1] : '',
+        'settore2' => isset($primaryParts[2]) ? (string)$primaryParts[2] : '',
+        'category' => (string)$categoryPaths[0],
+      ];
     }
 
     $locationParts = array_values(array_filter([$comune, $provincia], fn($v) => $v !== ''));
@@ -3673,47 +4206,46 @@ function ab_sync_parse_csv(string $csv) {
       }
     }
 
-    // Create one row per category variant; maintain unique row keys using counters
-    foreach ($variants as $v) {
-      $cat = (string)$v['category'];
-      $baseRowKey = ab_assoc_row_key_from_values($nome, $regione, $provincia, $comune, $cat);
-      $rowKey = $baseRowKey;
-      if ($baseRowKey !== '') {
-        if (!isset($rowKeyCounts[$baseRowKey])) {
-          $rowKeyCounts[$baseRowKey] = 0;
-        }
-        $rowKeyCounts[$baseRowKey]++;
-        if ($rowKeyCounts[$baseRowKey] > 1) {
-          $rowKey .= '|dup:' . (string)$rowKeyCounts[$baseRowKey];
-        }
-      }
-
-      $rows[] = [
-        'category'     => $cat,
-        'region'       => $regione,
-        'organization' => $nome,
-        'city'         => $comune,
-        'province'     => $provincia,
-        'macro'        => (string)$v['macro'],
-        'settore'      => (string)$v['settore'],
-        'settore2'     => (string)$v['settore2'],
-        'website'      => $sito,
-        'facebook'     => $facebook,
-        'instagram'    => $instagram,
-        'location_raw' => $locationRaw,
-        'urls'         => $urlsStr,
-        'emails'       => $email,
-        'notes'        => '',
-        'source_block' => $source,
-        'source_key'   => ab_assoc_source_key($nome, $provincia, $comune, $regione),
-        'row_key'      => $rowKey,
-        'csv_all_cols' => $allCols,
-        '_line'        => $line,
-      ];
+    $primaryCategory = (string)($primaryVariant['category'] ?? '');
+    $baseRowKey = ab_assoc_row_key_from_values($nome, $regione, $provincia, $comune, '');
+    $rowKey = $baseRowKey;
+    if ($rowKey === '') {
+      $rowKey = substr(sha1(strtolower(trim($nome . '|' . $locationRaw . '|' . $email . '|' . $urlsStr))), 0, 20);
     }
+
+    $rows[] = [
+      'category'       => $primaryCategory,
+      'all_categories' => implode(' | ', $categoryPaths),
+      'category_paths' => $categoryPaths,
+      'region'         => $regione,
+      'organization'   => $nome,
+      'city'           => $comune,
+      'province'       => $provincia,
+      'macro'          => (string)($primaryVariant['macro'] ?? $macro),
+      'settore'        => (string)($primaryVariant['settore'] ?? $settore),
+      'settore2'       => (string)($primaryVariant['settore2'] ?? $settore2),
+      'contacts_raw'   => $contatti,
+      'website'        => $sito,
+      'facebook'       => $facebook,
+      'instagram'      => $instagram,
+      'location_raw'   => $locationRaw,
+      'urls'           => $urlsStr,
+      'emails'         => $email,
+      'notes'          => '',
+      'source_block'   => $source,
+      'source_key'     => ab_assoc_source_key($nome, $provincia, $comune, $regione),
+      'row_key'        => $rowKey,
+      'csv_all_cols'   => $allCols,
+      '_line'          => $line,
+    ];
   }
 
   fclose($fp);
+  $GLOBALS['ab_sync_last_parse_stats'] = [
+    'raw_rows' => (int)$rawRows,
+    'rows_with_name' => (int)($rawRows - $skippedNoName),
+    'skipped_no_name' => (int)$skippedNoName,
+  ];
   return $rows;
 }
 
@@ -3767,53 +4299,32 @@ function ab_sync_set_external_url_meta(int $postId, array $candidates): void {
   delete_post_meta($postId, '_hebeae_external_url');
 }
 
-function ab_sync_set_activity_category_if_empty(int $postId, string $categoryPath): void {
+function ab_sync_set_activity_categories(int $postId, array $categoryPaths): void {
   if (!taxonomy_exists('activity_category')) return;
-  $categoryPath = trim($categoryPath);
-  if ($categoryPath === '' || ab_assoc_is_placeholder_label($categoryPath)) return;
 
-  $segments = ab_split_category($categoryPath);
-  if (empty($segments)) return;
+  $categoryPaths = ab_sync_filter_category_paths_to_tree($categoryPaths, true);
+  $termIds = [];
 
-  $parentId = 0;
-  $leafId = 0;
-
-  foreach ($segments as $segmentRaw) {
-    $segment = ab_sync_normalize_text((string)$segmentRaw);
-    if ($segment === '') continue;
-
-    $term = term_exists($segment, 'activity_category', $parentId);
-    if (is_wp_error($term)) {
-      continue;
-    }
-
-    $termId = 0;
-    if (is_array($term) && isset($term['term_id'])) {
-      $termId = (int)$term['term_id'];
-    } elseif (is_numeric($term)) {
-      $termId = (int)$term;
-    } else {
-      $inserted = wp_insert_term($segment, 'activity_category', ['parent' => $parentId]);
-      if (is_wp_error($inserted) || !isset($inserted['term_id'])) {
-        continue;
-      }
-      $termId = (int)$inserted['term_id'];
-    }
-
-    if ($termId > 0) {
-      $leafId = $termId;
-      $parentId = $termId;
+  if (!empty($categoryPaths) && function_exists('culturacsi_activity_tree_term_ids_from_paths')) {
+    $treeTermIds = culturacsi_activity_tree_term_ids_from_paths($categoryPaths, true);
+    if (is_array($treeTermIds)) {
+      $termIds = array_values(array_unique(array_filter(array_map('intval', $treeTermIds), fn($id) => $id > 0)));
     }
   }
 
-  if ($leafId > 0) {
-    $existingIds = wp_get_post_terms($postId, 'activity_category', ['fields' => 'ids']);
-    if (is_wp_error($existingIds) || !is_array($existingIds)) {
-      $existingIds = [];
-    }
-    $termIds = array_values(array_unique(array_filter(array_merge($existingIds, [$leafId]), fn($id) => (int)$id > 0)));
+  // Strict mode: never create taxonomy terms from CSV.
+  // If no valid tree path is found, categories are cleared.
+  if (function_exists('culturacsi_activity_tree_set_post_terms')) {
+    culturacsi_activity_tree_set_post_terms($postId, $termIds);
+  } else {
     wp_set_post_terms($postId, $termIds, 'activity_category', false);
   }
+}
+
+function ab_sync_set_activity_category_if_empty(int $postId, string $categoryPath): void {
+  $categoryPath = trim($categoryPath);
+  if ($categoryPath === '') return;
+  ab_sync_set_activity_categories($postId, [$categoryPath]);
 }
 
 function ab_sync_prune_stale_association_posts(array $keepPostIds): array {
@@ -3858,6 +4369,371 @@ function ab_sync_prune_stale_association_posts(array $keepPostIds): array {
   return ['trashed' => $trashed, 'errors' => $errors];
 }
 
+function ab_sync_assoc_status_rank(string $status): int {
+  $status = trim(strtolower($status));
+  if ($status === 'publish') return 50;
+  if ($status === 'private') return 40;
+  if ($status === 'pending') return 30;
+  if ($status === 'draft') return 20;
+  return 10;
+}
+
+function ab_sync_assoc_location_meta(int $postId): array {
+  $city = trim((string)get_post_meta($postId, 'city', true));
+  if ($city === '') $city = trim((string)get_post_meta($postId, 'comune', true));
+  $province = trim((string)get_post_meta($postId, 'province', true));
+  $region = trim((string)get_post_meta($postId, 'region', true));
+  if ($region === '') $region = trim((string)get_post_meta($postId, 'regione', true));
+  $locationRaw = trim((string)get_post_meta($postId, '_ab_csv_location_raw', true));
+  if ($locationRaw === '') $locationRaw = trim((string)get_post_meta($postId, 'location_raw', true));
+  return [
+    'city' => $city,
+    'province' => $province,
+    'region' => $region,
+    'location_raw' => $locationRaw,
+  ];
+}
+
+function ab_sync_assoc_group_key(int $postId): string {
+  $loc = ab_sync_assoc_location_meta($postId);
+  $cityN = ab_assoc_normalize_key((string)$loc['city']);
+  $provN = ab_assoc_normalize_key((string)$loc['province']);
+  $regionN = ab_assoc_normalize_key((string)$loc['region']);
+  $locationRawN = ab_assoc_normalize_key((string)($loc['location_raw'] ?? ''));
+  $hasConcreteLocation = ($cityN !== '' || $provN !== '' || $regionN !== '');
+
+  $baseKey = trim((string)get_post_meta($postId, '_ab_source_key', true));
+  if ($baseKey !== '' && $hasConcreteLocation) return 'base:' . $baseKey;
+
+  $variantKey = trim((string)get_post_meta($postId, '_ab_source_variant_key', true));
+  if ($variantKey !== '') return 'variant:' . $variantKey;
+
+  if ($baseKey !== '') return 'base:' . $baseKey;
+
+  $entityKey = trim((string)get_post_meta($postId, '_ab_entity_key', true));
+  if ($entityKey !== '') return 'entity:' . $entityKey;
+
+  $title = trim((string)get_the_title($postId));
+  $titleN = ab_assoc_normalize_key($title);
+  if ($titleN !== '' || $cityN !== '' || $provN !== '' || $regionN !== '' || $locationRawN !== '') {
+    return 'titleloc:' . implode('|', [$titleN, $cityN, $provN, $regionN, $locationRawN]);
+  }
+
+  return 'id:' . (string)$postId;
+}
+
+function ab_sync_rewire_association_references(int $fromPostId, int $toPostId): array {
+  global $wpdb;
+
+  if ($fromPostId <= 0 || $toPostId <= 0 || $fromPostId === $toPostId) {
+    return ['postmeta' => 0, 'usermeta' => 0];
+  }
+
+  $fromVal = (string)$fromPostId;
+  $toVal = (string)$toPostId;
+  $postmetaUpdated = 0;
+  $usermetaUpdated = 0;
+
+  $metaKeys = apply_filters('ab_sync_assoc_reference_meta_keys', [
+    'organizer_association_id',
+    'associazione_id',
+    'association_id',
+    'association_post_id',
+  ]);
+  if (is_array($metaKeys)) {
+    $metaKeys = array_values(array_filter(array_map('strval', $metaKeys), fn($v) => trim($v) !== ''));
+  } else {
+    $metaKeys = [];
+  }
+
+  if (!empty($metaKeys)) {
+    $placeholders = implode(',', array_fill(0, count($metaKeys), '%s'));
+    $sql = "
+      UPDATE {$wpdb->postmeta}
+      SET meta_value = %s
+      WHERE meta_key IN ({$placeholders})
+        AND meta_value = %s
+    ";
+    $params = array_merge([$toVal], $metaKeys, [$fromVal]);
+    $updated = $wpdb->query($wpdb->prepare($sql, $params));
+    if (is_numeric($updated) && (int)$updated > 0) {
+      $postmetaUpdated = (int)$updated;
+    }
+  }
+
+  $updatedUsers = $wpdb->update(
+    $wpdb->usermeta,
+    ['meta_value' => $toVal],
+    ['meta_key' => 'association_post_id', 'meta_value' => $fromVal],
+    ['%s'],
+    ['%s', '%s']
+  );
+  if (is_numeric($updatedUsers) && (int)$updatedUsers > 0) {
+    $usermetaUpdated = (int)$updatedUsers;
+  }
+
+  return ['postmeta' => $postmetaUpdated, 'usermeta' => $usermetaUpdated];
+}
+
+function ab_sync_merge_duplicate_association_post(int $primaryId, int $duplicateId): array {
+  if ($primaryId <= 0 || $duplicateId <= 0 || $primaryId === $duplicateId) {
+    return ['terms_added' => 0];
+  }
+
+  $termsPrimary = wp_get_post_terms($primaryId, 'activity_category', ['fields' => 'ids']);
+  if (is_wp_error($termsPrimary) || !is_array($termsPrimary)) $termsPrimary = [];
+  $termsDuplicate = wp_get_post_terms($duplicateId, 'activity_category', ['fields' => 'ids']);
+  if (is_wp_error($termsDuplicate) || !is_array($termsDuplicate)) $termsDuplicate = [];
+  $mergedTermIds = array_values(array_unique(array_filter(array_merge($termsPrimary, $termsDuplicate), fn($v) => (int)$v > 0)));
+  $termsAdded = max(0, count($mergedTermIds) - count($termsPrimary));
+  if (!empty($mergedTermIds)) {
+    if (function_exists('culturacsi_activity_tree_set_post_terms')) {
+      culturacsi_activity_tree_set_post_terms($primaryId, $mergedTermIds);
+    } else {
+      wp_set_post_terms($primaryId, $mergedTermIds, 'activity_category', false);
+    }
+  }
+
+    $metaKeys = [
+      'comune', 'city', 'province', 'region', 'regione',
+      'address', 'indirizzo', 'phone', 'telefono',
+      'email', 'website', 'facebook', 'instagram',
+      '_ab_source_key', '_ab_source_variant_key', '_ab_entity_key', '_ab_row_key',
+      '_ab_csv_category', '_ab_csv_macro', '_ab_csv_settore', '_ab_csv_settore2', '_ab_csv_region', '_ab_csv_location_raw',
+    ];
+  foreach ($metaKeys as $metaKey) {
+    $primaryVal = trim((string)get_post_meta($primaryId, $metaKey, true));
+    if ($primaryVal !== '') continue;
+    $dupVal = trim((string)get_post_meta($duplicateId, $metaKey, true));
+    if ($dupVal !== '') update_post_meta($primaryId, $metaKey, $dupVal);
+  }
+
+  $primarySync = trim((string)get_post_meta($primaryId, '_ab_csv_last_sync', true));
+  $dupSync = trim((string)get_post_meta($duplicateId, '_ab_csv_last_sync', true));
+  $primaryTs = $primarySync !== '' ? (int)strtotime($primarySync) : 0;
+  $dupTs = $dupSync !== '' ? (int)strtotime($dupSync) : 0;
+  if ($dupTs > 0 && $dupTs > $primaryTs) {
+    update_post_meta($primaryId, '_ab_csv_last_sync', $dupSync);
+  }
+
+  if (!has_post_thumbnail($primaryId) && has_post_thumbnail($duplicateId)) {
+    $thumbId = (int)get_post_thumbnail_id($duplicateId);
+    if ($thumbId > 0) {
+      set_post_thumbnail($primaryId, $thumbId);
+    }
+  }
+
+  $primaryPost = get_post($primaryId);
+  $dupPost = get_post($duplicateId);
+  if ($primaryPost instanceof WP_Post && $dupPost instanceof WP_Post) {
+    $update = ['ID' => $primaryId];
+    $needsUpdate = false;
+    if (trim((string)$primaryPost->post_excerpt) === '' && trim((string)$dupPost->post_excerpt) !== '') {
+      $update['post_excerpt'] = (string)$dupPost->post_excerpt;
+      $needsUpdate = true;
+    }
+    if (trim((string)$primaryPost->post_content) === '' && trim((string)$dupPost->post_content) !== '') {
+      $update['post_content'] = (string)$dupPost->post_content;
+      $needsUpdate = true;
+    }
+    if ($needsUpdate) {
+      wp_update_post($update);
+    }
+  }
+
+  return ['terms_added' => $termsAdded];
+}
+
+function ab_sync_clean_activity_terms_for_post(int $postId): array {
+  if ($postId <= 0) return ['removed' => 0];
+
+  $terms = wp_get_post_terms($postId, 'activity_category');
+  if (is_wp_error($terms) || !is_array($terms) || empty($terms)) {
+    return ['removed' => 0];
+  }
+
+  $bestByName = [];
+  $originalIds = [];
+
+  foreach ($terms as $termObj) {
+    if (!$termObj instanceof WP_Term) continue;
+    $termId = (int)$termObj->term_id;
+    if ($termId <= 0) continue;
+    $originalIds[] = $termId;
+
+    $name = trim((string)$termObj->name);
+    $nameKey = ab_assoc_normalize_key($name);
+    if ($nameKey === '') continue;
+    if (ab_assoc_is_placeholder_label($name)) continue;
+
+    $alpha = (string)preg_replace('/[^\p{L}]+/u', '', $name);
+    $alphaLen = function_exists('mb_strlen') ? (int)mb_strlen($alpha, 'UTF-8') : (int)strlen($alpha);
+    if ($alphaLen < 2) continue;
+
+    if (!isset($bestByName[$nameKey])) {
+      $bestByName[$nameKey] = $termId;
+      continue;
+    }
+
+    $currentBest = (int)$bestByName[$nameKey];
+    if ($currentBest <= 0 || $termId < $currentBest) {
+      $bestByName[$nameKey] = $termId;
+    }
+  }
+
+  if (empty($bestByName)) {
+    if (function_exists('culturacsi_activity_tree_set_post_terms')) {
+      culturacsi_activity_tree_set_post_terms($postId, []);
+    } else {
+      wp_set_post_terms($postId, [], 'activity_category', false);
+    }
+    return ['removed' => count(array_unique(array_map('intval', $originalIds)))];
+  }
+
+  $newIds = array_values(array_unique(array_filter(array_map('intval', array_values($bestByName)), fn($id) => $id > 0)));
+  sort($newIds, SORT_NUMERIC);
+
+  $oldIds = array_values(array_unique(array_filter(array_map('intval', $originalIds), fn($id) => $id > 0)));
+  sort($oldIds, SORT_NUMERIC);
+
+  if ($newIds === $oldIds) {
+    return ['removed' => 0];
+  }
+
+  if (function_exists('culturacsi_activity_tree_set_post_terms')) {
+    culturacsi_activity_tree_set_post_terms($postId, $newIds);
+  } else {
+    wp_set_post_terms($postId, $newIds, 'activity_category', false);
+  }
+  return ['removed' => max(0, count($oldIds) - count($newIds))];
+}
+
+function ab_sync_dedupe_association_posts(): array {
+  if (!post_type_exists('association')) {
+    return ['groups' => 0, 'duplicates' => 0, 'trashed' => 0, 'errors' => 0, 'rewired_postmeta' => 0, 'rewired_usermeta' => 0, 'terms_added' => 0, 'terms_removed' => 0];
+  }
+
+  $posts = get_posts([
+    'post_type' => 'association',
+    'post_status' => ['publish', 'private', 'pending', 'draft'],
+    'posts_per_page' => -1,
+    'fields' => 'ids',
+    'orderby' => 'ID',
+    'order' => 'ASC',
+    'suppress_filters' => true,
+  ]);
+  if (!is_array($posts) || empty($posts)) {
+    return ['groups' => 0, 'duplicates' => 0, 'trashed' => 0, 'errors' => 0, 'rewired_postmeta' => 0, 'rewired_usermeta' => 0, 'terms_added' => 0, 'terms_removed' => 0];
+  }
+
+  // Pre-load all posts to avoid N×log(N) database queries during sorting
+  $allPosts = get_posts([
+    'post_type' => 'association',
+    'post_status' => ['publish', 'private', 'pending', 'draft', 'trash'],
+    'posts_per_page' => -1,
+    'orderby' => 'ID',
+    'order' => 'ASC',
+    'suppress_filters' => true,
+  ]);
+  $postsMap = [];
+  foreach ($allPosts as $post) {
+    if ($post instanceof WP_Post) {
+      $postsMap[$post->ID] = $post;
+    }
+  }
+  unset($allPosts); // Free memory
+
+  $groups = [];
+  foreach ($posts as $postIdRaw) {
+    $postId = (int)$postIdRaw;
+    if ($postId <= 0) continue;
+    $key = ab_sync_assoc_group_key($postId);
+    if (!isset($groups[$key])) $groups[$key] = [];
+    $groups[$key][] = $postId;
+  }
+
+  $groupCount = 0;
+  $duplicateCount = 0;
+  $trashed = 0;
+  $errors = 0;
+  $rewiredPostmeta = 0;
+  $rewiredUsermeta = 0;
+  $termsAdded = 0;
+  $termsRemoved = 0;
+
+  foreach ($groups as $groupIds) {
+    if (!is_array($groupIds) || count($groupIds) <= 1) continue;
+    $groupCount++;
+    $duplicateCount += (count($groupIds) - 1);
+
+    // Use pre-loaded posts map for sorting to avoid database queries
+    usort($groupIds, function($a, $b) use ($postsMap) {
+      $a = (int)$a;
+      $b = (int)$b;
+      $aPost = $postsMap[$a] ?? null;
+      $bPost = $postsMap[$b] ?? null;
+      $aRank = $aPost instanceof WP_Post ? ab_sync_assoc_status_rank((string)$aPost->post_status) : 0;
+      $bRank = $bPost instanceof WP_Post ? ab_sync_assoc_status_rank((string)$bPost->post_status) : 0;
+      if ($aRank !== $bRank) return $bRank <=> $aRank;
+      return $a <=> $b;
+    });
+
+    $primaryId = (int)$groupIds[0];
+    if ($primaryId <= 0) continue;
+
+    for ($i = 1; $i < count($groupIds); $i++) {
+      $duplicateId = (int)$groupIds[$i];
+      if ($duplicateId <= 0 || $duplicateId === $primaryId) continue;
+
+      $merge = ab_sync_merge_duplicate_association_post($primaryId, $duplicateId);
+      $termsAdded += (int)($merge['terms_added'] ?? 0);
+
+      $rewire = ab_sync_rewire_association_references($duplicateId, $primaryId);
+      $rewiredPostmeta += (int)($rewire['postmeta'] ?? 0);
+      $rewiredUsermeta += (int)($rewire['usermeta'] ?? 0);
+
+      $trashedPost = wp_trash_post($duplicateId);
+      if ($trashedPost instanceof WP_Post) $trashed++;
+      else $errors++;
+    }
+
+    // Clean activity terms for the primary and remaining posts using pre-loaded data
+    foreach ($groupIds as $postId) {
+      $postId = (int)$postId;
+      if ($postId <= 0) continue;
+      $clean = ab_sync_clean_activity_terms_for_post($postId);
+      $termsRemoved += (int)($clean['removed'] ?? 0);
+    }
+  }
+
+  // Clean activity terms for posts not in any group (single-item groups)
+  $groupedPostIds = [];
+  foreach ($groups as $groupIds) {
+    foreach ($groupIds as $id) {
+      $groupedPostIds[(int)$id] = true;
+    }
+  }
+  foreach ($posts as $postIdRaw) {
+    $postId = (int)$postIdRaw;
+    if ($postId <= 0) continue;
+    if (!isset($groupedPostIds[$postId])) {
+      $clean = ab_sync_clean_activity_terms_for_post($postId);
+      $termsRemoved += (int)($clean['removed'] ?? 0);
+    }
+  }
+
+  return [
+    'groups' => $groupCount,
+    'duplicates' => $duplicateCount,
+    'trashed' => $trashed,
+    'errors' => $errors,
+    'rewired_postmeta' => $rewiredPostmeta,
+    'rewired_usermeta' => $rewiredUsermeta,
+    'terms_added' => $termsAdded,
+    'terms_removed' => $termsRemoved,
+  ];
+}
+
 function ab_sync_upsert_association_posts(array $rows) {
   if (!post_type_exists('association')) {
     return [
@@ -3873,7 +4749,9 @@ function ab_sync_upsert_association_posts(array $rows) {
 
   global $wpdb;
 
-  $sourceMap = [];
+  $sourceBaseMap = [];
+  $sourceVariantMap = [];
+  $entityKeyMap = [];
   $rowKeyMap = [];
 
   $metaKey = '_ab_source_key';
@@ -3887,10 +4765,47 @@ function ab_sync_upsert_association_posts(array $rows) {
   ";
   $metaRows = $wpdb->get_results($wpdb->prepare($sqlMeta, [$metaKey]), ARRAY_A);
   foreach ($metaRows as $metaRow) {
-    $sourceKey = trim((string)($metaRow['source_key'] ?? ''));
+    $sourceBaseKey = trim((string)($metaRow['source_key'] ?? ''));
     $postId = (int)($metaRow['post_id'] ?? 0);
-    if ($sourceKey !== '' && $postId > 0) {
-      $sourceMap[$sourceKey] = $postId;
+    if ($sourceBaseKey !== '' && $postId > 0) {
+      if (!isset($sourceBaseMap[$sourceBaseKey])) $sourceBaseMap[$sourceBaseKey] = [];
+      $sourceBaseMap[$sourceBaseKey][$postId] = true;
+    }
+  }
+
+  $variantMetaKey = '_ab_source_variant_key';
+  $sqlVariantMeta = "
+    SELECT pm.meta_value AS source_variant, pm.post_id
+    FROM {$wpdb->postmeta} pm
+    INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+    WHERE pm.meta_key = %s
+      AND p.post_type = 'association'
+      AND p.post_status NOT IN ('trash', 'auto-draft')
+  ";
+  $variantRows = $wpdb->get_results($wpdb->prepare($sqlVariantMeta, [$variantMetaKey]), ARRAY_A);
+  foreach ($variantRows as $variantRow) {
+    $variantKey = trim((string)($variantRow['source_variant'] ?? ''));
+    $postId = (int)($variantRow['post_id'] ?? 0);
+    if ($variantKey !== '' && $postId > 0) {
+      $sourceVariantMap[$variantKey] = $postId;
+    }
+  }
+
+  $entityMetaKey = '_ab_entity_key';
+  $sqlEntityMeta = "
+    SELECT pm.meta_value AS entity_key, pm.post_id
+    FROM {$wpdb->postmeta} pm
+    INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+    WHERE pm.meta_key = %s
+      AND p.post_type = 'association'
+      AND p.post_status NOT IN ('trash', 'auto-draft')
+  ";
+  $entityRows = $wpdb->get_results($wpdb->prepare($sqlEntityMeta, [$entityMetaKey]), ARRAY_A);
+  foreach ($entityRows as $entityRow) {
+    $entityKey = trim((string)($entityRow['entity_key'] ?? ''));
+    $postId = (int)($entityRow['post_id'] ?? 0);
+    if ($entityKey !== '' && $postId > 0) {
+      $entityKeyMap[$entityKey] = $postId;
     }
   }
 
@@ -3928,61 +4843,73 @@ function ab_sync_upsert_association_posts(array $rows) {
     }
   }
 
+  foreach ($sourceBaseMap as $baseKey => $postIdSet) {
+    $ids = array_keys((array)$postIdSet);
+    if (count($ids) === 1) {
+      $singleId = (int)$ids[0];
+      if ($singleId > 0 && !isset($sourceVariantMap[$baseKey])) {
+        $sourceVariantMap[$baseKey] = $singleId;
+      }
+    }
+  }
+
   $processed = 0;
   $linked = 0;
   $created = 0;
   $matched = 0;
   $errors = 0;
   $touchedPostIds = [];
+  $postCategoryPathMap = [];
 
   foreach ($rows as $row) {
     $organization = trim((string)($row['organization'] ?? ''));
     if ($organization === '') continue;
     $processed++;
-    $resolvedCategory = ab_assoc_resolve_category_from_row($row);
+    $categoryPaths = ab_sync_row_category_paths((array)$row);
+    $resolvedCategory = !empty($categoryPaths) ? (string)$categoryPaths[0] : ab_assoc_resolve_category_from_row($row);
 
     $province = trim((string)($row['province'] ?? ''));
     $city = trim((string)($row['city'] ?? ''));
     $region = trim((string)($row['region'] ?? ''));
     $rowKey = trim((string)($row['row_key'] ?? ''));
     if ($rowKey === '') {
-      $rowKey = ab_assoc_row_key_from_values($organization, $region, $province, $city, $resolvedCategory);
+      $rowKey = ab_assoc_row_key_from_values($organization, $region, $province, $city, '');
     }
-    // Build strict and legacy-compatible source keys to keep chapters distinct by city/province,
-    // and avoid collapsing when location data is missing.
-    [$sourceKey, $sourceKeyCompat] = ab_assoc_build_source_key_from_row($row);
+    $entityKey = ab_assoc_entity_key_from_row($row);
+    // Build variant + base keys. Base is always org+region+province+city.
+    // Variant may include a discriminator for missing location or chapter split.
+    [$sourceVariantKey, $sourceBaseKey] = ab_assoc_build_source_key_from_row($row);
+    $matchKey = $sourceVariantKey !== '' ? $sourceVariantKey : $sourceBaseKey;
 
     $postId = 0;
-    // Prefer source-key match (organization + location) to avoid per-activity duplicates
-    if ($sourceKey !== '' && isset($sourceMap[$sourceKey])) {
-      $candidateId = (int)$sourceMap[$sourceKey];
-      if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKey)) {
+
+    // Primary: stable association identity (name + location + contacts, excluding activities).
+    if ($entityKey !== '' && isset($entityKeyMap[$entityKey])) {
+      $candidateId = (int)$entityKeyMap[$entityKey];
+      if (ab_assoc_post_matches_row($candidateId, $rowKey, $matchKey, $entityKey)) {
         $postId = $candidateId;
       }
     }
 
-    // Legacy without discriminator: only reuse if the candidate's strict key matches this row's strict key.
-    if ($postId <= 0 && $sourceKeyCompat !== '' && isset($sourceMap[$sourceKeyCompat])) {
-      $candidateId = (int)$sourceMap[$sourceKeyCompat];
-      if ($candidateId > 0 && get_post_type($candidateId) === 'association') {
-        $candStrict = trim((string)get_post_meta($candidateId, '_ab_source_key', true));
-        if ($candStrict !== '' && $sourceKey !== '' && $candStrict !== $sourceKey) {
-          // Do not reuse: this compat key is already tied to a different strict chapter; force new post
-        } else if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKeyCompat)) {
-          $postId = $candidateId;
-        }
+    // Fallback: source/chapter keys.
+    if ($postId <= 0 && $matchKey !== '' && isset($sourceVariantMap[$matchKey])) {
+      $candidateId = (int)$sourceVariantMap[$matchKey];
+      if (ab_assoc_post_matches_row($candidateId, $rowKey, $matchKey, $entityKey)) {
+        $postId = $candidateId;
+      }
+    }
+    if ($postId <= 0 && $sourceBaseKey !== '' && isset($sourceVariantMap[$sourceBaseKey])) {
+      $candidateId = (int)$sourceVariantMap[$sourceBaseKey];
+      if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceBaseKey, $entityKey)) {
+        $postId = $candidateId;
       }
     }
 
-    // Fallback: row-key (category-specific) match
+    // Final fallback: row key.
     if ($postId <= 0 && $rowKey !== '' && isset($rowKeyMap[$rowKey])) {
       $candidateId = (int)$rowKeyMap[$rowKey];
-      if (ab_assoc_post_matches_row($candidateId, $rowKey, $sourceKey)) {
+      if (ab_assoc_post_matches_row($candidateId, $rowKey, $matchKey, $entityKey)) {
         $postId = $candidateId;
-        // If a source-key canonical exists, favor it and remap this row-key for future rows
-        if ($sourceKey !== '' && isset($sourceMap[$sourceKey]) && (int)$sourceMap[$sourceKey] !== $postId) {
-          $postId = (int)$sourceMap[$sourceKey];
-        }
       }
     }
 
@@ -4019,13 +4946,18 @@ function ab_sync_upsert_association_posts(array $rows) {
       // Point this category-specific row key at the canonical post for this source
       $rowKeyMap[$rowKey] = $postId;
     }
-    if ($sourceKey !== '') {
-      update_post_meta($postId, '_ab_source_key', $sourceKey);
-      $sourceMap[$sourceKey] = $postId;
-      // Also register legacy key so future rows pre-migration still resolve
-      if ($sourceKeyCompat !== '' && $sourceKeyCompat !== $sourceKey) {
-        $sourceMap[$sourceKeyCompat] = $postId;
-      }
+    if ($sourceBaseKey !== '') {
+      update_post_meta($postId, '_ab_source_key', $sourceBaseKey);
+      if (!isset($sourceBaseMap[$sourceBaseKey])) $sourceBaseMap[$sourceBaseKey] = [];
+      $sourceBaseMap[$sourceBaseKey][$postId] = true;
+    }
+    if ($matchKey !== '') {
+      update_post_meta($postId, '_ab_source_variant_key', $matchKey);
+      $sourceVariantMap[$matchKey] = $postId;
+    }
+    if ($entityKey !== '') {
+      update_post_meta($postId, '_ab_entity_key', $entityKey);
+      $entityKeyMap[$entityKey] = $postId;
     }
 
     $urlsParsed = ab_assoc_parse_urls((string)($row['urls'] ?? ''));
@@ -4051,15 +4983,22 @@ function ab_sync_upsert_association_posts(array $rows) {
     ab_sync_set_meta_if_empty($postId, 'website', $website, 'url');
     ab_sync_set_meta_if_empty($postId, 'facebook', $facebook, 'url');
     ab_sync_set_meta_if_empty($postId, 'instagram', $instagram, 'url');
-    update_post_meta($postId, '_ab_csv_category', $resolvedCategory);
-    update_post_meta($postId, '_ab_csv_macro', (string)($row['macro'] ?? ''));
-    update_post_meta($postId, '_ab_csv_settore', (string)($row['settore'] ?? ''));
-    update_post_meta($postId, '_ab_csv_settore2', (string)($row['settore2'] ?? ''));
     update_post_meta($postId, '_ab_csv_region', (string)($row['region'] ?? ''));
+    update_post_meta($postId, '_ab_csv_location_raw', (string)($row['location_raw'] ?? ''));
     update_post_meta($postId, '_ab_csv_last_sync', current_time('mysql'));
     ab_sync_set_external_url_meta($postId, $externalUrlCandidates);
 
-    ab_sync_set_activity_category_if_empty($postId, $resolvedCategory);
+    if (empty($categoryPaths) && $resolvedCategory !== '') {
+      $categoryPaths = ab_sync_filter_category_paths_to_tree([$resolvedCategory], true);
+    }
+    if (!isset($postCategoryPathMap[$postId])) {
+      $postCategoryPathMap[$postId] = [];
+    }
+    foreach ((array)$categoryPaths as $path) {
+      $path = trim((string)$path);
+      if ($path === '' || ab_assoc_is_placeholder_label($path)) continue;
+      $postCategoryPathMap[$postId][$path] = true;
+    }
 
     // Store ALL available CSV columns as post meta with _ab_csv_ prefix
     if (isset($row['csv_all_cols']) && is_array($row['csv_all_cols'])) {
@@ -4071,6 +5010,27 @@ function ab_sync_upsert_association_posts(array $rows) {
         }
       }
     }
+  }
+
+  // Assign taxonomy terms once per association after all CSV rows are merged.
+  foreach ($postCategoryPathMap as $postId => $pathSet) {
+    $postId = (int)$postId;
+    if ($postId <= 0) continue;
+    $paths = array_keys((array)$pathSet);
+    $paths = ab_sync_filter_category_paths_to_tree($paths, true);
+
+    sort($paths, SORT_NATURAL | SORT_FLAG_CASE);
+    $allCategories = implode(' | ', $paths);
+    $primaryCategory = !empty($paths) ? (string)$paths[0] : '';
+    $primaryParts = ab_split_category($primaryCategory);
+
+    update_post_meta($postId, '_ab_csv_category', $primaryCategory);
+    update_post_meta($postId, '_ab_csv_all_categories', $allCategories);
+    update_post_meta($postId, '_ab_csv_macro', isset($primaryParts[0]) ? (string)$primaryParts[0] : '');
+    update_post_meta($postId, '_ab_csv_settore', isset($primaryParts[1]) ? (string)$primaryParts[1] : '');
+    update_post_meta($postId, '_ab_csv_settore2', isset($primaryParts[2]) ? (string)$primaryParts[2] : '');
+
+    ab_sync_set_activity_categories($postId, $paths);
   }
 
   $pruned = 0;
@@ -4100,6 +5060,7 @@ function ab_sync_ensure_table(): void {
   $charset = $wpdb->get_charset_collate();
   $sql = "CREATE TABLE IF NOT EXISTS `{$table}` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `source_post_id` BIGINT UNSIGNED DEFAULT NULL,
     `category` TEXT NOT NULL,
     `macro` VARCHAR(191) DEFAULT '',
     `settore` VARCHAR(191) DEFAULT '',
@@ -4114,6 +5075,7 @@ function ab_sync_ensure_table(): void {
     `notes` LONGTEXT NULL,
     `source_block` LONGTEXT NULL,
     PRIMARY KEY (`id`),
+    KEY `idx_source_post` (`source_post_id`),
     KEY `idx_region` (`region`),
     KEY `idx_province` (`province`),
     KEY `idx_org` (`organization`),
@@ -4124,6 +5086,7 @@ function ab_sync_ensure_table(): void {
   $wpdb->query($sql);
 
   $columnDefs = [
+    'source_post_id' => "BIGINT UNSIGNED DEFAULT NULL",
     'macro' => "VARCHAR(191) DEFAULT ''",
     'settore' => "VARCHAR(191) DEFAULT ''",
     'settore2' => "VARCHAR(191) DEFAULT ''",
@@ -4137,6 +5100,7 @@ function ab_sync_ensure_table(): void {
   }
 
   $indexDefs = [
+    'idx_source_post' => 'source_post_id',
     'idx_macro' => 'macro',
     'idx_settore' => 'settore',
     'idx_settore2' => 'settore2',
@@ -4178,55 +5142,71 @@ function ab_sync_import_rows(array $rows) {
   }
 
   $inserted = 0;
+  $applyTreeRules = true;
+
   foreach ($rows as $row) {
-    $resolvedCategory = ab_assoc_resolve_category_from_row($row);
-    // Optionally apply tree rules during import so DB reflects final structure
-    $settings = abf_get_settori_settings();
-    if (!empty($settings['apply_on_import'])) {
-      $macro   = (string)($row['macro'] ?? '');
-      $settore = (string)($row['settore'] ?? '');
-      $settore2= (string)($row['settore2'] ?? '');
-      [$macro, $settore, $settore2] = abf_apply_tree_rules_to_segments($macro, $settore, $settore2);
-      $row['macro'] = $macro;
-      $row['settore'] = $settore;
-      $row['settore2'] = $settore2;
+    $categoryPaths = ab_sync_row_category_paths((array)$row);
+    if (empty($categoryPaths)) {
+      $single = ab_assoc_resolve_category_from_row((array)$row);
+      if ($single !== '') $categoryPaths = ab_sync_filter_category_paths_to_tree([$single], true);
+    }
+    if (empty($categoryPaths)) continue;
+
+    $rowMacroFallback = (string)($row['macro'] ?? '');
+    $rowSettoreFallback = (string)($row['settore'] ?? '');
+    $rowSettore2Fallback = (string)($row['settore2'] ?? '');
+
+    foreach ($categoryPaths as $categoryPath) {
+      $parts = ab_split_category((string)$categoryPath);
+      $macro = isset($parts[0]) ? (string)$parts[0] : $rowMacroFallback;
+      $settore = isset($parts[1]) ? (string)$parts[1] : $rowSettoreFallback;
+      $settore2 = isset($parts[2]) ? (string)$parts[2] : $rowSettore2Fallback;
+
+      if ($applyTreeRules) {
+        [$macro, $settore, $settore2] = abf_apply_tree_rules_to_segments($macro, $settore, $settore2);
+      }
+
       $resolvedCategory = ab_join_category(array_values(array_filter([$macro, $settore, $settore2], fn($v) => trim((string)$v) !== '')));
+      if ($resolvedCategory === '') continue;
+
+      $ok = $wpdb->insert(
+        $table,
+        [
+          'category'     => $resolvedCategory,
+          'macro'        => $macro,
+          'settore'      => $settore,
+          'settore2'     => $settore2,
+          'region'       => $row['region'] ?? '',
+          'organization' => $row['organization'] ?? '',
+          'city'         => $row['city'] ?? '',
+          'province'     => $row['province'] ?? '',
+          'location_raw' => $row['location_raw'] ?? '',
+          'urls'         => $row['urls'] ?? '',
+          'emails'       => $row['emails'] ?? '',
+          'notes'        => $row['notes'] ?? '',
+          'source_block' => $row['source_block'] ?? '',
+        ],
+        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s']
+      );
+      if ($ok === false) {
+        return new WP_Error('ab_sync_insert', 'Errore insert riga CSV (linea ' . (int)($row['_line'] ?? 0) . '): ' . $wpdb->last_error);
+      }
+      $inserted++;
     }
-    $ok = $wpdb->insert(
-      $table,
-      [
-        'category'     => $resolvedCategory,
-        'macro'        => $row['macro'] ?? '',
-        'settore'      => $row['settore'] ?? '',
-        'settore2'     => $row['settore2'] ?? '',
-        'region'       => $row['region'] ?? '',
-        'organization' => $row['organization'] ?? '',
-        'city'         => $row['city'] ?? '',
-        'province'     => $row['province'] ?? '',
-        'location_raw' => $row['location_raw'] ?? '',
-        'urls'         => $row['urls'] ?? '',
-        'emails'       => $row['emails'] ?? '',
-        'notes'        => $row['notes'] ?? '',
-        'source_block' => $row['source_block'] ?? '',
-      ],
-      ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s']
-    );
-    if ($ok === false) {
-      return new WP_Error('ab_sync_insert', 'Errore insert riga CSV (linea ' . (int)($row['_line'] ?? 0) . '): ' . $wpdb->last_error);
-    }
-    $inserted++;
   }
 
   ab_sync_clear_cache();
+  update_option('ab_settori_hero_cache_version', time(), false);
 
   return [
     'inserted' => $inserted,
-    'total' => count($rows),
+    'total' => $inserted,
+    'source_rows' => count($rows),
   ];
 }
 
 function ab_sync_fetch_remote_csv(string $rawUrl) {
-  $url = ab_sync_google_sheet_export_url($rawUrl);
+  $url = ab_sync_resolve_csv_source_url($rawUrl);
   if ($url === '') {
     return new WP_Error('ab_sync_no_url', 'URL CSV non impostato.');
   }
@@ -4241,7 +5221,26 @@ function ab_sync_fetch_remote_csv(string $rawUrl) {
     return new WP_Error('ab_sync_url_blocked', 'Dominio URL non consentito dalla configurazione.');
   }
 
-  $response = wp_remote_get($url, ['timeout' => 35, 'redirection' => 5]);
+  $requestUrl = $url;
+  $host = strtolower((string)($parts['host'] ?? ''));
+  $isGoogleHost = ($host !== '') && (
+    preg_match('/(^|\.)docs\.google\.com$/i', $host) ||
+    preg_match('/(^|\.)drive\.google\.com$/i', $host)
+  );
+  if ($isGoogleHost) {
+    // Avoid stale edge-cache responses when the sheet was just updated.
+    $requestUrl = add_query_arg('_ab_sync_ts', (string)time(), $requestUrl);
+  }
+
+  $response = wp_remote_get($requestUrl, [
+    'timeout' => 35,
+    'redirection' => 5,
+    'headers' => [
+      'Cache-Control' => 'no-cache, no-store, max-age=0',
+      'Pragma' => 'no-cache',
+      'Accept' => 'text/csv,text/plain,*/*',
+    ],
+  ]);
   if (is_wp_error($response)) return $response;
 
   $code = wp_remote_retrieve_response_code($response);
@@ -4273,8 +5272,48 @@ function ab_sync_run_import_from_csv_text(string $csvText, string $source = 'man
   $rows = ab_sync_parse_csv($csvText);
   if (is_wp_error($rows)) return $rows;
 
+  $parseStats = isset($GLOBALS['ab_sync_last_parse_stats']) && is_array($GLOBALS['ab_sync_last_parse_stats'])
+    ? (array)$GLOBALS['ab_sync_last_parse_stats']
+    : [];
+  $rawRows = (int)($parseStats['raw_rows'] ?? 0);
+  $rowsWithName = (int)($parseStats['rows_with_name'] ?? count($rows));
+  $skippedNoName = (int)($parseStats['skipped_no_name'] ?? 0);
+
+  $sourceLineSet = [];
+  $rowIdentitySet = [];
+  foreach ($rows as $row) {
+    $lineNo = (int)($row['_line'] ?? 0);
+    if ($lineNo > 0) $sourceLineSet[$lineNo] = true;
+    $rowIdentity = trim((string)($row['row_key'] ?? ''));
+    if ($rowIdentity === '') {
+      $rowIdentity = ab_assoc_row_key((array)$row);
+    }
+    if ($rowIdentity !== '') $rowIdentitySet[$rowIdentity] = true;
+  }
+  $sourceLines = count($sourceLineSet);
+  $uniqueEntitiesFromSource = count($rowIdentitySet);
+  $collapsedDuplicates = max(0, $sourceLines - $uniqueEntitiesFromSource);
+
   $assocResult = ab_sync_upsert_association_posts($rows);
   if (is_wp_error($assocResult)) return $assocResult;
+
+  $dedupeResult = [
+    'groups' => 0,
+    'duplicates' => 0,
+    'trashed' => 0,
+    'errors' => 0,
+    'rewired_postmeta' => 0,
+    'rewired_usermeta' => 0,
+    'terms_added' => 0,
+    'terms_removed' => 0,
+  ];
+  $autoDedupeEnabled = (bool)apply_filters('ab_sync_auto_dedupe_after_import', true, $rows, $source);
+  if ($autoDedupeEnabled) {
+    $maybeDedupe = ab_sync_dedupe_association_posts();
+    if (!is_wp_error($maybeDedupe) && is_array($maybeDedupe)) {
+      $dedupeResult = array_merge($dedupeResult, $maybeDedupe);
+    }
+  }
 
   $result = ab_sync_import_rows($rows);
   if (is_wp_error($result)) return $result;
@@ -4284,6 +5323,12 @@ function ab_sync_run_import_from_csv_text(string $csvText, string $source = 'man
     'source' => $source,
     'inserted' => (int)$result['inserted'],
     'total' => (int)$result['total'],
+    'raw_rows' => $rawRows,
+    'rows_with_name' => $rowsWithName,
+    'source_lines' => $sourceLines,
+    'source_unique_entities' => $uniqueEntitiesFromSource,
+    'source_collapsed_duplicates' => $collapsedDuplicates,
+    'source_skipped_no_name' => $skippedNoName,
     'assoc_processed' => (int)($assocResult['processed'] ?? 0),
     'assoc_linked' => (int)($assocResult['linked'] ?? 0),
     'assoc_created' => (int)($assocResult['created'] ?? 0),
@@ -4291,10 +5336,26 @@ function ab_sync_run_import_from_csv_text(string $csvText, string $source = 'man
     'assoc_errors' => (int)($assocResult['errors'] ?? 0),
     'assoc_pruned' => (int)($assocResult['pruned'] ?? 0),
     'assoc_prune_errors' => (int)($assocResult['prune_errors'] ?? 0),
+    'assoc_dedupe_auto' => $autoDedupeEnabled ? 1 : 0,
+    'assoc_dedupe_duplicates' => (int)($dedupeResult['duplicates'] ?? 0),
+    'assoc_dedupe_trashed' => (int)($dedupeResult['trashed'] ?? 0),
+    'assoc_dedupe_errors' => (int)($dedupeResult['errors'] ?? 0),
+    'assoc_dedupe_terms_added' => (int)($dedupeResult['terms_added'] ?? 0),
+    'assoc_dedupe_terms_removed' => (int)($dedupeResult['terms_removed'] ?? 0),
     'time' => current_time('mysql'),
   ], false);
 
   $result['associations'] = $assocResult;
+  $result['source_stats'] = [
+    'raw_rows' => $rawRows,
+    'rows_with_name' => $rowsWithName,
+    'source_lines' => $sourceLines,
+    'unique_entities' => $uniqueEntitiesFromSource,
+    'collapsed_duplicates' => $collapsedDuplicates,
+    'skipped_no_name' => $skippedNoName,
+  ];
+  $result['dedupe'] = $dedupeResult;
+  $result['dedupe_enabled'] = $autoDedupeEnabled ? 1 : 0;
   return $result;
 }
 
@@ -4328,15 +5389,22 @@ function ab_sync_admin_menu(): void {
     'ab-settori-images',
     'ab_settori_images_admin_page'
   );
-  add_management_page(
-    'Settori Struttura',
-    'Settori Struttura',
-    'manage_options',
-    'ab-settori-structure',
-    'ab_settori_structure_admin_page'
-  );
 }
 add_action('admin_menu', 'ab_sync_admin_menu');
+
+/**
+ * Redirect deprecated Tools -> Settori Struttura URL to the authoritative
+ * Associazioni -> Struttura Settori editor.
+ */
+function abf_redirect_deprecated_settori_structure_tools_page(): void {
+  if (!is_admin() || !current_user_can('manage_options')) return;
+  $page = isset($_GET['page']) ? sanitize_key((string)wp_unslash($_GET['page'])) : '';
+  if ($page !== 'ab-settori-structure') return;
+
+  wp_safe_redirect(admin_url('edit.php?post_type=association&page=ab-settori-structure-modal'));
+  exit;
+}
+add_action('admin_init', 'abf_redirect_deprecated_settori_structure_tools_page');
 
 function ab_sync_admin_page(): void {
   if (!current_user_can('manage_options')) return;
@@ -4348,7 +5416,7 @@ function ab_sync_admin_page(): void {
   ?>
   <div class="wrap">
     <h1>Associazioni - Sync CSV</h1>
-    <p>Importa associazioni da CSV con struttura: MACRO CATEGORIA, SETTORE, SETTORE 2, REGIONE, PROVINCIA, COMUNE-CITÀ, NOME ASSOCIAZIONE, CONTATTI (EMIAL), SITIO WEB, FACEBOOK, INSTAGRAM.</p>
+    <p>Importa associazioni da CSV con struttura: MACRO CATEGORIA, SETTORE, SETTORE 2, REGIONE, PROVINCIA, COMUNE-CITTÀ, NOME ASSOCIAZIONE, CONTATTI (EMIAL), SITIO WEB, FACEBOOK, INSTAGRAM.</p>
 
     <?php if ($message !== ''): ?>
       <div class="notice <?php echo $status === 'ok' ? 'notice-success' : 'notice-error'; ?> is-dismissible"><p><?php echo esc_html($message); ?></p></div>
@@ -4386,11 +5454,26 @@ function ab_sync_admin_page(): void {
     </form>
 
     <hr>
+    <h2>Manutenzione Database Associazioni</h2>
+    <p>Rimuove duplicati tra i post "Associazione" (stessa chiave entita/sorgente), unifica le categorie attivita e aggiorna i riferimenti collegati.</p>
+    <form method="post" onsubmit="return confirm('Procedere con la pulizia dei duplicati associazioni? I duplicati verranno spostati nel cestino.');">
+      <?php wp_nonce_field('ab_sync_dedupe_associations'); ?>
+      <input type="hidden" name="ab_sync_action" value="dedupe_associations">
+      <?php submit_button('Deduplica Associazioni', 'secondary'); ?>
+    </form>
+
+    <hr>
     <h2>Ultimo Sync</h2>
     <?php if (is_array($last) && !empty($last)): ?>
       <p><strong>Esito:</strong> <?php echo !empty($last['ok']) ? 'OK' : 'Errore'; ?></p>
       <p><strong>Origine:</strong> <?php echo esc_html((string)($last['source'] ?? 'n/d')); ?></p>
       <p><strong>Righe importate:</strong> <?php echo (int)($last['inserted'] ?? 0); ?> / <?php echo (int)($last['total'] ?? 0); ?></p>
+      <?php if (!empty($last['raw_rows']) || !empty($last['rows_with_name'])): ?>
+        <p><strong>Righe CSV sorgente:</strong> <?php echo (int)($last['raw_rows'] ?? 0); ?> (con nome: <?php echo (int)($last['rows_with_name'] ?? 0); ?><?php if (!empty($last['source_skipped_no_name'])): ?>, senza nome: <?php echo (int)($last['source_skipped_no_name'] ?? 0); ?><?php endif; ?>)</p>
+      <?php endif; ?>
+      <?php if (!empty($last['source_unique_entities']) || !empty($last['source_collapsed_duplicates'])): ?>
+        <p><strong>Univocita sorgente:</strong> entita uniche <?php echo (int)($last['source_unique_entities'] ?? 0); ?><?php if (!empty($last['source_collapsed_duplicates'])): ?>, duplicati accorpati <?php echo (int)($last['source_collapsed_duplicates'] ?? 0); ?><?php endif; ?></p>
+      <?php endif; ?>
       <p><strong>Associazioni collegate:</strong> <?php echo (int)($last['assoc_linked'] ?? 0); ?> (nuove: <?php echo (int)($last['assoc_created'] ?? 0); ?>, esistenti: <?php echo (int)($last['assoc_matched'] ?? 0); ?>)</p>
       <?php if (!empty($last['assoc_pruned'])): ?><p><strong>Associazioni obsolete rimosse:</strong> <?php echo (int)$last['assoc_pruned']; ?></p><?php endif; ?>
       <?php if (!empty($last['assoc_errors'])): ?><p><strong>Errori sync associazioni:</strong> <?php echo (int)$last['assoc_errors']; ?></p><?php endif; ?>
@@ -4414,7 +5497,7 @@ function ab_settori_structure_admin_page(): void {
   $hidden = [];
   $renames = [];
   $moves = [];
-  $applyOnImport = !empty($settings['apply_on_import']);
+  $applyOnImport = true;
   if (is_array($settings)) {
     if (isset($settings['hidden']) && is_array($settings['hidden'])) $hidden = $settings['hidden'];
     if (isset($settings['renames']) && is_array($settings['renames'])) $renames = $settings['renames'];
@@ -4541,8 +5624,12 @@ add_action('admin_menu', 'abf_register_associazioni_structure_submenu');
 function abf_render_settori_structure_modal_page(): void {
   if (!current_user_can('manage_options')) return;
   $nonce = wp_create_nonce('abf_settori_tree');
+  $notice = isset($_GET['ab_notice']) ? sanitize_text_field((string)wp_unslash($_GET['ab_notice'])) : '';
   ?>
   <div class="wrap">
+    <?php if ($notice !== ''): ?>
+      <div class="notice notice-warning is-dismissible"><p><?php echo esc_html($notice); ?></p></div>
+    <?php endif; ?>
     <h1>Struttura Settori (Editor)</h1>
     <p>Gestisci Macro, Settore e Settore 2. Le modifiche aggiornano i nodi manuali e possono essere combinate con rinomini/spostamenti nella pagina Struttura (Tools).</p>
     <button id="abf-open-struct-modal" class="button button-primary">Apri Editor</button>
@@ -4684,15 +5771,66 @@ function abf_render_settori_structure_modal_page(): void {
   <?php
 }
 
-// AJAX: fetch current tree (manual nodes + distinct DB values)
+function abf_sync_activity_category_taxonomy_from_tree(): array {
+  if (!taxonomy_exists('activity_category')) {
+    return ['created' => 0, 'skipped' => 0];
+  }
+
+  $nodes = abf_get_authoritative_tree_nodes();
+
+  $created = 0;
+  $skipped = 0;
+
+  $ensureTerm = static function(string $label, int $parentId) use (&$created, &$skipped): int {
+    $label = trim($label);
+    if ($label === '') return 0;
+
+    $existing = term_exists($label, 'activity_category', $parentId);
+    if (is_wp_error($existing)) {
+      $skipped++;
+      return 0;
+    }
+    if (is_array($existing) && isset($existing['term_id'])) {
+      return (int)$existing['term_id'];
+    }
+    if (is_numeric($existing)) {
+      return (int)$existing;
+    }
+
+    $inserted = wp_insert_term($label, 'activity_category', ['parent' => $parentId]);
+    if (is_wp_error($inserted) || !isset($inserted['term_id'])) {
+      $skipped++;
+      return 0;
+    }
+    $created++;
+    return (int)$inserted['term_id'];
+  };
+
+  foreach ((array)$nodes as $macro => $settoriMap) {
+    $macroTermId = $ensureTerm((string)$macro, 0);
+    if ($macroTermId <= 0) continue;
+
+    foreach ((array)$settoriMap as $settore => $settore2List) {
+      $settoreTermId = $ensureTerm((string)$settore, $macroTermId);
+      if ($settoreTermId <= 0) continue;
+
+      foreach ((array)$settore2List as $settore2) {
+        $ensureTerm((string)$settore2, $settoreTermId);
+      }
+    }
+  }
+
+  return ['created' => $created, 'skipped' => $skipped];
+}
+
+// AJAX: fetch current authoritative tree for the editor modal.
 function abf_ajax_get_settori_tree(): void {
   if (!current_user_can('manage_options') || !check_ajax_referer('abf_settori_tree', '_wpnonce', false)) {
     wp_send_json_error(['message' => 'Unauthorized'], 403);
   }
-  $manual = abf_get_manual_nodes();
-  // Normalize manual to UI shape
+  $tree = abf_get_authoritative_tree_nodes();
   $ui = ['macros' => []];
-  foreach ($manual as $m => $sMap) {
+  foreach ($tree as $m => $sMap) {
     $uM = ['label' => (string)$m, 'settori' => []];
     foreach ($sMap as $s => $s2List) {
       $uS = ['label' => (string)$s, 'settori2' => []];
@@ -4712,11 +5850,15 @@ function abf_ajax_save_settori_tree(): void {
   $raw = isset($_POST['manual_nodes']) ? (string)wp_unslash($_POST['manual_nodes']) : '';
   $nodes = json_decode($raw, true);
   if (!is_array($nodes)) $nodes = [];
+  $nodes = abf_sanitize_manual_nodes($nodes);
   $settings = get_option(AB_SETTORI_TREE_OPTION, []);
   if (!is_array($settings)) $settings = [];
+  $settings['manual_mode'] = 'override';
   $settings['manual_nodes'] = $nodes;
   update_option(AB_SETTORI_TREE_OPTION, $settings, false);
+  abf_sync_activity_category_taxonomy_from_tree();
   ab_sync_clear_cache();
+  abf_invalidate_hero_image_caches();
   wp_send_json_success(['ok' => true]);
 }
 add_action('wp_ajax_abf_save_settori_tree', 'abf_ajax_save_settori_tree');
@@ -4745,13 +5887,17 @@ function ab_settori_images_admin_page(): void {
 
   $message = isset($_GET['ab_img_msg']) ? sanitize_text_field((string)$_GET['ab_img_msg']) : '';
   $status = isset($_GET['ab_img_status']) ? sanitize_key((string)$_GET['ab_img_status']) : '';
-  $labelMap = abf_collect_hero_label_map();
+  
+  $heroLabelMap = function_exists('abf_collect_hero_label_map') ? (array)abf_collect_hero_label_map() : [];
   $overrides = abf_get_hero_image_overrides();
-  $effectiveMap = abf_get_hero_image_map();
-  $total = count($labelMap);
+  $suggestions = function_exists('abf_auto_match_hero_images') ? abf_auto_match_hero_images() : [];
+  
+  $total = count($heroLabelMap);
   $assigned = 0;
-  foreach ($effectiveMap as $url) {
-    if (is_string($url) && trim($url) !== '') {
+  
+  // Calculate assigned
+  foreach (array_keys($heroLabelMap) as $key) {
+    if (!empty($overrides[$key]) || !empty($suggestions[$key])) {
       $assigned++;
     }
   }
@@ -4760,13 +5906,17 @@ function ab_settori_images_admin_page(): void {
   <div class="wrap">
     <h1>Settori - Gestione Immagini</h1>
     <p>Verifica l'immagine assegnata a ogni settore e imposta un override manuale quando necessario.</p>
+    <p>
+      Le immagini qui configurate vengono usate dal <strong>blocco pattern "Griglia Settori"</strong> nella homepage e in qualsiasi pagina che utilizzi il pattern <code>culturacsi/services-grid</code>.
+      Dopo aver salvato le modifiche, il pattern si aggiornerà automaticamente alla prossima visualizzazione.
+    </p>
 
     <?php if ($message !== ''): ?>
       <div class="notice <?php echo $status === 'ok' ? 'notice-success' : 'notice-error'; ?> is-dismissible"><p><?php echo esc_html($message); ?></p></div>
     <?php endif; ?>
 
     <p>
-      <strong>Settori totali:</strong> <?php echo (int)$total; ?>
+      <strong>Macro Categorie totali:</strong> <?php echo (int)$total; ?>
       &nbsp; | &nbsp;
       <strong>Con immagine:</strong> <?php echo (int)$assigned; ?>
       &nbsp; | &nbsp;
@@ -4775,74 +5925,121 @@ function ab_settori_images_admin_page(): void {
       <strong>Override manuali:</strong> <?php echo (int)count($overrides); ?>
     </p>
 
-    <?php if (empty($labelMap)): ?>
-      <p>Nessun settore trovato. Verifica i dati importati.</p>
+    <?php if (empty($heroLabelMap)): ?>
+      <p>Nessuna categoria trovata. Verifica i dati dell'albero delle attività.</p>
     <?php else: ?>
       <style>
         .abf-hero-table td{vertical-align:top}
         .abf-hero-key{font-family:monospace;color:#50575e;font-size:12px}
-        .abf-hero-labels{margin-top:4px;color:#50575e;font-size:12px}
         .abf-hero-preview{width:120px;height:80px;border:1px solid #dcdcde;background:#f6f7f7;display:flex;align-items:center;justify-content:center;overflow:hidden}
         .abf-hero-preview img{width:100%;height:100%;object-fit:cover;display:block}
         .abf-hero-preview-empty{font-size:11px;color:#787c82;padding:6px;text-align:center}
-        .abf-hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .abf-hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;}
         .abf-hero-override-meta{font-size:12px;color:#50575e}
         .abf-hero-row-missing{background:#fff8f8}
+        .abf-hero-row-auto{background:#fdfcf2}
+        .abf-hero-row-override{background:#f6fbf8}
       </style>
 
       <form method="post">
-        <?php wp_nonce_field('ab_settori_images_save'); ?>
-        <input type="hidden" name="ab_sync_action" value="save_settori_images">
+        <input type="hidden" id="ab_settori_images_nonce" value="<?php echo esc_attr(wp_create_nonce('ab_settori_images_save')); ?>">
 
         <table class="widefat striped abf-hero-table">
           <thead>
             <tr>
-              <th style="width:32%;">Settore</th>
-              <th style="width:24%;">Immagine assegnata</th>
-              <th style="width:30%;">Override manuale</th>
-              <th style="width:14%;">Azioni</th>
+              <th style="width:25%;">Macro Categoria</th>
+              <th style="width:25%;">Attività (Macro / Settore / Settore 2)</th>
+              <th style="width:25%;">Suggerimento Auto</th>
+              <th style="width:25%;">Immagine Assegnata</th>
+              <th style="width:25%;">Azioni Override</th>
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($labelMap as $key => $labels): ?>
+            <?php foreach ($heroLabelMap as $key => $labels): ?>
               <?php
-              $labels = is_array($labels) ? $labels : [];
-              $title = !empty($labels) ? (string)$labels[0] : (string)$key;
-              $effectiveUrl = trim((string)($effectiveMap[$key] ?? ''));
-              $overrideId = (int)($overrides[$key] ?? 0);
+              $primaryLabel = '';
+              if (is_array($labels) && !empty($labels)) {
+                $primaryLabel = trim((string)$labels[0]);
+              }
+              if ($primaryLabel === '') {
+                $primaryLabel = (string)$key;
+              }
+              
+              $overrideVal = $overrides[$key] ?? null;
+              $overrideId = 0;
+              if (is_numeric($overrideVal)) {
+                $overrideId = (int)$overrideVal;
+              }
+              
+              $suggestionId = (int)($suggestions[$key] ?? 0);
+              
               $overrideThumb = $overrideId > 0 ? (string)wp_get_attachment_image_url($overrideId, 'thumbnail') : '';
               $overrideFull = $overrideId > 0 ? (string)wp_get_attachment_image_url($overrideId, 'full') : '';
-              if ($overrideThumb === '' && $overrideFull !== '') {
-                $overrideThumb = $overrideFull;
+              
+              $suggestionThumb = $suggestionId > 0 ? (string)wp_get_attachment_image_url($suggestionId, 'thumbnail') : '';
+              
+              $assignedThumb = $overrideThumb !== '' ? $overrideThumb : $suggestionThumb;
+              
+              $rowClass = 'abf-hero-row-missing';
+              if ($overrideId > 0) {
+                $rowClass = 'abf-hero-row-override';
+              } elseif ($suggestionId > 0) {
+                $rowClass = 'abf-hero-row-auto';
               }
-              $rowClass = ($effectiveUrl === '') ? 'abf-hero-row-missing' : '';
               ?>
-              <tr class="<?php echo esc_attr($rowClass); ?>" data-hero-key="<?php echo esc_attr($key); ?>">
+              <tr class="<?php echo esc_attr($rowClass); ?>" data-hero-key="<?php echo esc_attr($key); ?>" data-suggestion-id="<?php echo esc_attr((string)$suggestionId); ?>" data-auto-url="<?php echo esc_url($suggestionThumb); ?>">
                 <td>
-                  <strong><?php echo esc_html($title); ?></strong>
+                  <strong><?php echo esc_html($primaryLabel); ?></strong>
                   <div class="abf-hero-key"><?php echo esc_html($key); ?></div>
-                  <?php if (count($labels) > 1): ?>
-                    <div class="abf-hero-labels"><?php echo esc_html(implode(' | ', $labels)); ?></div>
+                </td>
+                <td>
+                  <?php
+                  $activityParts = [];
+                  if (is_array($labels)) {
+                    foreach ($labels as $labelPart) {
+                      $labelPart = trim((string)$labelPart);
+                      if ($labelPart !== '') $activityParts[] = $labelPart;
+                    }
+                  }
+                  ?>
+                  <?php if (!empty($activityParts)): ?>
+                    <?php foreach ($activityParts as $activityPart): ?>
+                      <div><?php echo esc_html($activityPart); ?></div>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <span style="color:#787c82;">N/D</span>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php if ($suggestionId > 0 && $suggestionThumb !== ''): ?>
+                    <div class="abf-hero-preview">
+                      <img src="<?php echo esc_url($suggestionThumb); ?>" alt="Suggerimento">
+                    </div>
+                    <div class="abf-hero-override-meta" style="margin-top:6px;">
+                      Attachment ID: <?php echo (int)$suggestionId; ?>
+                    </div>
+                  <?php else: ?>
+                    <div style="color:#787c82;font-style:italic;">Nessun suggerimento<br>&#10007; No match found</div>
                   <?php endif; ?>
                 </td>
                 <td>
                   <div class="abf-hero-preview">
-                    <?php if ($effectiveUrl !== ''): ?>
-                      <img src="<?php echo esc_url($effectiveUrl); ?>" alt="">
+                    <?php if ($assignedThumb !== ''): ?>
+                      <img class="abf-hero-assigned-img" src="<?php echo esc_url($assignedThumb); ?>" alt="">
+                      <div class="abf-hero-preview-empty abf-hero-assigned-empty" style="display:none;">Override non impostato</div>
                     <?php else: ?>
-                      <div class="abf-hero-preview-empty">Nessuna immagine</div>
+                      <img class="abf-hero-assigned-img" src="" alt="" style="display:none;">
+                      <div class="abf-hero-preview-empty abf-hero-assigned-empty">Override non impostato</div>
                     <?php endif; ?>
                   </div>
                 </td>
                 <td>
-                  <input type="hidden" class="abf-hero-override-id" name="ab_settori_override[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr((string)$overrideId); ?>">
-                  <div class="abf-hero-preview abf-hero-override-preview-box">
-                    <?php if ($overrideThumb !== ''): ?>
-                      <img class="abf-hero-override-preview" src="<?php echo esc_url($overrideThumb); ?>" alt="">
-                    <?php else: ?>
-                      <div class="abf-hero-preview-empty abf-hero-override-preview-empty">Nessun override</div>
-                      <img class="abf-hero-override-preview" src="" alt="" style="display:none;">
+                  <div class="abf-hero-actions">
+                    <button type="button" class="button abf-hero-select-image">Seleziona</button>
+                    <?php if ($suggestionId > 0 && $overrideId <= 0): ?>
+                      <button type="button" class="button abf-hero-accept-suggestion">Accetta &#8599;</button>
                     <?php endif; ?>
+                    <button type="button" class="button-link-delete abf-hero-clear-image" style="<?php echo $overrideId > 0 ? '' : 'display:none;'; ?>">Rimuovi</button>
                   </div>
                   <div class="abf-hero-override-meta" style="margin-top:6px;">
                     <span class="abf-hero-override-id-label">
@@ -4856,23 +6053,53 @@ function ab_settori_images_admin_page(): void {
                     <?php endif; ?>
                   </div>
                 </td>
-                <td>
-                  <div class="abf-hero-actions">
-                    <button type="button" class="button abf-hero-select-image">Seleziona</button>
-                    <button type="button" class="button-link-delete abf-hero-clear-image">Rimuovi</button>
-                  </div>
-                </td>
               </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
-
-        <?php submit_button('Salva Immagini Settori', 'primary', 'submit', true, ['style' => 'margin-top:16px;']); ?>
       </form>
     <?php endif; ?>
   </div>
   <?php
 }
+
+function abf_ajax_save_hero_image_override(): void {
+  if (!current_user_can('manage_options')) {
+    wp_send_json_error('Unauthorized');
+  }
+  if (!check_ajax_referer('ab_settori_images_save', 'nonce', false)) {
+    wp_send_json_error('Invalid nonce');
+  }
+
+  $key = sanitize_text_field((string)($_POST['hero_key'] ?? ''));
+  if ($key === '') {
+    wp_send_json_error('Missing key');
+  }
+
+  $attachmentId = isset($_POST['attachment_id']) ? (int)$_POST['attachment_id'] : 0;
+  
+  $overrides = abf_get_hero_image_overrides();
+  if ($attachmentId > 0) {
+    $overrides[$key] = $attachmentId;
+  } else {
+    unset($overrides[$key]);
+  }
+  
+  $cleanOverrides = abf_sanitize_hero_image_overrides($overrides);
+  update_option(AB_SETTORI_HERO_OVERRIDES_OPTION, $cleanOverrides, false);
+  
+  if (function_exists('abf_invalidate_hero_image_caches')) {
+    abf_invalidate_hero_image_caches();
+  }
+
+  $url = '';
+  if ($attachmentId > 0) {
+      $url = wp_get_attachment_image_url($attachmentId, 'thumbnail');
+      if (!$url) $url = wp_get_attachment_image_url($attachmentId, 'full');
+  }
+  wp_send_json_success(['url' => $url, 'id' => $attachmentId]);
+}
+add_action('wp_ajax_abf_save_hero_image_override', 'abf_ajax_save_hero_image_override');
 
 function ab_sync_handle_admin_post(): void {
   if (!is_admin() || !current_user_can('manage_options')) return;
@@ -4888,7 +6115,7 @@ function ab_sync_handle_admin_post(): void {
       : [];
     $cleanOverrides = abf_sanitize_hero_image_overrides($rawOverrides);
     update_option(AB_SETTORI_HERO_OVERRIDES_OPTION, $cleanOverrides, false);
-    update_option('ab_settori_hero_cache_version', time(), false);
+    abf_invalidate_hero_image_caches();
 
     $msg = sprintf('Immagini settori salvate. Override attivi: %d.', count($cleanOverrides));
     wp_safe_redirect(add_query_arg(['ab_img_status' => 'ok', 'ab_img_msg' => $msg], $redirectImages));
@@ -4897,75 +6124,37 @@ function ab_sync_handle_admin_post(): void {
 
   if ($action === 'save_settori_structure') {
     check_admin_referer('ab_settori_structure_save');
-    $redirectStruct = admin_url('tools.php?page=ab-settori-structure');
-    $rawHidden = isset($_POST['ab_settori_hidden']) ? (string)wp_unslash($_POST['ab_settori_hidden']) : '';
-    $rawRenames = isset($_POST['ab_settori_renames']) ? (string)wp_unslash($_POST['ab_settori_renames']) : '';
-    $rawMoves = isset($_POST['ab_settori_moves']) ? (string)wp_unslash($_POST['ab_settori_moves']) : '';
-    $applyOnImport = !empty($_POST['ab_settori_apply_on_import']);
-    $lines = preg_split('/\r?\n/', $rawHidden);
-    $hidden = [];
-    if (is_array($lines)) {
-      foreach ($lines as $line) {
-        $label = trim((string)$line);
-        if ($label === '') continue;
-        $hidden[] = $label; // store raw; normalize on read
-      }
-    }
-    // Parse renames: one per line, "old => new"
-    $renames = [];
-    if (trim($rawRenames) !== '') {
-      $rLines = preg_split('/\r?\n/', $rawRenames);
-      if (is_array($rLines)) {
-        foreach ($rLines as $rline) {
-          $rline = trim((string)$rline);
-          if ($rline === '') continue;
-          $parts = preg_split('/\s*=>\s*/', $rline);
-          if (!is_array($parts) || count($parts) < 2) continue;
-          $from = trim((string)$parts[0]);
-          $to   = trim((string)implode('=>', array_slice($parts, 1))); // in case '=>' appears in value
-          if ($from !== '' && $to !== '') {
-            $renames[$from] = $to;
-          }
-        }
-      }
-    }
-    // Parse moves: one per line, "oldPath => newPath"
-    $moves = [];
-    if (trim($rawMoves) !== '') {
-      $mLines = preg_split('/\r?\n/', $rawMoves);
-      if (is_array($mLines)) {
-        foreach ($mLines as $mline) {
-          $mline = trim((string)$mline);
-          if ($mline === '') continue;
-          $parts = preg_split('/\s*=>\s*/', $mline);
-          if (!is_array($parts) || count($parts) < 2) continue;
-          $from = trim((string)$parts[0]);
-          $to   = trim((string)implode('=>', array_slice($parts, 1)));
-          if ($from !== '' && $to !== '') {
-            $moves[] = ['from' => $from, 'to' => $to];
-          }
-        }
-      }
-    }
-    $settings = [
-      'hidden' => $hidden,
-      'renames' => $renames,
-      'moves' => $moves,
-      'apply_on_import' => $applyOnImport ? 1 : 0,
-    ];
-    update_option(AB_SETTORI_TREE_OPTION, $settings, false);
-    // Clear caches so UI reflects changes immediately
-    ab_sync_clear_cache();
-    $msg = 'Struttura Settori aggiornata.';
-    wp_safe_redirect(add_query_arg(['ab_struct_status' => 'ok', 'ab_struct_msg' => $msg], $redirectStruct));
+    $redirect = admin_url('edit.php?post_type=association&page=ab-settori-structure-modal');
+    $msg = rawurlencode('La pagina Tools -> Settori Struttura è stata dismessa. Usa Associazioni -> Struttura Settori.');
+    wp_safe_redirect($redirect . '&ab_notice=' . $msg);
     exit;
   }
 
   $redirect = admin_url('tools.php?page=ab-sync-csv');
 
+  if ($action === 'dedupe_associations') {
+    check_admin_referer('ab_sync_dedupe_associations');
+    $result = ab_sync_dedupe_association_posts();
+    $msg = sprintf(
+      'Deduplica completata. Gruppi: %d, duplicati trovati: %d, spostati nel cestino: %d, riferimenti aggiornati: %d, termini aggiunti: %d, termini rimossi: %d, errori: %d.',
+      (int)($result['groups'] ?? 0),
+      (int)($result['duplicates'] ?? 0),
+      (int)($result['trashed'] ?? 0),
+      (int)(($result['rewired_postmeta'] ?? 0) + ($result['rewired_usermeta'] ?? 0)),
+      (int)($result['terms_added'] ?? 0),
+      (int)($result['terms_removed'] ?? 0),
+      (int)($result['errors'] ?? 0)
+    );
+    $status = ((int)($result['errors'] ?? 0) > 0) ? 'err' : 'ok';
+    wp_safe_redirect(add_query_arg(['ab_status' => $status, 'ab_msg' => $msg], $redirect));
+    exit;
+  }
+
   if ($action === 'save_url') {
     check_admin_referer('ab_sync_save_url');
-    $raw = isset($_POST['ab_csv_url']) ? esc_url_raw((string)wp_unslash($_POST['ab_csv_url'])) : '';
+    $rawInput = isset($_POST['ab_csv_url']) ? (string)wp_unslash($_POST['ab_csv_url']) : '';
+    $resolvedInput = ab_sync_resolve_csv_source_url($rawInput);
+    $raw = $resolvedInput !== '' ? esc_url_raw($resolvedInput) : '';
     update_option(AB_SYNC_URL_OPTION, $raw, false);
     wp_safe_redirect(add_query_arg(['ab_status' => 'ok', 'ab_msg' => 'URL salvato.'], $redirect));
     exit;
@@ -4978,11 +6167,19 @@ function ab_sync_handle_admin_post(): void {
       wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => $result->get_error_message()], $redirect));
       exit;
     }
+    $src = isset($result['source_stats']) && is_array($result['source_stats']) ? (array)$result['source_stats'] : [];
+    $ded = isset($result['dedupe']) && is_array($result['dedupe']) ? (array)$result['dedupe'] : [];
     $msg = sprintf(
-      'Sync completato. Importate %d righe. Associazioni collegate: %d (nuove: %d).',
+      'Sync completato. Righe CSV: %d (con nome: %d). Importate %d righe espanse. Associazioni collegate: %d (nuove: %d). Duplicati sorgente accorpati: %d. Deduplica automatica: duplicati %d, cestinati %d, errori %d.',
+      (int)($src['raw_rows'] ?? 0),
+      (int)($src['rows_with_name'] ?? 0),
       (int)$result['inserted'],
       (int)($result['associations']['linked'] ?? 0),
-      (int)($result['associations']['created'] ?? 0)
+      (int)($result['associations']['created'] ?? 0),
+      (int)($src['collapsed_duplicates'] ?? 0),
+      (int)($ded['duplicates'] ?? 0),
+      (int)($ded['trashed'] ?? 0),
+      (int)($ded['errors'] ?? 0)
     );
     wp_safe_redirect(add_query_arg(['ab_status' => 'ok', 'ab_msg' => $msg], $redirect));
     exit;
@@ -5039,11 +6236,19 @@ function ab_sync_handle_admin_post(): void {
       wp_safe_redirect(add_query_arg(['ab_status' => 'err', 'ab_msg' => $result->get_error_message()], $redirect));
       exit;
     }
+    $src = isset($result['source_stats']) && is_array($result['source_stats']) ? (array)$result['source_stats'] : [];
+    $ded = isset($result['dedupe']) && is_array($result['dedupe']) ? (array)$result['dedupe'] : [];
     $msg = sprintf(
-      'Import completato. Importate %d righe. Associazioni collegate: %d (nuove: %d).',
+      'Import completato. Righe CSV: %d (con nome: %d). Importate %d righe espanse. Associazioni collegate: %d (nuove: %d). Duplicati sorgente accorpati: %d. Deduplica automatica: duplicati %d, cestinati %d, errori %d.',
+      (int)($src['raw_rows'] ?? 0),
+      (int)($src['rows_with_name'] ?? 0),
       (int)$result['inserted'],
       (int)($result['associations']['linked'] ?? 0),
-      (int)($result['associations']['created'] ?? 0)
+      (int)($result['associations']['created'] ?? 0),
+      (int)($src['collapsed_duplicates'] ?? 0),
+      (int)($ded['duplicates'] ?? 0),
+      (int)($ded['trashed'] ?? 0),
+      (int)($ded['errors'] ?? 0)
     );
     wp_safe_redirect(add_query_arg(['ab_status' => 'ok', 'ab_msg' => $msg], $redirect));
     exit;
@@ -5051,35 +6256,19 @@ function ab_sync_handle_admin_post(): void {
 }
 add_action('admin_init', 'ab_sync_handle_admin_post');
 
-function ab_sync_maybe_schedule(): void {
-  if (!wp_next_scheduled(AB_SYNC_HOOK)) {
-    wp_schedule_event(time() + 600, 'hourly', AB_SYNC_HOOK);
-  }
+/**
+ * Keep sync manual-only: clear any legacy scheduled events.
+ */
+function ab_sync_disable_scheduled_sync(): void {
+  wp_clear_scheduled_hook(AB_SYNC_HOOK);
 }
-add_action('init', 'ab_sync_maybe_schedule');
+add_action('init', 'ab_sync_disable_scheduled_sync', 1);
 
-function ab_sync_cron_runner(): void {
-  $url = (string)get_option(AB_SYNC_URL_OPTION, '');
-  if (trim($url) === '') return;
-  ab_sync_run_import_from_url();
-}
-add_action(AB_SYNC_HOOK, 'ab_sync_cron_runner');
-
-// Activation/Deactivation: ensure cron is scheduled/cleared
-function ab_sync_activate(): void {
-  if (!wp_next_scheduled(AB_SYNC_HOOK)) {
-    wp_schedule_event(time() + 600, 'hourly', AB_SYNC_HOOK);
-  }
-}
 function ab_sync_deactivate(): void {
-  $timestamp = wp_next_scheduled(AB_SYNC_HOOK);
-  while ($timestamp) {
-    wp_unschedule_event($timestamp, AB_SYNC_HOOK);
-    $timestamp = wp_next_scheduled(AB_SYNC_HOOK);
-  }
+  wp_clear_scheduled_hook(AB_SYNC_HOOK);
 }
 if (function_exists('register_activation_hook')) {
-  register_activation_hook(__FILE__, 'ab_sync_activate');
+  register_activation_hook(__FILE__, 'ab_sync_disable_scheduled_sync');
 }
 if (function_exists('register_deactivation_hook')) {
   register_deactivation_hook(__FILE__, 'ab_sync_deactivate');

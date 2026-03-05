@@ -96,8 +96,23 @@ function culturacsi_portal_events_list_shortcode(): string {
 	}
 	ob_start();
 	echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	if ( function_exists( 'culturacsi_portal_render_process_tutorial' ) ) {
+		echo culturacsi_portal_render_process_tutorial(
+			array(
+				'title'   => '',
+				'summary' => 'Come usare questa sezione',
+				'open'    => false,
+				'steps'   => array(
+					array( 'text' => 'Usa la ricerca per filtrare gli eventi.' ),
+					array( 'text' => 'Apri Mod. per aggiornare i dati dell\'evento.' ),
+					array( 'text' => 'Usa Appr./Rif. per moderare lo stato (solo Site Admin).' ),
+				),
+			)
+		); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
 	echo '<div class="assoc-portal-events-list assoc-portal-section">';
-	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Eventi</h2><div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( add_query_arg( 'culturacsi_export', 'event', $_SERVER['REQUEST_URI'] ?? '' ) ) . '">Esporta CSV</a> <a class="button button-primary" href="' . esc_url( home_url( '/area-riservata/eventi/nuovo/' ) ) . '">Nuovo Evento</a></div></div>';
+	$export_url = function_exists( 'culturacsi_export_build_url' ) ? culturacsi_export_build_url( 'event', (string) ( $_SERVER['REQUEST_URI'] ?? '' ) ) : (string) add_query_arg( 'culturacsi_export', 'event', $_SERVER['REQUEST_URI'] ?? '' );
+	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Eventi</h2><div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( $export_url ) . '">Esporta CSV</a> <a class="button button-primary" href="' . esc_url( home_url( '/area-riservata/eventi/nuovo/' ) ) . '">Nuovo Evento</a></div></div>';
 	echo '<style>.assoc-admin-table tr.is-pending-approval td { background-color: #fef2f2 !important; border-top: 2px solid #ef4444 !important; border-bottom: 2px solid #ef4444 !important; } .assoc-admin-table tr.is-pending-approval td:first-child { border-left: 2px solid #ef4444 !important; } .assoc-admin-table tr.is-pending-approval td:last-child { border-right: 2px solid #ef4444 !important; }</style>';
 	echo '<table class="widefat striped assoc-admin-table assoc-table-events"><colgroup><col style="width:4ch"><col style="width:38%"><col style="width:7.2rem"><col style="width:6.2rem"><col style="width:140px"><col style="width:110px"></colgroup><thead><tr>';
 	echo culturacsi_portal_sortable_th( '#', 'index', $sort_state['sort'], $sort_state['dir'], 'e_sort', 'e_dir', $base_url, 'assoc-col-index' );

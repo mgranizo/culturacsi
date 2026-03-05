@@ -39,7 +39,7 @@ function culturacsi_portal_users_form_shortcode(): string {
 	$current_avatar_id = $user instanceof WP_User ? (int) get_user_meta( (int) $user->ID, 'assoc_user_avatar_id', true ) : 0;
 
 	$message_html = '';
-	if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) && isset( $_POST['culturacsi_users_form_submit'] ) ) {
+	if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) && ( isset( $_POST['culturacsi_users_form_submit'] ) || isset( $_POST['is_portal_ajax'] ) ) ) {
 		if ( ! isset( $_POST['culturacsi_users_form_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['culturacsi_users_form_nonce'] ) ), 'culturacsi_users_form_save' ) ) {
 			$message_html = culturacsi_portal_notice( 'Verifica di sicurezza non valida.', 'error' );
 		} else {
@@ -47,6 +47,10 @@ function culturacsi_portal_users_form_shortcode(): string {
 			$form_user    = $form_user_id > 0 ? get_user_by( 'id', $form_user_id ) : false;
 			if ( $form_user_id > 0 && ! $form_user instanceof WP_User ) {
 				$message_html = culturacsi_portal_notice( 'Utente non trovato.', 'error' );
+			} elseif ( $form_user_id > 0 && ! $is_site_admin && ! culturacsi_portal_can_manage_user_target( $form_user, $current_user_id ) ) {
+				$message_html = culturacsi_portal_notice( 'Non hai i permessi per gestire questo utente.', 'error' );
+			} elseif ( $form_user_id > 0 && user_can( $form_user, 'manage_options' ) && (int) $form_user->ID !== $current_user_id ) {
+				$message_html = culturacsi_portal_notice( 'I profili Site Admin possono essere gestiti solo dal pannello standard di WordPress.', 'error' );
 			} else {
 				$user_login = isset( $_POST['user_login'] ) ? sanitize_user( wp_unslash( $_POST['user_login'] ), true ) : '';
 				$user_email = isset( $_POST['user_email'] ) ? sanitize_email( wp_unslash( $_POST['user_email'] ) ) : '';
@@ -171,25 +175,33 @@ function culturacsi_portal_users_form_shortcode(): string {
 						}
 
 						if ( '' === $message_html ) {
-							wp_safe_redirect(
-								add_query_arg(
-									array(
-										'user_id' => $saved_user_id,
-										'saved'   => '1',
-									),
-									culturacsi_portal_admin_user_form_url()
-								)
-							);
+							if ( isset( $_POST['is_portal_ajax'] ) && '1' === (string) $_POST['is_portal_ajax'] ) {
+								while ( ob_get_level() > 0 ) {
+									ob_end_clean();
+								}
+								wp_send_json_success( 'Utente salvato correttamente.', 200 );
+							}
+							wp_safe_redirect( add_query_arg( array( 'user_id' => $saved_user_id, 'saved' => '1' ), culturacsi_portal_admin_user_form_url() ) );
 							exit;
 						}
 					}
 				}
 			}
 		}
+
+		if ( isset( $_POST['is_portal_ajax'] ) && '1' === (string) $_POST['is_portal_ajax'] ) {
+			while ( ob_get_level() > 0 ) {
+				ob_end_clean();
+			}
+			wp_send_json_error( wp_strip_all_tags( $message_html ) ?: 'Errore durante il salvataggio.', 400 );
+		}
 	}
 
 	if ( isset( $_GET['saved'] ) && '1' === (string) $_GET['saved'] ) {
-		$message_html = culturacsi_portal_notice( 'Utente salvato correttamente.', 'success' );
+		$message_html = culturacsi_portal_notice(
+			$is_site_admin ? 'Utente salvato correttamente.' : 'Modifiche utente inviate per approvazione.',
+			'success'
+		);
 		$user_id      = isset( $_GET['user_id'] ) ? absint( wp_unslash( $_GET['user_id'] ) ) : 0;
 		$user         = $user_id > 0 ? get_user_by( 'id', $user_id ) : false;
 	}
@@ -221,11 +233,61 @@ function culturacsi_portal_users_form_shortcode(): string {
 			}
 		}
 	}
+	$user_checklist = array(
+		array( 'label' => 'Username compilato', 'selectors' => array( '#user_login' ), 'mode' => 'all' ),
+		array( 'label' => 'Email compilata', 'selectors' => array( '#user_email' ), 'mode' => 'all' ),
+	);
+	$user_steps = array(
+		array( 'text' => 'Compila username ed email.' ),
+		array( 'text' => 'Controlla ruolo e associazione (se disponibili).' ),
+		array( 'text' => 'Salva utente.' ),
+	);
+	if ( $user_id <= 0 ) {
+		$user_checklist[] = array( 'label' => 'Password inserita', 'selectors' => array( '#pass1', '#pass2' ), 'mode' => 'all' );
+		array_splice( $user_steps, 1, 0, array( array( 'text' => 'Imposta password e conferma.' ) ) );
+	} else {
+		$user_checklist[] = array( 'label' => 'Ruolo verificato', 'selectors' => array( '#user_role', '#association_post_id' ), 'mode' => 'any' );
+	}
 
 	ob_start();
 	echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	if ( function_exists( 'culturacsi_portal_render_process_tutorial' ) ) {
+		echo culturacsi_portal_render_process_tutorial(
+			array(
+				'title'     => '',
+				'intro'     => 'Inserisci i dati minimi e controlla la checklist prima di salvare.',
+				'summary'   => 'Tutorial rapido',
+				'checklist' => $user_checklist,
+				'steps'     => $user_steps,
+			)
+		); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+	$root_url = home_url( '/area-riservata/utenti/' );
 	?>
-	<form class="assoc-portal-form" method="post" enctype="multipart/form-data" autocomplete="off">
+	<style>
+		.password-toggle-wrapper { position: relative; display: flex; align-items: center; }
+		.password-toggle-wrapper input[type="password"],
+		.password-toggle-wrapper input[type="text"] { padding-right: 40px; flex: 1; }
+		.password-toggle-btn { position: absolute; right: 8px; background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 12px; color: #64748b; }
+		.password-toggle-btn:hover { color: #2563eb; }
+	</style>
+	<script>
+	(function() {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.querySelectorAll('.password-toggle-wrapper').forEach(function(wrapper) {
+				var btn = wrapper.querySelector('.password-toggle-btn');
+				var input = wrapper.querySelector('input[type="password"], input[type="text"]');
+				if (!btn || !input) return;
+				btn.addEventListener('click', function() {
+					var isPass = input.type === 'password';
+					input.type = isPass ? 'text' : 'password';
+					btn.textContent = isPass ? 'Nascondi' : 'Mostra';
+				});
+			});
+		});
+	})();
+	</script>
+	<form class="assoc-portal-form" method="post" enctype="multipart/form-data" autocomplete="off" data-redirect-url="<?php echo esc_url( $root_url ); ?>">
 		<?php wp_nonce_field( 'culturacsi_users_form_save', 'culturacsi_users_form_nonce' ); ?>
 		<input type="hidden" name="form_user_id" value="<?php echo esc_attr( (string) $user_id ); ?>">
 		<h2 style="margin-bottom:0;"><?php echo esc_html( $user_id > 0 ? 'Modifica Utente' : 'Nuovo Utente' ); ?></h2>
@@ -248,8 +310,8 @@ function culturacsi_portal_users_form_shortcode(): string {
 		$val_url   = isset( $_POST['user_url'] ) ? esc_url_raw( wp_unslash( $_POST['user_url'] ) ) : ( $user instanceof WP_User ? (string) $user->user_url : '' );
 		$val_desc  = isset( $_POST['description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['description'] ) ) : ( $user instanceof WP_User ? (string) $user->description : '' );
 		?>
-		<p><label for="user_login">Username *</label><input type="text" id="user_login" name="user_login" required <?php echo $user_id > 0 ? 'readonly' : ''; ?> value="<?php echo esc_attr( $val_login ); ?>"></p>
-		<p><label for="user_email">Email *</label><input type="email" id="user_email" name="user_email" required value="<?php echo esc_attr( $val_email ); ?>"></p>
+		<p><?php echo culturacsi_portal_label_with_tip( 'user_login', 'Username *', 'Usa un nome semplice, senza spazi.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><input type="text" id="user_login" name="user_login" required <?php echo $user_id > 0 ? 'readonly' : ''; ?> value="<?php echo esc_attr( $val_login ); ?>"></p>
+		<p><?php echo culturacsi_portal_label_with_tip( 'user_email', 'Email *', 'L\'utente ricevera comunicazioni su questo indirizzo.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><input type="email" id="user_email" name="user_email" required value="<?php echo esc_attr( $val_email ); ?>"></p>
 		<p><label for="first_name">Nome</label><input type="text" id="first_name" name="first_name" value="<?php echo esc_attr( $val_first ); ?>"></p>
 		<p><label for="last_name">Cognome</label><input type="text" id="last_name" name="last_name" value="<?php echo esc_attr( $val_last ); ?>"></p>
 		<p><label for="display_name">Nome visualizzato pubblicamente</label><input type="text" id="display_name" name="display_name" value="<?php echo esc_attr( $val_disp ); ?>"></p>
@@ -294,8 +356,10 @@ function culturacsi_portal_users_form_shortcode(): string {
 				?>"></p>
 			<?php endif; ?>
 		<?php endif; ?>
-		<p><label for="pass1"><?php echo esc_html( $user_id > 0 ? 'Nuova password (opzionale)' : 'Password *' ); ?></label><input type="password" id="pass1" name="pass1" autocomplete="new-password"></p>
-		<p><label for="pass2">Conferma password</label><input type="password" id="pass2" name="pass2" autocomplete="new-password"></p>
+		<p><?php echo culturacsi_portal_label_with_tip( 'pass1', ( $user_id > 0 ? 'Nuova password (opzionale)' : 'Password *' ), 'Minimo 8 caratteri.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
+		<div class="password-toggle-wrapper"><input type="password" id="pass1" name="pass1" autocomplete="new-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
+		<p><label for="pass2">Conferma password</label></p>
+		<div class="password-toggle-wrapper"><input type="password" id="pass2" name="pass2" autocomplete="new-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
 		<p><button type="submit" name="culturacsi_users_form_submit" class="button button-primary">Salva Utente</button></p>
 	</form>
 	<?php

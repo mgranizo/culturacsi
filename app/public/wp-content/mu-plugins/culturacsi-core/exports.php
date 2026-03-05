@@ -3,6 +3,86 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/**
+ * Efficiently fetch post meta for multiple posts in a single query.
+ * Returns array indexed by post_id => meta_key => meta_value
+ *
+ * @param array $post_ids Array of post IDs.
+ * @return array Array of meta data indexed by post ID.
+ */
+function get_post_meta_chunked(array $post_ids): array {
+    global $wpdb;
+    
+    if (empty($post_ids)) {
+        return array();
+    }
+    
+    $post_ids = array_map('intval', $post_ids);
+    $post_ids = array_filter($post_ids);
+    
+    if (empty($post_ids)) {
+        return array();
+    }
+    
+    $placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
+    
+    // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $results = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT post_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id IN ($placeholders)",
+            $post_ids
+        ),
+        ARRAY_A
+    );
+    
+    $meta = array();
+    foreach ($results as $row) {
+        $post_id = (int) $row['post_id'];
+        $key = $row['meta_key'];
+        $value = $row['meta_value'];
+        
+        if (!isset($meta[$post_id])) {
+            $meta[$post_id] = array();
+        }
+        
+        // Handle multiple values for same key (use array)
+        if (isset($meta[$post_id][$key])) {
+            if (!is_array($meta[$post_id][$key])) {
+                $meta[$post_id][$key] = array($meta[$post_id][$key]);
+            }
+            $meta[$post_id][$key][] = $value;
+        } else {
+            $meta[$post_id][$key] = $value;
+        }
+    }
+    
+    return $meta;
+}
+
+/**
+ * Build a signed export URL for portal CSV downloads.
+ *
+ * @param string $type        Export type.
+ * @param string $current_url Current page URL/path.
+ * @return string
+ */
+function culturacsi_export_build_url( string $type, string $current_url = '' ): string {
+    $type = sanitize_key( $type );
+    if ( '' === $type ) {
+        return '';
+    }
+
+    $base_url = '' !== trim( $current_url ) ? $current_url : (string) ( $_SERVER['REQUEST_URI'] ?? '' );
+
+    return (string) add_query_arg(
+        array(
+            'culturacsi_export'       => $type,
+            'culturacsi_export_nonce' => wp_create_nonce( 'culturacsi_export_' . $type ),
+        ),
+        $base_url
+    );
+}
+
 add_action('init', 'culturacsi_export_csv_handler');
 function culturacsi_export_csv_handler() {
     if ( ! isset( $_GET['culturacsi_export'] ) ) {
@@ -13,7 +93,16 @@ function culturacsi_export_csv_handler() {
         wp_die('Accesso negato.');
     }
 
-    $type = sanitize_key( $_GET['culturacsi_export'] );
+    $type = isset( $_GET['culturacsi_export'] ) ? sanitize_key( wp_unslash( $_GET['culturacsi_export'] ) ) : '';
+    $allowed_types = array( 'event', 'news', 'user', 'association', 'cronologia' );
+    if ( ! in_array( $type, $allowed_types, true ) ) {
+        wp_die( 'Tipo esportazione non valido.', 'Accesso negato', array( 'response' => 400 ) );
+    }
+
+    $nonce = isset( $_GET['culturacsi_export_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['culturacsi_export_nonce'] ) ) : '';
+    if ( '' === $nonce || ! wp_verify_nonce( $nonce, 'culturacsi_export_' . $type ) ) {
+        wp_die( 'Verifica di sicurezza non valida.', 'Accesso negato', array( 'response' => 403 ) );
+    }
     
     // Determine file name
     $filename = 'esportazione-' . $type . '-' . date('Y-m-d_H-i-s') . '.csv';
@@ -58,20 +147,33 @@ function culturacsi_export_csv_handler() {
             if ( in_array( $filters['status'], $allowed_status, true ) ) { $args['post_status'] = array( $filters['status'] ); }
         }
 
-        fputcsv($output, array('ID', 'Titolo', 'Data Evento', 'Stato', 'Luogo', 'Citta', 'Autore', 'Data Creazione'));
+        fputcsv($output, array('ID', 'Titolo', 'Data Evento', 'Stato', 'Luogo', 'Citta', 'Autore', 'Associazione', 'Data Creazione'));
         
         $query = new WP_Query($args);
+        
+        // OPTIMIZATION: Pre-fetch all post meta to avoid N+1 queries
+        $post_ids = wp_list_pluck($query->posts, 'ID');
+        $all_meta = array();
+        if (!empty($post_ids)) {
+            $all_meta = get_post_meta_chunked($post_ids);
+        }
+        
         foreach($query->posts as $post) {
+            $post_id = $post->ID;
             $status_obj = get_post_status_object($post->post_status);
             $status_label = $status_obj ? $status_obj->label : $post->post_status;
+            $assoc_id = isset($all_meta[$post_id]['organizer_association_id']) ? (int) $all_meta[$post_id]['organizer_association_id'] : 0;
+            $assoc_name = $assoc_id > 0 ? (string) get_the_title($assoc_id) : '';
+            $city = isset($all_meta[$post_id]['city']) ? $all_meta[$post_id]['city'] : (isset($all_meta[$post_id]['comune']) ? $all_meta[$post_id]['comune'] : '');
             fputcsv($output, array(
                 $post->ID,
                 html_entity_decode($post->post_title, ENT_QUOTES, 'UTF-8'),
-                get_post_meta($post->ID, 'start_date', true),
+                isset($all_meta[$post_id]['start_date']) ? $all_meta[$post_id]['start_date'] : '',
                 $status_label,
-                get_post_meta($post->ID, 'venue_name', true),
-                get_post_meta($post->ID, 'city', true) ?: get_post_meta($post->ID, 'comune', true),
+                isset($all_meta[$post_id]['venue_name']) ? $all_meta[$post_id]['venue_name'] : '',
+                $city,
                 get_the_author_meta('display_name', $post->post_author),
+                html_entity_decode($assoc_name, ENT_QUOTES, 'UTF-8'),
                 $post->post_date
             ));
         }
@@ -108,19 +210,30 @@ function culturacsi_export_csv_handler() {
             if ( in_array( $filters['status'], $allowed_status, true ) ) { $args['post_status'] = array( $filters['status'] ); }
         }
 
-        fputcsv($output, array('ID', 'Titolo', 'Data', 'Stato', 'Link Esterno', 'Autore', 'Associazione ID'));
+        fputcsv($output, array('ID', 'Titolo', 'Data', 'Stato', 'Link Esterno', 'Autore', 'Associazione'));
         $query = new WP_Query($args);
+        
+        // OPTIMIZATION: Pre-fetch all post meta to avoid N+1 queries
+        $post_ids = wp_list_pluck($query->posts, 'ID');
+        $all_meta = array();
+        if (!empty($post_ids)) {
+            $all_meta = get_post_meta_chunked($post_ids);
+        }
+        
         foreach($query->posts as $post) {
+            $post_id = $post->ID;
             $status_obj = get_post_status_object($post->post_status);
             $status_label = $status_obj ? $status_obj->label : $post->post_status;
+            $assoc_id = isset($all_meta[$post_id]['organizer_association_id']) ? (int) $all_meta[$post_id]['organizer_association_id'] : 0;
+            $assoc_name = $assoc_id > 0 ? (string) get_the_title($assoc_id) : '';
             fputcsv($output, array(
                 $post->ID,
                 html_entity_decode($post->post_title, ENT_QUOTES, 'UTF-8'),
                 $post->post_date,
                 $status_label,
-                get_post_meta($post->ID, '_hebeae_external_url', true),
+                isset($all_meta[$post_id]['_hebeae_external_url']) ? $all_meta[$post_id]['_hebeae_external_url'] : '',
                 get_the_author_meta('display_name', $post->post_author),
-                get_post_meta($post->ID, 'organizer_association_id', true)
+                html_entity_decode($assoc_name, ENT_QUOTES, 'UTF-8')
             ));
         }
 
@@ -157,10 +270,12 @@ function culturacsi_export_csv_handler() {
             return true;
         });
 
-        fputcsv($output, array('ID', 'Nome', 'Cognome', 'Username', 'Email', 'Ruoli', 'Stato', 'Codice Fiscale', 'Societa', 'Telefono', 'Data Registrazione'));
+        fputcsv($output, array('ID', 'Nome', 'Cognome', 'Username', 'Email', 'Ruoli', 'Stato', 'Associazione', 'Codice Fiscale', 'Societa', 'Telefono', 'Data Registrazione'));
         foreach($users as $user) {
             $roles = implode(', ', $user->roles);
             $status_label = culturacsi_portal_user_approval_label($user);
+            $assoc_id = (int) get_user_meta($user->ID, 'association_post_id', true);
+            $assoc_name = $assoc_id > 0 ? (string) get_the_title($assoc_id) : '';
             fputcsv($output, array(
                 $user->ID,
                 get_user_meta($user->ID, 'first_name', true),
@@ -169,6 +284,7 @@ function culturacsi_export_csv_handler() {
                 $user->user_email,
                 $roles,
                 $status_label,
+                html_entity_decode($assoc_name, ENT_QUOTES, 'UTF-8'),
                 get_user_meta($user->ID, 'codice_fiscale', true),
                 get_user_meta($user->ID, 'company', true),
                 get_user_meta($user->ID, 'phone', true),
@@ -198,28 +314,85 @@ function culturacsi_export_csv_handler() {
             $query_args['meta_query'] = $location_meta_query;
         }
 
-        fputcsv($output, array('ID', 'Ragione Sociale', 'Email', 'Codice Fiscale / PIVA', 'Telefono', 'Indirizzo', 'Citta', 'Provincia', 'Regione', 'CAP', 'Categoria', 'Stato', 'Data Inserimento'));
+        // Associations: export all key contact + visibility data available in the admin page
+        fputcsv($output, array(
+            'ID',
+            'Ragione Sociale',
+            'Email',
+            'Codice Fiscale / PIVA',
+            'Telefono',
+            'Indirizzo',
+            'Citta',
+            'Provincia',
+            'Regione',
+            'CAP',
+            'Sito Web',
+            'Facebook',
+            'Instagram',
+            'YouTube',
+            'TikTok',
+            'X',
+            'Categoria',
+            'Stato',
+            'Data Inserimento'
+        ));
         $query = new WP_Query($query_args);
+        
+        // OPTIMIZATION: Pre-fetch all post meta to avoid N+1 queries
+        $post_ids = wp_list_pluck($query->posts, 'ID');
+        $all_meta = array();
+        if (!empty($post_ids)) {
+            $all_meta = get_post_meta_chunked($post_ids);
+        }
+        
+        // Helper function to get meta with fallback keys
+        $get_meta_with_fallback = function($post_id, $meta_key, $fallback_keys = array()) use ($all_meta) {
+            $value = isset($all_meta[$post_id][$meta_key]) ? $all_meta[$post_id][$meta_key] : '';
+            if (empty($value) && !empty($fallback_keys)) {
+                foreach ($fallback_keys as $fallback) {
+                    if (isset($all_meta[$post_id][$fallback]) && !empty($all_meta[$post_id][$fallback])) {
+                        $value = $all_meta[$post_id][$fallback];
+                        break;
+                    }
+                }
+            }
+            return $value;
+        };
+        
         foreach($query->posts as $post) {
+            $post_id = $post->ID;
             $status_obj = get_post_status_object($post->post_status);
             $status_label = $status_obj ? $status_obj->label : $post->post_status;
             
             $terms = wp_get_post_terms( $post->ID, 'activity_category', array( 'fields' => 'names' ) );
             $category = ! empty( $terms ) ? implode( ', ', array_map( 'sanitize_text_field', $terms ) ) : '';
 
-            $city = get_post_meta($post->ID, 'city', true) ?: get_post_meta($post->ID, 'comune', true);
+            // Use optimized meta retrieval with fallbacks
+            $city = $get_meta_with_fallback($post_id, 'city') ?: $get_meta_with_fallback($post_id, 'comune');
+            $website = $get_meta_with_fallback($post_id, 'website', array('sito', 'sito_web', 'web', 'url', '_ab_csv_website'));
+            $facebook = $get_meta_with_fallback($post_id, 'facebook', array('facebook_url', 'fb', '_ab_csv_facebook'));
+            $instagram = $get_meta_with_fallback($post_id, 'instagram', array('instagram_url', 'ig', '_ab_csv_instagram'));
+            $youtube = $get_meta_with_fallback($post_id, 'youtube');
+            $tiktok = $get_meta_with_fallback($post_id, 'tiktok');
+            $x_link = $get_meta_with_fallback($post_id, 'x');
 
             fputcsv($output, array(
                 $post->ID,
                 html_entity_decode($post->post_title, ENT_QUOTES, 'UTF-8'),
-                get_post_meta($post->ID, 'email', true),
-                get_post_meta($post->ID, 'codice_fiscale', true),
-                get_post_meta($post->ID, 'phone', true),
-                get_post_meta($post->ID, 'address', true),
+                $get_meta_with_fallback($post_id, 'email'),
+                $get_meta_with_fallback($post_id, 'codice_fiscale'),
+                $get_meta_with_fallback($post_id, 'phone'),
+                $get_meta_with_fallback($post_id, 'address'),
                 $city,
-                get_post_meta($post->ID, 'province', true),
-                get_post_meta($post->ID, 'region', true) ?: get_post_meta($post->ID, 'regione', true),
-                get_post_meta($post->ID, 'cap', true),
+                $get_meta_with_fallback($post_id, 'province'),
+                $get_meta_with_fallback($post_id, 'region') ?: $get_meta_with_fallback($post_id, 'regione'),
+                $get_meta_with_fallback($post_id, 'cap'),
+                $website,
+                $facebook,
+                $instagram,
+                $youtube,
+                $tiktok,
+                $x_link,
                 $category,
                 $status_label,
                 $post->post_date
@@ -228,7 +401,7 @@ function culturacsi_export_csv_handler() {
     } elseif ( $type === 'cronologia' ) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'culturacsi_audit_log';
-        if ( $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name ) {
+        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ) === $table_name ) {
             $where = "1=1";
             if ( ! $is_site_admin ) {
                 $assoc_id = culturacsi_portal_get_managed_association_id( $user_id );

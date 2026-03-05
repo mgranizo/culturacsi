@@ -603,7 +603,7 @@ function assoc_portal_reserved_access_shortcode() {
                 </p>
                 <p>
                     <label for="assoc_login_password"><?php esc_html_e( 'Password', 'assoc-portal' ); ?></label>
-                    <input type="password" id="assoc_login_password" name="assoc_login_password" required autocomplete="current-password">
+                    <div class="password-toggle-wrapper"><input type="password" id="assoc_login_password" name="assoc_login_password" required autocomplete="current-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
                 </p>
                 <p>
                     <label><input type="checkbox" name="rememberme" value="1"> <?php esc_html_e( 'Ricordami', 'assoc-portal' ); ?></label>
@@ -639,11 +639,11 @@ function assoc_portal_reserved_access_shortcode() {
                 </p>
                 <p>
                     <label for="assoc_reg_password"><?php esc_html_e( 'Password', 'assoc-portal' ); ?></label>
-                    <input type="password" id="assoc_reg_password" name="assoc_reg_password" required autocomplete="new-password">
+                    <div class="password-toggle-wrapper"><input type="password" id="assoc_reg_password" name="assoc_reg_password" required autocomplete="new-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
                 </p>
                 <p>
                     <label for="assoc_reg_password_confirm"><?php esc_html_e( 'Conferma Password', 'assoc-portal' ); ?></label>
-                    <input type="password" id="assoc_reg_password_confirm" name="assoc_reg_password_confirm" required autocomplete="new-password">
+                    <div class="password-toggle-wrapper"><input type="password" id="assoc_reg_password_confirm" name="assoc_reg_password_confirm" required autocomplete="new-password"><button type="button" class="password-toggle-btn">Mostra</button></div>
                 </p>
                 <p class="assoc-password-strength-row">
                     <span class="assoc-password-strength-label"><?php esc_html_e( 'Sicurezza password', 'assoc-portal' ); ?></span>
@@ -675,8 +675,27 @@ function assoc_portal_reserved_access_shortcode() {
             </form>
         </div>
     </div>
+    <style>
+        .password-toggle-wrapper { position: relative; display: flex; align-items: center; }
+        .password-toggle-wrapper input[type="password"],
+        .password-toggle-wrapper input[type="text"] { padding-right: 40px; flex: 1; }
+        .password-toggle-btn { position: absolute; right: 8px; background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 12px; color: #64748b; }
+        .password-toggle-btn:hover { color: #2563eb; }
+    </style>
     <script>
         (function() {
+            // Password toggle functionality
+            document.querySelectorAll('.password-toggle-wrapper').forEach(function(wrapper) {
+                var btn = wrapper.querySelector('.password-toggle-btn');
+                var input = wrapper.querySelector('input[type="password"], input[type="text"]');
+                if (!btn || !input) return;
+                btn.addEventListener('click', function() {
+                    var isPass = input.type === 'password';
+                    input.type = isPass ? 'text' : 'password';
+                    btn.textContent = isPass ? 'Nascondi' : 'Mostra';
+                });
+            });
+
             var wrap = document.querySelector('[data-assoc-auth-wrap]');
             if (!wrap) { return; }
 
@@ -950,9 +969,17 @@ function assoc_portal_profile_form_shortcode() {
         // --- Update Taxonomy ---
         if ( isset( $_POST['tax_input']['activity_category'] ) ) {
             $term_ids = array_map( 'intval', $_POST['tax_input']['activity_category'] );
-            wp_set_post_terms( $association_id, $term_ids, 'activity_category' );
+            if ( function_exists( 'culturacsi_activity_tree_set_post_terms' ) ) {
+                culturacsi_activity_tree_set_post_terms( (int) $association_id, $term_ids );
+            } else {
+                wp_set_post_terms( $association_id, $term_ids, 'activity_category' );
+            }
         } else {
-             wp_set_post_terms( $association_id, [], 'activity_category' );
+             if ( function_exists( 'culturacsi_activity_tree_set_post_terms' ) ) {
+                culturacsi_activity_tree_set_post_terms( (int) $association_id, [] );
+            } else {
+                wp_set_post_terms( $association_id, [], 'activity_category' );
+            }
         }
 
         // --- …2967 tokens truncated…) {

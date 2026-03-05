@@ -1,30 +1,86 @@
 <?php
-define('WP_USE_THEMES', false);
-require_once dirname(__FILE__) . '/wp-load.php';
+/**
+ * One-time MU plugin migrations.
+ *
+ * @package CulturaCSI
+ */
 
-global $wpdb;
-$table_name = $wpdb->prefix . 'snippets';
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
-$snippet_id = 14;
+add_action( 'init', 'culturacsi_run_pending_mu_migrations', 5 );
 
-$new_code = <<< 'EOT'
+/**
+ * Run pending one-time data updates.
+ *
+ * @return void
+ */
+function culturacsi_run_pending_mu_migrations() {
+	$done_key = '__update_snippet_14_done';
+	$status   = (string) get_option( $done_key, '0' );
+
+	if ( '1' === $status || 'skipped' === $status ) {
+		return;
+	}
+
+	global $wpdb;
+	if ( ! ( $wpdb instanceof wpdb ) ) {
+		return;
+	}
+
+	$table_name = $wpdb->prefix . 'snippets';
+
+	$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+	if ( $table_name !== $table_exists ) {
+		update_option( $done_key, 'skipped', false );
+		return;
+	}
+
+	// Identify the snippet by its name (stable across environments) rather than
+	// by auto-increment ID, which can differ between local and production DBs.
+	// The snippet name contains 'calendario' or 'calendar' hero overlay code.
+	$target_id = (int) $wpdb->get_var(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
+			"SELECT id FROM {$table_name} WHERE snippet_name LIKE %s ORDER BY id ASC LIMIT 1",
+			'%calendar%'
+		)
+	);
+
+	if ( $target_id <= 0 ) {
+		// Snippet not found by name. Skip safely and log for visibility.
+		$fallback_id = 14;
+		$exists = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(1) FROM {$table_name} WHERE id = %d", $fallback_id )
+		);
+		if ( $exists > 0 ) {
+			$target_id = $fallback_id;
+		} else {
+			error_log( '[culturacsi migrations] Migration ' . $done_key . ': snippet not found by name or ID. Skipping.' );
+			update_option( $done_key, 'skipped', false );
+			return;
+		}
+	}
+
+	$new_code = <<<'EOT'
 add_action('wp_footer', function() {
     if (!is_page('calendario') && !is_page('calendar')) return;
 
-    $m_val = isset($_GET['ev_m']) ? $_GET['ev_m'] : (isset($_GET['m']) ? $_GET['m'] : date('n'));
-    $y_val = isset($_GET['ev_y']) ? $_GET['ev_y'] : (isset($_GET['y']) ? $_GET['y'] : date('Y'));
-    $current_month = intval($m_val) > 0 ? intval($m_val) : date('n');
-    $current_year = intval($y_val) > 0 ? intval($y_val) : date('Y');
+    $m_val = absint(isset($_GET['ev_m']) ? $_GET['ev_m'] : (isset($_GET['m']) ? $_GET['m'] : 0));
+    $y_val = absint(isset($_GET['ev_y']) ? $_GET['ev_y'] : (isset($_GET['y']) ? $_GET['y'] : 0));
+    $current_month = $m_val > 0 ? $m_val : (int) date('n');
+    $current_year  = $y_val > 0 ? $y_val  : (int) date('Y');
     $month_name = mb_strtoupper((string) date_i18n( 'F', mktime( 0, 0, 0, $current_month, 1, $current_year ) ), 'UTF-8');
     ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // === CONFIGURATION ================== //
             const CONFIG = {
-                textWidthMultiplier: 1.0,      // 1.0 means exactly 100% width. Change to 1.1 to make it 10% larger.
-                textVerticalShift: -2.2,       // Shift text up or down
-                blueTintOpacity: 0.60,         // Opacity of the blue overlay
-                heroImageHeightCrop: 1.5       // 1.5 creates a panoramic 2/3 height crop
+                textWidthMultiplier: 1.0,      
+                textVerticalShift: -2.2,       
+                blueTintOpacity: 0.6,          
+                heroImageHeightCrop: 1.5       
             };
             // ==================================== //
 
@@ -109,13 +165,19 @@ add_action('wp_footer', function() {
 });
 EOT;
 
-$result = $wpdb->update($table_name, ['code' => $new_code], ['id' => $snippet_id]);
-if ($result === false) {
-    echo "Error updating snippet: " . $wpdb->last_error . "\n";
-} else {
-    echo "Successfully updated snippet 14\n";
-    // Also update snippet cache if running Code Snippets
-    delete_transient('code_snippets');
-    delete_transient('code_snippets_active_snippets');
+	$updated = $wpdb->update(
+		$table_name,
+		array( 'code' => $new_code ),
+		array( 'id' => $target_id ),
+		array( '%s' ),
+		array( '%d' )
+	);
+
+	if ( false === $updated ) {
+		return;
+	}
+
+	delete_transient( 'code_snippets' );
+	delete_transient( 'code_snippets_active_snippets' );
+	update_option( $done_key, '1', false );
 }
-?>
