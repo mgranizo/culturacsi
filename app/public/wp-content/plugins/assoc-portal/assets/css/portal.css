@@ -1530,6 +1530,7 @@ body.event-modal-open {
 .assoc-admin-filters input[type="date"],
 .assoc-admin-filters select {
     min-width: 190px;
+    max-width: 100%;
 }
 
 .assoc-admin-filters-actions {
@@ -1547,6 +1548,7 @@ body.event-modal-open {
 
 .assoc-admin-table-wrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .assoc-admin-table td,
@@ -1557,6 +1559,7 @@ body.event-modal-open {
 .assoc-admin-table {
     width: 100%;
     table-layout: fixed;
+    min-width: 640px;
 }
 
 .assoc-admin-table th {
@@ -2163,6 +2166,7 @@ button.assoc-admin-action-btn {
     background-size: 12px 8px !important;
     padding-right: 34px !important;
 }
+
 /* Calendar Hero Month Overlay */
 .calendar-hero-month-overlay {
     position: absolute;
@@ -2183,3 +2187,126 @@ button.assoc-admin-action-btn {
     text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.4);
 }
 
+/* =============================================================================
+ * Mobile-first responsive fixes for Area Riservata (max-width: 719px)
+ * Root issue: assoc-admin-table had table-layout:fixed with no min-width,
+ * causing columns to crush into unreadable single-character vertical stacks.
+ * Solution: wrapper scrolls horizontally; table keeps min-width:640px (set above).
+ * ============================================================================= */
+@media (max-width: 719px) {
+
+    /* ---- Brand header: stack into single column ---- */
+    .assoc-reserved-brand-row {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 6px;
+    }
+    .assoc-reserved-brand-left,
+    .assoc-reserved-brand-right {
+        justify-content: center;
+    }
+    .assoc-reserved-brand-tagline {
+        white-space: normal;
+    }
+
+    /* ---- Navigation ---- */
+    .assoc-reserved-nav-list {
+        gap: 6px;
+    }
+    .assoc-reserved-nav-link {
+        font-size: 0.88rem;
+        padding: 0 10px;
+        min-height: 36px;
+    }
+    .assoc-reserved-nav-head {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* ---- Admin panel action buttons: full-width column ---- */
+    .assoc-admin-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .assoc-admin-actions .button,
+    .assoc-admin-actions a.button {
+        text-align: center;
+        justify-content: center;
+    }
+
+    /* ---- Filter inputs: single-column, no min-width ---- */
+    .assoc-admin-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .assoc-admin-filters label {
+        width: 100%;
+    }
+    .assoc-admin-filters input[type="text"],
+    .assoc-admin-filters input[type="date"],
+    .assoc-admin-filters select {
+        min-width: 0;
+        width: 100%;
+    }
+    .assoc-admin-filters-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    /* ---- Search panel forms: force single-column; override any inline grid ---- */
+    .assoc-search-form {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    .assoc-search-field {
+        grid-column: unset !important;
+        grid-row: unset !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .assoc-search-panel select,
+    .assoc-search-panel input[type="text"],
+    .assoc-search-panel input[type="month"],
+    .assoc-search-panel input[type="number"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* ---- Data tables: slightly smaller font, reduced cell padding ---- */
+    /* Horizontal scroll handled by .assoc-admin-table-wrap + min-width:640px above */
+    .assoc-admin-table {
+        font-size: 0.88rem;
+    }
+    .assoc-admin-table th,
+    .assoc-admin-item-row td {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    /* ---- Portal form inputs: remove 400px max-width cap on mobile ---- */
+    .assoc-portal-form input[type="text"],
+    .assoc-portal-form input[type="email"],
+    .assoc-portal-form input[type="tel"],
+    .assoc-portal-form input[type="url"],
+    .assoc-portal-form input[type="password"],
+    .assoc-portal-form input[type="datetime-local"],
+    .assoc-portal-form select {
+        max-width: 100%;
+    }
+
+    /* ---- Row action chips: left-align on small screens ---- */
+    .assoc-admin-row-actions {
+        justify-content: flex-start;
+    }
+
+    /* ---- Password strength indicator: stack vertically ---- */
+    .assoc-password-strength-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .assoc-password-strength-meter {
+        min-width: 0;
+        width: 100%;
+    }
+}

@@ -580,13 +580,13 @@ if ( ! function_exists( 'culturacsi_portal_content_entries_list_shortcode' ) ) {
 						$edit_url    = culturacsi_portal_content_entries_edit_url( $post_item );
 						?>
 						<tr class="<?php echo ( $is_admin && 'pending' === $status ) ? 'is-pending-approval' : ''; ?>">
-							<td class="assoc-col-index"><?php echo esc_html( (string) $row_num ); ?></td>
-							<td class="assoc-col-type"><?php echo esc_html( $type_label ); ?></td>
-							<td class="assoc-col-title"><?php echo esc_html( get_the_title( $post_id ) ); ?></td>
-							<td class="assoc-col-section"><?php echo esc_html( culturacsi_portal_content_entries_secondary_label( $post_item ) ); ?></td>
-							<td class="assoc-col-date"><?php echo esc_html( date_i18n( 'd/m/Y H:i', strtotime( (string) $post_item->post_date ) ) ); ?></td>
-							<td class="assoc-col-status"><span class="assoc-status-pill status-<?php echo esc_attr( $status ); ?>"><?php echo esc_html( $status_obj ? (string) $status_obj->label : $status ); ?></span></td>
-							<td class="assoc-col-actions">
+							<td class="assoc-col-index" data-label="#"><?php echo esc_html( (string) $row_num ); ?></td>
+							<td class="assoc-col-type" data-label="Tipo"><?php echo esc_html( $type_label ); ?></td>
+							<td class="assoc-col-title" data-label="Titolo"><?php echo esc_html( get_the_title( $post_id ) ); ?></td>
+							<td class="assoc-col-section" data-label="Sezione"><?php echo esc_html( culturacsi_portal_content_entries_secondary_label( $post_item ) ); ?></td>
+							<td class="assoc-col-date" data-label="Data"><?php echo esc_html( date_i18n( 'd/m/Y H:i', strtotime( (string) $post_item->post_date ) ) ); ?></td>
+							<td class="assoc-col-status" data-label="Stato"><span class="assoc-status-pill status-<?php echo esc_attr( $status ); ?>"><?php echo esc_html( $status_obj ? (string) $status_obj->label : $status ); ?></span></td>
+							<td class="assoc-col-actions" data-label="Azioni">
 								<div class="assoc-action-group">
 									<a class="assoc-action-chip chip-edit" href="<?php echo esc_url( $edit_url ); ?>">Mod.</a>
 									<?php

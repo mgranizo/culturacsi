@@ -261,8 +261,8 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-associations-search .assoc-search-field.is-region{grid-column:4}
 			.assoc-associations-search .assoc-search-field.is-city{grid-column:5}
 			.assoc-associations-search .assoc-search-field.is-status{grid-column:6}
-			.assoc-portal-events-list,.assoc-portal-users-list,.assoc-portal-associations-list{width:100%;max-width:100%;overflow-x:auto;padding:0 6px;box-sizing:border-box}
-		.assoc-admin-table{width:100%;border-radius:10px;overflow:hidden;border:1px solid #d9e2ec;table-layout:fixed}
+		.assoc-portal-events-list,.assoc-portal-users-list,.assoc-portal-associations-list{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 6px;box-sizing:border-box;border-radius:10px}
+		.assoc-admin-table{width:100%;border:1px solid #d9e2ec;table-layout:fixed;min-width:640px}
 		.assoc-admin-table thead th{background:#eff4fb;color:#0f172a;font-weight:800}
 		.assoc-admin-table thead th .assoc-admin-sort-link{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;color:inherit;text-decoration:none;font-weight:inherit}
 		.assoc-admin-table thead th.assoc-col-title .assoc-admin-sort-link,
@@ -370,11 +370,17 @@ function culturacsi_portal_reserved_inline_styles(): void {
 			.assoc-page-toolbar{flex-direction:column;align-items:stretch}
 			.assoc-search-head{flex-direction:column;align-items:stretch}
 			.assoc-page-toolbar .button{width:100%}
-			.assoc-search-form{grid-template-columns:minmax(0,1fr)}
-			.assoc-search-field{grid-column:1 / -1;grid-row:auto}
+			.assoc-page-toolbar > div{flex-direction:column;width:100%}
+			.assoc-page-toolbar > div .button{width:100%;text-align:center;justify-content:center}
+			.assoc-search-form{grid-template-columns:minmax(0,1fr) !important}
+			.assoc-search-field{grid-column:1 / -1 !important;grid-row:auto !important;min-width:0 !important}
 			.assoc-search-actions{justify-content:flex-start}
 			.assoc-action-chip{width:4.2rem}
-		}
+			/* Table mobile scroll: force explicit width so table overflows container and scroll kicks in */
+			.assoc-portal-events-list,.assoc-portal-users-list,.assoc-portal-associations-list{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0}
+			.assoc-admin-table{width:800px !important;min-width:800px !important;table-layout:auto !important}
+			.assoc-table-users{width:900px !important;min-width:900px !important}
+			}
 
 		/* Modal Styles */
 		.assoc-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; align-items: center; justify-content: center; padding: 20px; }

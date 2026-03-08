@@ -169,18 +169,18 @@ function culturacsi_portal_users_list_shortcode(): string {
 
 			$row_class  = ( current_user_can( 'manage_options' ) && ! culturacsi_portal_is_user_approved( $user ) ) ? ' is-pending-approval' : '';
 			echo '<tr class="' . esc_attr( trim( $row_class ) ) . '" data-id="' . esc_attr( (string) $user->ID ) . '" data-type="user">';
-			echo '<td class="assoc-col-index">' . esc_html( (string) $row_num ) . '</td>';
-			echo '<td class="assoc-col-title">';
+			echo '<td class="assoc-col-index" data-label="#">' . esc_html( (string) $row_num ) . '</td>';
+			echo '<td class="assoc-col-title" data-label="Nome">';
 			$avatar_id = (int) get_user_meta( (int) $user->ID, 'assoc_user_avatar_id', true );
 			if ( $avatar_id > 0 ) {
 				echo '<span class="assoc-user-list-thumb">' . wp_get_attachment_image( $avatar_id, array( 32, 32 ) ) . '</span>';
 			}
 			echo '<span class="assoc-user-list-name">' . esc_html( $user->display_name ) . '</span></td>';
-			echo '<td class="assoc-col-email">' . esc_html( $user->user_email ) . '</td>';
-			echo '<td class="assoc-col-role">' . esc_html( implode( ', ', $roles ) ) . '</td>';
-			echo '<td class="assoc-col-status assoc-col-status-compact"><span class="assoc-status-pill ' . esc_attr( culturacsi_portal_user_approval_class( $user ) ) . '">' . esc_html( culturacsi_portal_user_approval_label( $user ) ) . '</span></td>';
+			echo '<td class="assoc-col-email" data-label="Email">' . esc_html( $user->user_email ) . '</td>';
+			echo '<td class="assoc-col-role" data-label="Ruolo">' . esc_html( implode( ', ', $roles ) ) . '</td>';
+			echo '<td class="assoc-col-status assoc-col-status-compact" data-label="Stato"><span class="assoc-status-pill ' . esc_attr( culturacsi_portal_user_approval_class( $user ) ) . '">' . esc_html( culturacsi_portal_user_approval_label( $user ) ) . '</span></td>';
 			// History column for Users
-			echo '<td class="assoc-col-history" style="font-size:10px;line-height:1.2;color:#64748b;vertical-align:middle;white-space:nowrap;">';
+			echo '<td class="assoc-col-history" data-label="Cronologia" style="font-size:10px;line-height:1.2;color:#64748b;vertical-align:middle;">';
 			$last_mod = culturacsi_logging_get_last_modified( 'user', (int) $user->ID );
 			if ( $last_mod ) {
 				echo '<strong>Mod:</strong> ' . esc_html( date_i18n( 'd/m/y H:i', strtotime( $last_mod->created_at ) ) ) . '<br>';
@@ -192,8 +192,8 @@ function culturacsi_portal_users_list_shortcode(): string {
 			}
 			echo '</td>';
 
-			echo '<td class="assoc-col-date" style="vertical-align:middle; line-height:1.1; white-space:nowrap;">' . esc_html( date_i18n( 'd/m/Y', strtotime( (string) $user->user_registered ) ) ) . '<br><small style="color:#64748b;">' . esc_html( date_i18n( 'H:i', strtotime( (string) $user->user_registered ) ) ) . '</small></td>';
-			echo '<td class="assoc-col-actions"><div class="assoc-action-group">';
+			echo '<td class="assoc-col-date" data-label="Registrato" style="vertical-align:middle;line-height:1.1;">' . esc_html( date_i18n( 'd/m/Y', strtotime( (string) $user->user_registered ) ) ) . '<br><small style="color:#64748b;">' . esc_html( date_i18n( 'H:i', strtotime( (string) $user->user_registered ) ) ) . '</small></td>';
+			echo '<td class="assoc-col-actions" data-label="Azioni"><div class="assoc-action-group">';
 			// All managers can edit users in their association (listing logic above ensures they only see their association)
 			echo '<a class="assoc-action-chip chip-edit" href="' . esc_url( culturacsi_portal_admin_user_form_url( (int) $user->ID ) ) . '">Mod.</a>';
 			

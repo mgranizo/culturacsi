@@ -224,20 +224,20 @@ function culturacsi_portal_associations_list_shortcode(): string {
 			$row_class        = ( $is_site_admin && 'pending' === $status ) ? ' is-pending-approval' : '';
 
 			echo '<tr class="' . esc_attr( trim( $row_class ) ) . '" data-id="' . esc_attr( (string) $post_id ) . '" data-type="association">';
-			echo '<td class="assoc-col-index">' . esc_html( (string) $row_num ) . '</td>';
-			echo '<td class="assoc-col-title"><span class="assoc-association-name">' . esc_html( get_the_title( $post_id ) ) . '</span>';
+			echo '<td class="assoc-col-index" data-label="#">' . esc_html( (string) $row_num ) . '</td>';
+			echo '<td class="assoc-col-title" data-label="Nome"><span class="assoc-association-name">' . esc_html( get_the_title( $post_id ) ) . '</span>';
 			if ( '' !== $location_summary ) {
 				echo '<span class="assoc-association-location">' . esc_html( $location_summary ) . '</span>';
 			}
 			echo '</td>';
 			if ( '-' !== $category ) {
-				echo '<td class="assoc-col-category"><strong class="assoc-category-activities">' . esc_html( $category ) . '</strong></td>';
+				echo '<td class="assoc-col-category" data-label="Categoria"><strong class="assoc-category-activities">' . esc_html( $category ) . '</strong></td>';
 			} else {
-				echo '<td class="assoc-col-category">-</td>';
+				echo '<td class="assoc-col-category" data-label="Categoria">-</td>';
 			}
-			echo '<td class="assoc-col-status assoc-col-status-compact"><span class="assoc-status-pill status-' . esc_attr( $status ) . '">' . esc_html( $status_obj ? $status_obj->label : $status ) . '</span></td>';
+			echo '<td class="assoc-col-status assoc-col-status-compact" data-label="Stato"><span class="assoc-status-pill status-' . esc_attr( $status ) . '">' . esc_html( $status_obj ? $status_obj->label : $status ) . '</span></td>';
 
-			echo '<td class="assoc-col-history" style="font-size:11px;line-height:1.2;color:#64748b;vertical-align:middle;">';
+			echo '<td class="assoc-col-history" data-label="Cronologia" style="font-size:11px;line-height:1.2;color:#64748b;vertical-align:middle;">';
 			$last_mod = culturacsi_logging_get_last_modified( 'association', $post_id );
 			if ( $last_mod ) {
 				echo '<strong>Mod:</strong> ' . esc_html( date_i18n( 'd/m/y H:i', strtotime( $last_mod->created_at ) ) ) . '<br>';
@@ -254,7 +254,7 @@ function culturacsi_portal_associations_list_shortcode(): string {
 			}
 			echo '</td>';
 
-			echo '<td class="assoc-col-actions"><div class="assoc-action-group">';
+			echo '<td class="assoc-col-actions" data-label="Azioni"><div class="assoc-action-group">';
 			echo '<a class="assoc-action-chip chip-edit" href="' . esc_url( $edit_url ) . '">Mod.</a>';
 			if ( $is_site_admin ) {
 				echo culturacsi_portal_action_button_form(

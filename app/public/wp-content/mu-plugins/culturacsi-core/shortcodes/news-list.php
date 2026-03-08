@@ -147,14 +147,14 @@ function culturacsi_portal_news_list_shortcode(): string {
 
 			$row_class  = ( $is_admin && 'pending' === get_post_status( $post_id ) ) ? ' is-pending-approval' : '';
 			echo '<tr class="' . esc_attr( trim( $row_class ) ) . '" data-id="' . esc_attr( (string) $post_id ) . '" data-type="news">';
-			echo '<td class="assoc-col-index">' . esc_html( (string) $row_num ) . '</td>';
-			echo '<td class="assoc-col-title">' . esc_html( get_the_title( $post_id ) ) . '</td>';
-			echo '<td class="assoc-col-date">' . esc_html( date_i18n( 'd/m/Y H:i', strtotime( (string) $post_item->post_date ) ) ) . '</td>';
-			echo '<td class="assoc-col-status"><span class="assoc-status-pill status-' . esc_attr( (string) get_post_status( $post_id ) ) . '">' . esc_html( $status_obj ? $status_obj->label : (string) get_post_status( $post_id ) ) . '</span></td>';
-			echo '<td class="assoc-col-ext">' . ( $ext_url !== '' ? '<a href="' . esc_url( $ext_url ) . '" target="_blank" rel="noopener">ON</a>' : '&mdash;' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo '<td class="assoc-col-index" data-label="#">' . esc_html( (string) $row_num ) . '</td>';
+			echo '<td class="assoc-col-title" data-label="Titolo">' . esc_html( get_the_title( $post_id ) ) . '</td>';
+			echo '<td class="assoc-col-date" data-label="Data">' . esc_html( date_i18n( 'd/m/Y H:i', strtotime( (string) $post_item->post_date ) ) ) . '</td>';
+			echo '<td class="assoc-col-status" data-label="Stato"><span class="assoc-status-pill status-' . esc_attr( (string) get_post_status( $post_id ) ) . '">' . esc_html( $status_obj ? $status_obj->label : (string) get_post_status( $post_id ) ) . '</span></td>';
+			echo '<td class="assoc-col-ext" data-label="Ext URL">' . ( $ext_url !== '' ? '<a href="' . esc_url( $ext_url ) . '" target="_blank" rel="noopener">ON</a>' : '&mdash;' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			
 			// History column for News
-			echo '<td class="assoc-col-history" style="font-size:11px;line-height:1.2;color:#64748b;">';
+			echo '<td class="assoc-col-history" data-label="Cronologia" style="font-size:11px;line-height:1.2;color:#64748b;">';
 			$last_mod = culturacsi_logging_get_last_modified( 'news', $post_id );
 			if ( $last_mod ) {
 				echo '<strong>Modificato:</strong> ' . esc_html( date_i18n( 'd/m/y H:i', strtotime( $last_mod->created_at ) ) ) . '<br>';
@@ -170,7 +170,7 @@ function culturacsi_portal_news_list_shortcode(): string {
 				}
 			}
 			echo '</td>';
-			echo '<td class="assoc-col-actions"><div class="assoc-action-group">';
+			echo '<td class="assoc-col-actions" data-label="Azioni"><div class="assoc-action-group">';
 			echo '<a class="assoc-action-chip chip-edit" href="' . esc_url( $edit_url ) . '">Mod.</a>';
 			echo culturacsi_portal_action_button_form(
 				array(
