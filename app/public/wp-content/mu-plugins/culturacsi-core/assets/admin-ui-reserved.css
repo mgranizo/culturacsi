@@ -1802,9 +1802,13 @@ button.assoc-action-chip {
 /* =============================================================================
  * Mobile card/stack layout for Area Riservata data tables (max-width: 700px)
  *
- * Instead of horizontal scroll, each <tr> becomes a card and each <td> shows
- * its column label (from data-label="…") followed by the cell value.
- * This keeps every column visible with zero horizontal scroll.
+ * KEY DESIGN:
+ *   - Each <tr> becomes a rounded card (display:block on table + children).
+ *   - Each <td> uses CSS Grid (90px label | 1fr value) so that even plain
+ *     text nodes (dates, emails) fill the second column correctly.
+ *     flex layouts don't solve this because anonymous flex items can't receive
+ *     flex-grow — grid avoids the problem entirely.
+ *   - data-label="…" on each <td> feeds the ::before label pseudo-element.
  * ============================================================================= */
 @media (max-width: 700px) {
 
@@ -1877,6 +1881,38 @@ button.assoc-action-chip {
 	.assoc-admin-table td {
 		display: block;
 		width: 100%;
+		min-width: 0 !important;
+		/* override desktop min-width: 640px */
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+
+	/* Reset table-specific properties that don't apply to block elements */
+	.assoc-admin-table {
+		table-layout: auto !important;
+		border-collapse: unset;
+	}
+
+	/* ── CRITICAL: reset all nth-child column widths ───────────────────────────
+	 * The desktop CSS sets widths like `.assoc-table-users th:nth-child(2)
+	 * { width: 27% !important }`. These survive display:block and collapse the
+	 * grid's 1fr column to near-zero px. Nuke them all here.
+	 * ──────────────────────────────────────────────────────────────────────── */
+	.assoc-admin-table th:nth-child(n),
+	.assoc-admin-table td:nth-child(n) {
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: 100% !important;
+	}
+
+	/* Also override the col-title percentage width that desktop sets */
+	.assoc-table-events th.assoc-col-title,
+	.assoc-table-events td.assoc-col-title,
+	.assoc-table-news th.assoc-col-title,
+	.assoc-table-news td.assoc-col-title,
+	.assoc-table-assocs th.assoc-col-title,
+	.assoc-table-assocs td.assoc-col-title {
+		width: 100% !important;
 	}
 
 	/* Hide header row — labels come from data-label="" on each <td> */
@@ -1900,18 +1936,25 @@ button.assoc-action-chip {
 		border-width: 2px !important;
 	}
 
-	/* Each cell = a labeled row */
+	/* Each cell = a labeled row using grid (90px label | 1fr value)
+	 * Grid is used instead of flex so that bare text nodes (dates, emails,
+	 * etc.) automatically fill the second column without needing flex:1.
+	 * With flex, anonymous text-node items ignore flex-grow entirely. */
 	.assoc-admin-table td {
-		display: flex !important;
+		display: grid !important;
+		grid-template-columns: 90px 1fr;
 		align-items: baseline;
-		gap: 10px;
+		gap: 4px 12px;
 		padding: 9px 14px !important;
 		border-bottom: 1px solid #f0f4f9 !important;
 		background: transparent !important;
 		white-space: normal !important;
 		text-align: left !important;
 		min-height: 0;
-		vertical-align: top;
+		word-break: break-word;
+		overflow-wrap: anywhere;
+		box-sizing: border-box;
+		width: 100% !important;
 	}
 
 	.assoc-admin-table td:last-child {
@@ -1923,12 +1966,11 @@ button.assoc-action-chip {
 		background: transparent !important;
 	}
 
-	/* Label: from data-label attribute */
+	/* Label: the ::before is placed in grid column 1 (90px)
+	 * The cell content (text, spans, etc.) naturally fills column 2 (1fr) */
 	.assoc-admin-table td::before {
 		content: attr(data-label);
-		flex-shrink: 0;
-		min-width: 80px;
-		max-width: 100px;
+		width: 90px;
 		font-size: 0.72rem;
 		font-weight: 700;
 		text-transform: uppercase;
@@ -1936,25 +1978,16 @@ button.assoc-action-chip {
 		color: #64748b;
 		padding-top: 2px;
 		line-height: 1.4;
+		word-break: normal;
+		/* label itself shouldn't break */
 	}
 
-	/* Value side: allow long strings (emails, URLs) to break gracefully */
-	.assoc-admin-table td>*,
-	.assoc-admin-table td>a {
-		word-break: break-word;
-		overflow-wrap: anywhere;
-		min-width: 0;
-		flex: 1;
-	}
+	/* Remove the broken flex-based workaround — no longer needed with grid */
 
-	/* Inline text that isn't wrapped in a tag — cover with a span trick via overflow-wrap on td itself */
-	.assoc-admin-table td {
-		word-break: break-word;
-		overflow-wrap: anywhere;
-	}
-
-	/* Row number: compact, no label needed */
+	/* Row number cell: compact header bar — no label column needed */
 	.assoc-admin-table td.assoc-col-index {
+		grid-template-columns: 1fr;
+		/* single column — no label */
 		background: #f1f5fb !important;
 		font-weight: 700;
 		color: #64748b;
@@ -1965,27 +1998,65 @@ button.assoc-action-chip {
 
 	.assoc-admin-table td.assoc-col-index::before {
 		display: none;
-		/* the # is self-evident */
+		/* row number is self-evident */
 	}
 
-	/* Actions cell: left-align chips on mobile */
+	/* Status pills: don't stretch full width — keep pill-sized */
+	.assoc-admin-table td .assoc-status-pill {
+		width: auto;
+		display: inline-flex;
+		max-width: 100%;
+	}
+
+	/* Actions cell: let the action group span the full grid row */
 	.assoc-admin-table td.assoc-col-actions {
 		align-items: center;
 	}
 
 	.assoc-admin-table td.assoc-col-actions::before {
 		content: "Azioni";
-		min-width: 80px;
+		width: 90px;
 	}
 
+	/* Action-group: wrap chips so they don't create horizontal overflow */
 	.assoc-action-group {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
 		justify-content: flex-start;
-		grid-template-columns: auto auto;
+		grid-template-columns: unset;
 	}
 
-	/* Users table: keep the avatar visible inline in the name card */
+	/* Users table: avatar + name in the same grid cell */
 	.assoc-table-users td.assoc-col-title,
 	.assoc-table-users th.assoc-col-title {
 		width: 100% !important;
+	}
+
+	/* Cells with long labels (CRONOLOGIA, REGISTRATO) — stack label above value */
+	.assoc-admin-table td.assoc-col-history,
+	.assoc-admin-table td.assoc-col-date {
+		grid-template-columns: 1fr;
+		/* single column: label on row 1, value on row 2 */
+	}
+
+	/* For stacked cells, put label on its own line above the value */
+	.assoc-admin-table td.assoc-col-history::before,
+	.assoc-admin-table td.assoc-col-date::before {
+		width: auto;
+		margin-bottom: 2px;
+	}
+
+	/* NOME cell: make avatar and name sit side by side within the value column */
+	.assoc-table-users td.assoc-col-title .assoc-user-list-thumb {
+		vertical-align: middle;
+		margin-right: 6px;
+		flex-shrink: 0;
+	}
+
+	.assoc-table-users td.assoc-col-title .assoc-user-list-name {
+		max-width: 100%;
+		word-break: break-word;
+		overflow-wrap: anywhere;
 	}
 }
