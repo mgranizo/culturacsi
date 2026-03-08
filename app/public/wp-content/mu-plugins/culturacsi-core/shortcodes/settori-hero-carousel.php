@@ -23,6 +23,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Load the shared Settori hero carousel behavior.
+ */
+function culturacsi_settori_hero_carousel_enqueue_assets(): void {
+	$relative_path = 'settori-hero-carousel.js';
+	$asset_path    = __DIR__ . '/../assets/' . $relative_path;
+
+	wp_enqueue_script(
+		'culturacsi-settori-hero-carousel',
+		content_url( 'mu-plugins/culturacsi-core/assets/' . $relative_path ),
+		array(),
+		file_exists( $asset_path ) ? (string) filemtime( $asset_path ) : null,
+		true
+	);
+}
+
+/**
  * Build the ordered list of slides from the activity tree + hero image map.
  * Includes all levels: macro categoria, settore, settore 2.
  *
@@ -97,6 +113,7 @@ function culturacsi_settori_hero_carousel_shortcode( array $atts ): string {
 	}
 
 	$uid = 'csc-hero-' . wp_unique_id();
+	culturacsi_settori_hero_carousel_enqueue_assets();
 
 	ob_start();
 	?>
@@ -164,81 +181,6 @@ function culturacsi_settori_hero_carousel_shortcode( array $atts ): string {
 		</div>
 	</div>
 
-	<script>
-	(function () {
-		var root = document.getElementById(<?php echo wp_json_encode( $uid ); ?>);
-		if (!root) return;
-
-		var track  = root.querySelector('.csc-hero-track');
-		var slides = root.querySelectorAll('.csc-hero-slide');
-		var dots   = root.querySelectorAll('.csc-hero-dot');
-		var prev   = root.querySelector('.csc-hero-prev');
-		var next   = root.querySelector('.csc-hero-next');
-		var total  = slides.length;
-		var current = 0;
-		var timer  = null;
-		var autoplay = <?php echo $autoplay ? 'true' : 'false'; ?>;
-		var interval = <?php echo (int) $interval; ?>;
-
-		function goTo(index) {
-			current = ((index % total) + total) % total;
-			track.style.transform = 'translateX(-' + (current * 100) + '%)';
-			dots.forEach(function (d, i) {
-				d.classList.toggle('is-active', i === current);
-				d.style.background = i === current ? '#fff' : 'transparent';
-			});
-		}
-
-		function startAutoplay() {
-			if (!autoplay) return;
-			timer = setInterval(function () { goTo(current + 1); }, interval);
-		}
-
-		function stopAutoplay() {
-			if (timer) { clearInterval(timer); timer = null; }
-		}
-
-		if (prev) prev.addEventListener('click', function () { stopAutoplay(); goTo(current - 1); startAutoplay(); });
-		if (next) next.addEventListener('click', function () { stopAutoplay(); goTo(current + 1); startAutoplay(); });
-
-		dots.forEach(function (d) {
-			d.addEventListener('click', function () {
-				stopAutoplay();
-				goTo(parseInt(d.dataset.index, 10));
-				startAutoplay();
-			});
-		});
-
-		// Pause on hover
-		root.addEventListener('mouseenter', stopAutoplay);
-		root.addEventListener('mouseleave', startAutoplay);
-
-		// Touch / swipe support
-		var touchStartX = 0;
-		root.addEventListener('touchstart', function (e) { touchStartX = e.touches[0].clientX; }, { passive: true });
-		root.addEventListener('touchend', function (e) {
-			var dx = e.changedTouches[0].clientX - touchStartX;
-			if (Math.abs(dx) > 40) { stopAutoplay(); goTo(current + (dx < 0 ? 1 : -1)); startAutoplay(); }
-		}, { passive: true });
-
-		// Sync with AB_SETTORI_HERO filter selection (hero.js integration):
-		// When the settori filter changes, jump to the matching slide.
-		document.addEventListener('abf:hero:key', function (e) {
-			var key = e && e.detail && typeof e.detail.key === 'string' ? e.detail.key : '';
-			if (!key) return;
-			for (var i = 0; i < slides.length; i++) {
-				if (slides[i].dataset.heroKey === key) {
-					stopAutoplay();
-					goTo(i);
-					startAutoplay();
-					break;
-				}
-			}
-		});
-
-		startAutoplay();
-	}());
-	</script>
 	<?php
 	return (string) ob_get_clean();
 }

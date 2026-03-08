@@ -1,20 +1,158 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
- * Safety: ensure portal modal never shows in wp-admin.
+ * Admin UI asset helpers.
+ *
+ * This file now acts as the loader/orchestrator for frontend portal admin UX.
+ * Large reserved-area and submit-modal CSS/JS live in `assets/` so future
+ * maintainers can update behavior without digging through mixed PHP templates.
  */
-function culturacsi_hide_portal_modal_in_admin(): void {
-	if ( ! is_admin() ) return;
-	// Use specific selectors to avoid hiding unrelated modals
-	echo '<style>#assoc-portal-modal, .assoc-portal-modal, body.admin .assoc-modal{display:none !important;}</style>';
+function culturacsi_admin_ui_asset_path( string $relative_path ): string {
+	return __DIR__ . '/assets/' . ltrim( $relative_path, '/' );
 }
-add_action( 'admin_head', 'culturacsi_hide_portal_modal_in_admin', 1 );
+
+function culturacsi_admin_ui_asset_url( string $relative_path ): string {
+	return content_url( 'mu-plugins/culturacsi-core/assets/' . ltrim( $relative_path, '/' ) );
+}
+
+/**
+ * Return a cache-busting version string for an admin UI asset.
+ */
+function culturacsi_admin_ui_asset_version( string $relative_path ): ?string {
+	$asset_path = culturacsi_admin_ui_asset_path( $relative_path );
+
+	if ( ! file_exists( $asset_path ) ) {
+		return null;
+	}
+
+	return (string) filemtime( $asset_path );
+}
+
+/**
+ * Normalize the current request path once so route checks stay consistent.
+ */
+function culturacsi_current_request_path(): string {
+	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+	return trim( (string) wp_parse_url( $request_uri, PHP_URL_PATH ), '/' );
+}
+
+function culturacsi_is_reserved_frontend_request(): bool {
+	if ( is_admin() ) {
+		return false;
+	}
+
+	$path = culturacsi_current_request_path();
+	return 'area-riservata' === $path || 0 === strpos( $path, 'area-riservata/' );
+}
+
+/**
+ * Load reserved-area presentation and progressive-enhancement assets.
+ *
+ * Scope matters here: the selectors are intentionally broad because the portal
+ * shortcodes share class names across many screens, so we only enqueue them on
+ * reserved-area routes.
+ */
+function culturacsi_enqueue_reserved_frontend_assets(): void {
+	if ( ! culturacsi_is_reserved_frontend_request() ) {
+		return;
+	}
+
+	wp_enqueue_style(
+		'culturacsi-admin-ui-reserved',
+		culturacsi_admin_ui_asset_url( 'admin-ui-reserved.css' ),
+		array(),
+		culturacsi_admin_ui_asset_version( 'admin-ui-reserved.css' )
+	);
+
+	wp_enqueue_script(
+		'culturacsi-admin-ui-reserved',
+		culturacsi_admin_ui_asset_url( 'admin-ui-reserved.js' ),
+		array(),
+		culturacsi_admin_ui_asset_version( 'admin-ui-reserved.js' ),
+		true
+	);
+
+	wp_localize_script(
+		'culturacsi-admin-ui-reserved',
+		'culturacsiAdminUiReserved',
+		array(
+			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+			'modalNonce' => wp_create_nonce( 'culturacsi_portal_ajax' ),
+		)
+	);
+}
+add_action( 'wp_enqueue_scripts', 'culturacsi_enqueue_reserved_frontend_assets', 40 );
+
+/**
+ * Load the submit-status modal assets for frontend portal forms.
+ *
+ * This stays separate from reserved-area assets because portal forms can exist
+ * outside the reserved dashboard, while the collapsible search/table UI cannot.
+ */
+function culturacsi_enqueue_submit_modal_assets(): void {
+	if ( is_admin() ) {
+		return;
+	}
+
+	wp_enqueue_style(
+		'culturacsi-admin-ui-submit-modal',
+		culturacsi_admin_ui_asset_url( 'admin-ui-submit-modal.css' ),
+		array(),
+		culturacsi_admin_ui_asset_version( 'admin-ui-submit-modal.css' )
+	);
+
+	wp_enqueue_script(
+		'culturacsi-admin-ui-submit-modal',
+		culturacsi_admin_ui_asset_url( 'admin-ui-submit-modal.js' ),
+		array(),
+		culturacsi_admin_ui_asset_version( 'admin-ui-submit-modal.js' ),
+		true
+	);
+}
+add_action( 'wp_enqueue_scripts', 'culturacsi_enqueue_submit_modal_assets', 41 );
+
+/**
+ * Load shared wp-admin CSS for the custom portal maintenance tools.
+ *
+ * This replaces scattered inline admin `<style>` output with one versioned asset
+ * that other modules can extend via `wp_add_inline_style()`.
+ */
+function culturacsi_enqueue_admin_backend_assets(): void {
+	if ( ! is_admin() ) {
+		return;
+	}
+
+	wp_enqueue_style(
+		'culturacsi-admin-ui-admin',
+		culturacsi_admin_ui_asset_url( 'admin-ui-admin.css' ),
+		array(),
+		culturacsi_admin_ui_asset_version( 'admin-ui-admin.css' )
+	);
+
+	wp_enqueue_script(
+		'culturacsi-admin-ui-admin',
+		culturacsi_admin_ui_asset_url( 'admin-ui-admin.js' ),
+		array(),
+		culturacsi_admin_ui_asset_version( 'admin-ui-admin.js' ),
+		true
+	);
+}
+add_action( 'admin_enqueue_scripts', 'culturacsi_enqueue_admin_backend_assets', 20 );
+
+/**
+ * Legacy inline reserved-area renderer kept temporarily for rollback safety.
+ *
+ * It is intentionally no longer hooked; the active implementation lives in
+ * `assets/admin-ui-reserved.css` and `assets/admin-ui-reserved.js`.
+ */
 function culturacsi_portal_reserved_inline_styles(): void {
 	if ( is_admin() ) {
 		return;
 	}
-	$path = trim( (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
+	$path = culturacsi_current_request_path();
 	if ( 'area-riservata' !== $path && 0 !== strpos( $path, 'area-riservata/' ) ) {
 		return;
 	}
@@ -387,7 +525,6 @@ function culturacsi_portal_reserved_inline_styles(): void {
 	</script>
 	<?php
 }
-add_action( 'wp_head', 'culturacsi_portal_reserved_inline_styles', 9999 );
 
 /**
  * Show site logo in the WordPress backend admin top bar.
@@ -534,21 +671,21 @@ add_action( 'init', 'culturacsi_news_backfill_external_enabled_once', 200 );
 function culturacsi_admin_user_avatar_field( $user ) {
     $avatar_id = (int) get_user_meta( $user->ID, 'assoc_user_avatar_id', true );
     ?>
-    <div class="culturacsi-admin-avatar-section" style="margin-top: 2rem; padding: 20px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px;">
+    <div class="culturacsi-admin-avatar-section">
         <h3>CulturaCSI: Foto Profilo</h3>
         <table class="form-table">
             <tr>
                 <th><label>Foto attuale</label></th>
                 <td>
                     <?php if ( $avatar_id > 0 ) : ?>
-                        <div style="margin-bottom: 10px;">
-                            <?php echo wp_get_attachment_image( $avatar_id, array( 96, 96 ), false, array( 'style' => 'border-radius: 999px; object-fit: cover; border: 1px solid #ccd0d4;' ) ); ?>
+                        <div class="culturacsi-admin-avatar-current">
+                            <?php echo wp_get_attachment_image( $avatar_id, array( 96, 96 ) ); ?>
                         </div>
                         <label><input type="checkbox" name="remove_assoc_user_avatar" value="1"> Rimuovi foto attuale</label>
                     <?php else : ?>
                         <p>Nessuna foto caricata.</p>
                     <?php endif; ?>
-                    <div style="margin-top: 15px;">
+                    <div class="culturacsi-admin-avatar-upload">
                         <input type="file" name="assoc_user_avatar_upload" accept="image/*">
                         <p class="description">Carica una nuova foto per questo utente. Verrà usata nell'Area Riservata.</p>
                     </div>
@@ -556,14 +693,6 @@ function culturacsi_admin_user_avatar_field( $user ) {
             </tr>
         </table>
     </div>
-    <script>
-        (function() {
-            var form = document.getElementById('your-profile') || document.getElementById('editsite-user-profile') || document.querySelector('form#profile-page');
-            if (form) {
-                form.setAttribute('enctype', 'multipart/form-data');
-            }
-        })();
-    </script>
     <?php
 }
 add_action( 'show_user_profile', 'culturacsi_admin_user_avatar_field' );
@@ -602,140 +731,24 @@ add_action( 'admin_menu', 'culturacsi_remove_unused_admin_menus', 999 );
 
 
 /**
- * Render a "Processing" modal for portal forms to provide premium UX.
+ * Render the lightweight submit-status modal shell.
+ *
+ * The modal content is intentionally empty here. JavaScript owns the status
+ * states so PHP only needs to provide a stable DOM target in the footer.
  */
-function culturacsi_portal_render_submit_modal(): void {
-	if ( is_admin() ) return;
+function culturacsi_portal_render_submit_modal_shell(): void {
+	if ( is_admin() ) {
+		return;
+	}
 	?>
-	<style>
-		#assoc-submit-modal { display: none; position: fixed; inset: 0; z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
-		#assoc-submit-modal.is-open { display: flex; }
-		#assoc-submit-modal .assoc-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(5px); }
-		#assoc-submit-modal .assoc-modal-container { position: relative; background: #fff; width: 100%; max-width: 400px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; overflow: hidden; }
-		.assoc-submit-modal .assoc-modal-content { padding: 40px 24px; position: relative; z-index: 2; }
-		.assoc-submit-status-icon { font-size: 3.5rem; margin-bottom: 20px; display: block; line-height: 1; }
-		.assoc-submit-status-text { font-size: 1.2rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 8px; }
-		.assoc-submit-status-subtext { font-size: 0.95rem; color: #64748b; line-height: 1.5; display: block; }
-		.assoc-modal-loader-big { width: 50px; height: 50px; border: 4px solid #f1f5f9; border-radius: 50%; border-top-color: #0b3d91; animation: assocSubmitSpin 0.8s linear infinite; margin: 0 auto 20px; }
-		@keyframes assocSubmitSpin { to { transform: rotate(360deg); } }
-	</style>
-	<div id="assoc-submit-modal" class="assoc-modal assoc-submit-modal">
+	<div id="assoc-submit-modal" class="assoc-modal assoc-submit-modal" aria-hidden="true">
 		<div class="assoc-modal-overlay"></div>
-		<div class="assoc-modal-container">
+		<div class="assoc-modal-container" role="dialog" aria-modal="true" aria-labelledby="assoc-submit-modal-title">
 			<div class="assoc-modal-content">
-				<!-- Content injected by JS -->
+				<span id="assoc-submit-modal-title" class="screen-reader-text"><?php echo esc_html__( 'Stato invio modulo', 'culturacsi' ); ?></span>
 			</div>
 		</div>
 	</div>
-	<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		/**
-		 * Safely render a status panel using DOM APIs (no innerHTML for dynamic strings) to prevent XSS.
-		 */
-		function showSubmitStatus(content, modal, icon, title, message, retryLabel) {
-			content.innerHTML = '';
-			const wrap = document.createElement('div');
-			wrap.className = 'assoc-submit-status';
-			if (icon) {
-				const iconEl = document.createElement('span');
-				iconEl.className = 'assoc-submit-status-icon';
-				iconEl.textContent = icon;
-				wrap.appendChild(iconEl);
-			}
-			const titleEl = document.createElement('span');
-			titleEl.className = 'assoc-submit-status-text';
-			titleEl.textContent = title;
-			wrap.appendChild(titleEl);
-			const msgEl = document.createElement('span');
-			msgEl.className = 'assoc-submit-status-subtext';
-			msgEl.textContent = message;
-			wrap.appendChild(msgEl);
-			if (retryLabel) {
-				const btnWrap = document.createElement('div');
-				btnWrap.style.marginTop = '20px';
-				const btn = document.createElement('button');
-				btn.type = 'button';
-				btn.className = 'button assoc-modal-reset';
-				btn.textContent = retryLabel;
-				btn.onclick = () => modal.classList.remove('is-open');
-				btnWrap.appendChild(btn);
-				wrap.appendChild(btnWrap);
-			}
-			content.appendChild(wrap);
-		}
-
-		document.addEventListener('submit', function(e) {
-			const form = e.target.closest('.assoc-portal-form');
-			if (!form || form.classList.contains('assoc-auth-form')) return;
-			if (e.submitter && e.submitter.classList.contains('bypass-modal')) return;
-
-			e.preventDefault();
-			const modal = document.getElementById('assoc-submit-modal');
-			if (!modal) return;
-			const content = modal.querySelector('.assoc-modal-content');
-			const action = form.getAttribute('action') || window.location.href;
-			const redirectUrl = form.dataset.redirectUrl || window.location.href;
-
-			content.innerHTML = `
-				<div class="assoc-submit-status">
-					<div class="assoc-modal-loader-big"></div>
-					<span class="assoc-submit-status-text">Elaborazione in corso...</span>
-					<span class="assoc-submit-status-subtext">Stiamo salvando i dati, attendi un istante.</span>
-				</div>
-			`;
-			modal.classList.add('is-open');
-
-			const formData = new FormData(form);
-			if (e.submitter && e.submitter.name) {
-				formData.append(e.submitter.name, e.submitter.value || '1');
-			}
-			formData.append('is_portal_ajax', '1');
-
-			// Send is_portal_ajax via POST body only (not query string), matching $_POST check on server.
-			fetch(action, {
-				method: 'POST',
-				body: formData,
-				headers: { 'X-Requested-With': 'XMLHttpRequest' }
-			})
-			.then(async r => {
-				const text = await r.text();
-			if (!r.ok) {
-				throw new Error('Errore del server (' + r.status + '). Riprova tra qualche istante.');
-			}
-				try {
-					return JSON.parse(text);
-			} catch (parseErr) {
-				console.error('Portal JSON parse error:', parseErr, text);
-				throw new Error('Risposta non valida dal server. Controlla i log e riprova.');
-			}
-			})
-		.then(res => {
-			if (res && res.success) {
-				const msg = (typeof res.data === 'string' && res.data) ? res.data : 'I dati sono stati salvati correttamente.';
-				showSubmitStatus(content, modal, '✅', 'Operazione completata!', msg, null);
-				setTimeout(() => {
-					let finalUrl = redirectUrl;
-					if (res.data && typeof res.data === 'object' && res.data.redirect) {
-							try {
-								var rUrl = new URL(res.data.redirect, window.location.origin);
-								if (rUrl.origin === window.location.origin) finalUrl = rUrl.href;
-							} catch(e) {}
-						}
-					window.location.href = finalUrl;
-				}, 1600);
-			} else {
-				const errMsg = (typeof res?.data === 'string' && res.data) ? res.data : 'Errore durante il salvataggio.';
-				showSubmitStatus(content, modal, '❌', 'Impossibile procedere', errMsg, 'Riprova');
-			}
-		})
-		.catch(err => {
-			console.error('Portal submit error:', err);
-			const errMsg = (err && err.message) ? err.message : 'Verifica la tua connessione e riprova.';
-			showSubmitStatus(content, modal, '⚠️', 'Errore di sistema', errMsg, 'Chiudi');
-		});
-		});
-	});
-	</script>
 	<?php
 }
-add_action( 'wp_footer', 'culturacsi_portal_render_submit_modal' );
+add_action( 'wp_footer', 'culturacsi_portal_render_submit_modal_shell' );

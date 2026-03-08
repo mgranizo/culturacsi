@@ -264,29 +264,6 @@ function culturacsi_portal_users_form_shortcode(): string {
 	}
 	$root_url = home_url( '/area-riservata/utenti/' );
 	?>
-	<style>
-		.password-toggle-wrapper { position: relative; display: flex; align-items: center; }
-		.password-toggle-wrapper input[type="password"],
-		.password-toggle-wrapper input[type="text"] { padding-right: 40px; flex: 1; }
-		.password-toggle-btn { position: absolute; right: 8px; background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 12px; color: #64748b; }
-		.password-toggle-btn:hover { color: #2563eb; }
-	</style>
-	<script>
-	(function() {
-		document.addEventListener('DOMContentLoaded', function() {
-			document.querySelectorAll('.password-toggle-wrapper').forEach(function(wrapper) {
-				var btn = wrapper.querySelector('.password-toggle-btn');
-				var input = wrapper.querySelector('input[type="password"], input[type="text"]');
-				if (!btn || !input) return;
-				btn.addEventListener('click', function() {
-					var isPass = input.type === 'password';
-					input.type = isPass ? 'text' : 'password';
-					btn.textContent = isPass ? 'Nascondi' : 'Mostra';
-				});
-			});
-		});
-	})();
-	</script>
 	<form class="assoc-portal-form" method="post" enctype="multipart/form-data" autocomplete="off" data-redirect-url="<?php echo esc_url( $root_url ); ?>">
 		<?php wp_nonce_field( 'culturacsi_users_form_save', 'culturacsi_users_form_nonce' ); ?>
 		<input type="hidden" name="form_user_id" value="<?php echo esc_attr( (string) $user_id ); ?>">

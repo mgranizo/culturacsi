@@ -1,0 +1,155 @@
+/* =========================================================
+   culturacsi-core / queries-filters — public news search UI
+
+   Maintenance guide:
+   - This file styles only the public-facing News search shortcode.
+   - Query logic lives in queries-filters/news-search.php.
+   - Autosubmit behavior lives in assets/queries-filters.js.
+   ========================================================= */
+
+.culturacsi-news-search-panel {
+	margin: 0 0 1.25rem;
+	padding: 14px 16px;
+	border: 1px solid #d9e2ec;
+	border-radius: 12px;
+	background: #f8fbff;
+}
+
+.culturacsi-news-search-title {
+	margin: 0 0 10px;
+}
+
+.culturacsi-news-search-form {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 10px;
+	align-items: end;
+}
+
+.culturacsi-news-field {
+	margin: 0;
+}
+
+.culturacsi-news-field label {
+	display: block;
+	font-weight: 600;
+	margin: 0 0 4px;
+}
+
+.culturacsi-news-field input,
+.culturacsi-news-field select {
+	width: 100%;
+}
+
+.culturacsi-news-actions {
+	margin: 0;
+	grid-column: 1 / -1;
+	display: flex;
+	gap: 8px;
+	justify-content: flex-start;
+}
+
+.culturacsi-news-results {
+	margin: 0 0 1.5rem;
+}
+
+.culturacsi-news-count {
+	margin: 0 0 10px;
+	font-weight: 700;
+}
+
+.culturacsi-news-results-grid {
+	display: grid;
+	gap: 12px;
+}
+
+.culturacsi-news-item {
+	padding: 12px;
+	border: 1px solid #d9e2ec;
+	border-radius: 10px;
+	background: #fff;
+}
+
+.culturacsi-news-item-title {
+	margin: 0 0 6px;
+	font-size: 1.1rem;
+	line-height: 1.3;
+}
+
+.culturacsi-news-item-meta {
+	margin: 0 0 8px;
+	font-size: .9rem;
+	color: #475569;
+}
+
+.culturacsi-news-item-excerpt {
+	margin: 0;
+}
+
+.culturacsi-news-empty {
+	margin: 0;
+}
+
+/* Public Notizie search layout aligned to the portal-style search panel. */
+.assoc-news-search .assoc-search-form {
+	display: grid;
+	grid-auto-flow: row;
+	gap: 10px 10px;
+	align-items: end;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.assoc-news-search .assoc-search-field {
+	margin: 0;
+	grid-row: 1;
+	min-width: 0;
+}
+
+.assoc-news-search .assoc-search-field input,
+.assoc-news-search .assoc-search-field select {
+	width: 100%;
+	min-height: 44px;
+	padding: 7px 10px;
+	border: 1px solid #c7d3e4;
+	border-radius: 8px;
+	background: #fff;
+}
+
+.assoc-news-search .assoc-search-field.is-q {
+	grid-column: 1;
+}
+
+.assoc-news-search .assoc-search-field.is-date {
+	grid-column: 2;
+}
+
+.assoc-news-search .assoc-search-field.is-author {
+	grid-column: 3;
+}
+
+.assoc-news-search .assoc-search-field.is-association {
+	grid-column: 4;
+}
+
+@media (max-width: 920px) {
+	.culturacsi-news-search-form {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 719px) {
+	.assoc-news-search .assoc-search-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.assoc-news-search .assoc-search-field {
+		grid-column: 1 / -1;
+		grid-row: auto;
+	}
+}
+
+@media (max-width: 640px) {
+	.culturacsi-news-search-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

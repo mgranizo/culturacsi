@@ -1,0 +1,38 @@
+#assoc-portal-modal,
+.assoc-portal-modal,
+body.admin .assoc-modal {
+	display: none !important;
+}
+
+select {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23355a86' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+	background-repeat: no-repeat !important;
+	background-position: right 11px center !important;
+	background-size: 12px 8px !important;
+	padding-right: 34px !important;
+}
+
+.culturacsi-admin-avatar-section {
+	margin-top: 2rem;
+	padding: 20px;
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	border-radius: 4px;
+}
+
+.culturacsi-admin-avatar-current {
+	margin-bottom: 10px;
+}
+
+.culturacsi-admin-avatar-current img {
+	border-radius: 999px;
+	object-fit: cover;
+	border: 1px solid #ccd0d4;
+}
+
+.culturacsi-admin-avatar-upload {
+	margin-top: 15px;
+}

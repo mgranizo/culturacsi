@@ -1,0 +1,1189 @@
+/* =========================================================
+   culturacsi-core / ui-tweaks — shared frontend visual system
+
+   Maintenance guide:
+   - Design tokens live in :root and should be the first place to edit.
+   - Shared system rules come next (forms, buttons, cards, pagination, modals).
+   - Feature-specific rules come after that (hero overlay, map toggle, mobile fixes).
+   - If a future admin needs to restyle pagination/modals globally, they should
+     change the token block and the shared component section before adding overrides.
+   ========================================================= */
+
+/* -------------------------------------------------------------------------
+   Global tokens
+   Single source of truth for shared UI colors, radii, shadows and pagination.
+   ------------------------------------------------------------------------- */
+:root {
+	--csi-ui-primary: #0a3b75;
+	--csi-ui-primary-strong: #072a56;
+	--csi-ui-primary-soft: #1e5bb0;
+	--csi-ui-accent: #ffc20e;
+	--csi-ui-surface: #ffffff;
+	--csi-ui-surface-soft: #f5f8fc;
+	--csi-ui-surface-tint: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+	--csi-ui-border: #d7e1ef;
+	--csi-ui-border-strong: #b7c8df;
+	--csi-ui-text: #333333;
+	--csi-ui-text-muted: #5f6f82;
+	--csi-ui-shadow-sm: 0 12px 28px -24px rgba(7, 42, 86, 0.45);
+	--csi-ui-shadow-md: 0 22px 50px -34px rgba(7, 42, 86, 0.52);
+	--csi-ui-shadow-lg: 0 32px 72px -40px rgba(2, 12, 27, 0.72);
+	--csi-ui-radius-sm: 10px;
+	--csi-ui-radius-md: 16px;
+	--csi-ui-radius-lg: 22px;
+	--csi-ui-focus: 0 0 0 3px rgba(30, 91, 176, 0.18);
+	--csi-ui-overlay: linear-gradient(180deg, rgba(7, 24, 48, 0.68) 0%, rgba(7, 24, 48, 0.82) 100%);
+	--csi-pagination-border: #b7c8df;
+	--csi-pagination-text: var(--csi-ui-primary);
+	--csi-pagination-bg: transparent;
+	--csi-pagination-hover-border: var(--csi-ui-primary);
+	--csi-pagination-hover-text: var(--csi-ui-primary);
+	--csi-pagination-hover-bg: rgba(10, 59, 117, 0.06);
+	--csi-pagination-active-border: var(--csi-ui-primary);
+	--csi-pagination-active-bg: var(--csi-ui-primary);
+	--csi-pagination-active-text: #ffffff;
+	--csi-pagination-radius: .25rem;
+	--csi-pagination-min-width: 2.5em;
+	--csi-pagination-line-height: 2.25em;
+	--csi-video-modal-alpha: 0.6;
+}
+
+/* -------------------------------------------------------------------------
+   Base content readability
+   Keep a consistent text color across theme/plugin-generated wrappers.
+   ------------------------------------------------------------------------- */
+body {
+	color: var(--csi-ui-text);
+}
+
+body .entry-content,
+body .site-main,
+body .widget,
+body .wp-site-blocks {
+	color: var(--csi-ui-text);
+}
+
+/* -------------------------------------------------------------------------
+   Form controls
+   Shared low-level inputs so plugin and theme forms inherit the same shape.
+   ------------------------------------------------------------------------- */
+body :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+	min-height: 44px;
+	border: 1px solid var(--csi-ui-border);
+	border-radius: var(--csi-ui-radius-sm);
+	background: #fff;
+	color: var(--csi-ui-text);
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+	transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+body :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus {
+	border-color: var(--csi-ui-primary-soft);
+	box-shadow: var(--csi-ui-focus);
+	outline: none;
+}
+
+/* -------------------------------------------------------------------------
+   Buttons
+   This is the default action style across theme and custom plugin surfaces.
+   ------------------------------------------------------------------------- */
+body :where(button, .button, .wp-block-button__link, input[type="submit"], input[type="button"], input[type="reset"]) {
+	border-radius: 999px;
+	border: 1px solid var(--csi-ui-primary);
+	background: linear-gradient(180deg, var(--csi-ui-primary-soft) 0%, var(--csi-ui-primary) 100%);
+	color: #fff;
+	font-weight: 700;
+	box-shadow: var(--csi-ui-shadow-sm);
+	transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease;
+}
+
+body :where(button, .button, .wp-block-button__link, input[type="submit"], input[type="button"], input[type="reset"]):hover,
+body :where(button, .button, .wp-block-button__link, input[type="submit"], input[type="button"], input[type="reset"]):focus {
+	border-color: var(--csi-ui-primary-strong);
+	background: linear-gradient(180deg, #2a68c0 0%, var(--csi-ui-primary-strong) 100%);
+	box-shadow: var(--csi-ui-shadow-md);
+	transform: translateY(-1px);
+	color: #fff;
+}
+
+/* -------------------------------------------------------------------------
+   Shared surfaces
+   Cards, result rows and boxed content wrappers use the same surface language.
+   ------------------------------------------------------------------------- */
+body :where(.calendar-event-row, .assoc-event-card, .culturacsi-news-item, .assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-calendar-filters, .wp-block-group.has-background, .entry-content-wrap, .kt-inside-inner-col > .wp-block-group.has-background) {
+	border-radius: var(--csi-ui-radius-md);
+}
+
+body :where(.assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-calendar-filters) {
+	background: linear-gradient(135deg, #0a3b75 0%, #1e5bb0 100%) !important;
+	border: 1px solid rgba(255, 255, 255, 0.18) !important;
+	box-shadow: var(--csi-ui-shadow-md);
+}
+
+body :where(.assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-calendar-filters) :where(h1, h2, h3, h4, p, label, span, .calendar-view-mode-label, .ab-muted) {
+	color: #fff !important;
+}
+
+body :where(.calendar-event-row, .assoc-event-card, .culturacsi-news-item, .entry-content-wrap) {
+	border: 1px solid var(--csi-ui-border);
+	background: var(--csi-ui-surface-tint);
+	box-shadow: var(--csi-ui-shadow-sm);
+}
+
+body :where(.calendar-event-row:hover, .assoc-event-card:hover, .culturacsi-news-item:hover, .entry-content-wrap:hover) {
+	border-color: var(--csi-ui-border-strong);
+	box-shadow: var(--csi-ui-shadow-md);
+}
+
+body :where(h1, h2, h3, .entry-title, .wp-block-heading) {
+	color: var(--csi-ui-primary);
+}
+
+/* -------------------------------------------------------------------------
+   Shared pagination system
+   Every known pagination variant is mapped here so future updates happen once.
+   ------------------------------------------------------------------------- */
+body .pagination,
+body .the-posts-pagination,
+body .csi-content-hub-pagination,
+body .assoc-news-pagination,
+body .assoc-pagination,
+body .calendar-results-pagination,
+body .assoc-admin-pagination {
+	margin: var(--global-lg-spacing, 2rem) auto !important;
+	overflow: hidden;
+	text-align: center;
+}
+
+body .pagination .nav-links,
+body .the-posts-pagination .nav-links,
+body .csi-content-hub-pagination ul,
+body .assoc-news-pagination ul,
+body .assoc-pagination-list,
+body .calendar-results-pagination-list,
+body .assoc-admin-pagination ul {
+	display: flex !important;
+	justify-content: center !important;
+	align-items: center !important;
+	flex-wrap: wrap !important;
+	gap: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none !important;
+}
+
+body .pagination .page-numbers,
+body .the-posts-pagination .page-numbers,
+body .csi-content-hub-pagination .page-numbers,
+body .assoc-news-pagination .page-numbers,
+body .assoc-pagination-item a,
+body .assoc-pagination-item span,
+body .calendar-results-pagination-item a,
+body .calendar-results-pagination-item span,
+body .assoc-admin-pagination .page-numbers,
+body .page-links .post-page-numbers {
+	display: inline-block !important;
+	margin-right: .5em !important;
+	padding: 0 .7em !important;
+	min-width: var(--csi-pagination-min-width) !important;
+	line-height: var(--csi-pagination-line-height) !important;
+	text-align: center !important;
+	text-decoration: none !important;
+	border: 1px solid var(--csi-pagination-border) !important;
+	border-radius: var(--csi-pagination-radius) !important;
+	background: var(--csi-pagination-bg) !important;
+	color: var(--csi-pagination-text) !important;
+	font-weight: 600 !important;
+	box-shadow: none !important;
+	transform: none !important;
+}
+
+body .pagination a.page-numbers:hover,
+body .pagination a.page-numbers:focus,
+body .pagination a.page-numbers:active,
+body .the-posts-pagination a.page-numbers:hover,
+body .the-posts-pagination a.page-numbers:focus,
+body .the-posts-pagination a.page-numbers:active,
+body .csi-content-hub-pagination a.page-numbers:hover,
+body .csi-content-hub-pagination a.page-numbers:focus,
+body .csi-content-hub-pagination a.page-numbers:active,
+body .assoc-news-pagination a.page-numbers:hover,
+body .assoc-news-pagination a.page-numbers:focus,
+body .assoc-news-pagination a.page-numbers:active,
+body .assoc-pagination-item a:hover,
+body .assoc-pagination-item a:focus,
+body .calendar-results-pagination-item a:hover,
+body .calendar-results-pagination-item a:focus,
+body .assoc-admin-pagination a.page-numbers:hover,
+body .assoc-admin-pagination a.page-numbers:focus,
+body .page-links a.post-page-numbers:hover,
+body .page-links a.post-page-numbers:focus {
+	border-color: var(--csi-pagination-hover-border) !important;
+	background: var(--csi-pagination-hover-bg) !important;
+	color: var(--csi-pagination-hover-text) !important;
+	box-shadow: none !important;
+	transform: none !important;
+}
+
+body .pagination .page-numbers.current,
+body .the-posts-pagination .page-numbers.current,
+body .csi-content-hub-pagination .page-numbers.current,
+body .assoc-news-pagination .page-numbers.current,
+body .assoc-pagination-item.is-current span,
+body .assoc-pagination-item .current,
+body .calendar-results-pagination-item.is-current span,
+body .calendar-results-pagination-item .current,
+body .assoc-admin-pagination .page-numbers.current,
+body .page-links .post-page-numbers.current {
+	border-color: var(--csi-pagination-active-border) !important;
+	background: var(--csi-pagination-active-bg) !important;
+	color: var(--csi-pagination-active-text) !important;
+}
+
+body .pagination .page-numbers:last-child,
+body .the-posts-pagination .page-numbers:last-child,
+body .csi-content-hub-pagination .page-numbers:last-child,
+body .assoc-news-pagination .page-numbers:last-child,
+body .assoc-pagination-item:last-child a,
+body .assoc-pagination-item:last-child span,
+body .calendar-results-pagination-item:last-child a,
+body .calendar-results-pagination-item:last-child span,
+body .assoc-admin-pagination .page-numbers:last-child,
+body .page-links .post-page-numbers:last-child {
+	margin-right: 0 !important;
+}
+
+body .pagination .dots,
+body .the-posts-pagination .dots,
+body .csi-content-hub-pagination .dots,
+body .assoc-news-pagination .dots,
+body .page-links .post-page-numbers.dots {
+	min-width: auto !important;
+	border: none !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+/* -------------------------------------------------------------------------
+   Shared modal system
+   These selectors intentionally target native/custom/Kadence modal variants so
+   they feel consistent without editing third-party source files.
+   ------------------------------------------------------------------------- */
+body.csi-modal-open,
+body.event-modal-open {
+	overflow: hidden;
+}
+
+body :where(.csi-video-modal, .event-modal, .culturacsi-login-modal, .kt-modal, .kb-modal, .kb-modal-drawer, .kadence-search-popup, dialog[open]) {
+	background: var(--csi-ui-overlay) !important;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+}
+
+body :where(.event-modal-content, .csi-video-modal-container, .culturacsi-login-panel, .kt-modal .kt-modal-content, .kb-modal .kb-modal-content, .kb-modal-drawer .kb-modal-content, .kadence-search-popup-inner, dialog[open]) {
+	position: relative;
+	border: 1px solid rgba(183, 200, 223, 0.95);
+	border-radius: var(--csi-ui-radius-lg);
+	background: var(--csi-ui-surface-tint);
+	box-shadow: var(--csi-ui-shadow-lg);
+	color: var(--csi-ui-text);
+	overflow: hidden;
+}
+
+body :where(.event-modal-content, .culturacsi-login-panel)::before,
+body :where(.csi-video-modal-container)::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 5px;
+	background: linear-gradient(90deg, var(--csi-ui-primary) 0%, var(--csi-ui-primary-soft) 72%, var(--csi-ui-accent) 100%);
+	z-index: 2;
+}
+
+body :where(.event-modal-close, .csi-video-modal-close, .culturacsi-login-close, .kt-modal-close, .kb-modal-close, .kadence-search-popup .search-toggle-close) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border: 1px solid var(--csi-ui-border);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.92);
+	color: var(--csi-ui-primary-strong);
+	box-shadow: var(--csi-ui-shadow-sm);
+}
+
+body :where(.event-modal-close, .csi-video-modal-close, .culturacsi-login-close, .kt-modal-close, .kb-modal-close, .kadence-search-popup .search-toggle-close):hover,
+body :where(.event-modal-close, .csi-video-modal-close, .culturacsi-login-close, .kt-modal-close, .kb-modal-close, .kadence-search-popup .search-toggle-close):focus {
+	background: #fff;
+	border-color: var(--csi-ui-primary-soft);
+	color: var(--csi-ui-primary);
+	box-shadow: var(--csi-ui-shadow-md);
+	transform: translateY(-1px);
+}
+
+body :where(.event-modal-title, #event-modal-title, #culturacsi-login-title, .culturacsi-login-panel h2, .kadence-search-popup h2) {
+	color: var(--csi-ui-primary);
+}
+
+body :where(.event-modal-button, .event-modal a.event-modal-button) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 0 18px;
+	border-radius: 999px;
+	border: 1px solid var(--csi-ui-primary);
+	background: linear-gradient(180deg, var(--csi-ui-primary-soft) 0%, var(--csi-ui-primary) 100%);
+	color: #fff;
+	font-weight: 700;
+	text-decoration: none;
+	box-shadow: var(--csi-ui-shadow-sm);
+}
+
+body :where(.event-modal-button, .event-modal a.event-modal-button):hover,
+body :where(.event-modal-button, .event-modal a.event-modal-button):focus {
+	color: #fff;
+	background: linear-gradient(180deg, #2a68c0 0%, var(--csi-ui-primary-strong) 100%);
+}
+
+/* -------------------------------------------------------------------------
+   Feature: full-height carousel side arrows
+   Opt-in via .fullheight-arrows on the wrapper.
+   ------------------------------------------------------------------------- */
+.fullheight-arrows {
+	position: relative;
+}
+
+.fullheight-arrows .splide,
+.fullheight-arrows .kt-post-grid-layout-carousel,
+.fullheight-arrows .kt-post-grid-layout-carousel-wrap {
+	position: relative !important;
+}
+
+.fullheight-arrows .slick-prev,
+.fullheight-arrows .slick-next,
+.fullheight-arrows .kb-slider-arrow-prev,
+.fullheight-arrows .kb-slider-arrow-next,
+.fullheight-arrows .kb-slider-arrow,
+.fullheight-arrows .splide__arrow,
+.fullheight-arrows .splide__arrow--prev,
+.fullheight-arrows .splide__arrow--next {
+	top: 0 !important;
+	bottom: 0 !important;
+	height: auto !important;
+	transform: none !important;
+	margin-top: 0 !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 30px !important;
+	border-radius: 0 !important;
+	background: rgba(0, 72, 150, 0.55) !important;
+	z-index: 50 !important;
+}
+
+.fullheight-arrows .splide__arrows {
+	position: absolute !important;
+	top: 0 !important;
+	right: 0 !important;
+	bottom: 0 !important;
+	left: 0 !important;
+	pointer-events: none !important;
+	z-index: 50 !important;
+}
+
+.fullheight-arrows .splide__arrow {
+	pointer-events: auto !important;
+}
+
+.fullheight-arrows .splide__arrow--prev {
+	left: 0 !important;
+}
+
+.fullheight-arrows .splide__arrow--next {
+	right: 0 !important;
+}
+
+.fullheight-arrows .kb-slider-arrow-wrap,
+.fullheight-arrows .kb-gallery-slider-nav,
+.fullheight-arrows .slick-arrow {
+	top: 0 !important;
+	bottom: 0 !important;
+}
+
+.fullheight-arrows .slick-prev:before,
+.fullheight-arrows .slick-next:before {
+	font-size: 36px !important;
+	line-height: 1 !important;
+}
+
+.fullheight-arrows .kb-slider-arrow-prev svg,
+.fullheight-arrows .kb-slider-arrow-next svg,
+.fullheight-arrows .kb-slider-arrow svg,
+.fullheight-arrows .splide__arrow svg {
+	width: 36px !important;
+	height: 36px !important;
+}
+
+/* -------------------------------------------------------------------------
+   Feature: hero text overlay on post grids
+   Opt-in via .hero-overlay on the wrapper.
+   ------------------------------------------------------------------------- */
+.hero-overlay .kadence-post-grid-item,
+.hero-overlay .kadence-post-grid-item-inner,
+.hero-overlay .kadence-post-grid-item-wrap,
+.hero-overlay .kb-post-grid-item,
+.hero-overlay .kb-post-grid-item-inner {
+	position: relative !important;
+	overflow: hidden !important;
+	background: transparent !important;
+}
+
+.hero-overlay img {
+	display: block !important;
+}
+
+.hero-overlay .kt-image-ratio-56-25,
+.hero-overlay .kadence-post-image-intrisic.kt-image-ratio-56-25,
+.hero-overlay .kadence-post-image-intrisic,
+.hero-overlay .kadence-post-image-inner-intrisic,
+.hero-overlay .kadence-post-image-inner-intrisic img,
+.hero-overlay .kadence-post-image img {
+	width: 100% !important;
+}
+
+.hero-overlay .kadence-post-image-inner-intrisic {
+	position: absolute !important;
+	inset: 0 !important;
+}
+
+.hero-overlay .kadence-post-image-inner-intrisic img,
+.hero-overlay .kadence-post-image img {
+	height: 100% !important;
+	object-fit: cover !important;
+	object-position: center center !important;
+}
+
+.hero-overlay .kadence-post-content,
+.hero-overlay .kadence-post-grid-content,
+.hero-overlay .kadence-post-text,
+.hero-overlay .kb-post-grid-text,
+.hero-overlay .kb-post-grid-content,
+.hero-overlay .kb-post-grid-inner .entry-content {
+	position: absolute !important;
+	left: 0 !important;
+	right: 0 !important;
+	bottom: 0 !important;
+	z-index: 30 !important;
+	padding: 18px 20px !important;
+	margin: 0 !important;
+	background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.65) 35%, rgba(0, 0, 0, 0.35) 65%, rgba(0, 0, 0, 0) 100%) !important;
+	color: #fff !important;
+}
+
+.hero-overlay .kadence-post-title,
+.hero-overlay .kadence-post-grid-title,
+.hero-overlay .kb-post-grid-title,
+.hero-overlay .kadence-post-excerpt,
+.hero-overlay .kadence-post-grid-excerpt,
+.hero-overlay .kb-post-grid-excerpt,
+.hero-overlay .kadence-post-meta,
+.hero-overlay .kb-post-grid-meta,
+.hero-overlay p,
+.hero-overlay span,
+.hero-overlay small {
+	color: #fff !important;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.hero-overlay a,
+.hero-overlay a:visited,
+.hero-overlay a:hover,
+.hero-overlay a:active {
+	color: #fff !important;
+	text-decoration: none !important;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+/* -------------------------------------------------------------------------
+   Feature: Contatti page map toggle
+   JS adds/removes .is-open and ARIA attributes; CSS handles visibility only.
+   ------------------------------------------------------------------------- */
+.csi-map-collapsible {
+	max-height: 0 !important;
+	opacity: 0;
+	overflow: hidden;
+	pointer-events: none;
+	transform: translateY(-10px);
+	transition: max-height .35s ease, opacity .25s ease, transform .25s ease;
+}
+
+.csi-map-collapsible.is-open {
+	max-height: 1200px !important;
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0);
+}
+
+.csi-map-toggle-target {
+	cursor: pointer;
+	user-select: none;
+}
+
+.csi-map-toggle-target:focus-visible {
+	outline: 2px solid #1e5bb0;
+	outline-offset: 3px;
+	border-radius: 4px;
+}
+
+.csi-map-toggle-arrow {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: .4rem;
+	color: #1e5bb0;
+	font-size: .95em;
+	line-height: 1;
+	transition: transform .2s ease;
+}
+
+.csi-map-toggle-target.is-open .csi-map-toggle-arrow {
+	transform: rotate(180deg);
+}
+
+/* -------------------------------------------------------------------------
+   Feature: 5xmille promo modal
+   Markup is rendered by PHP; JS injects media and toggles .is-visible.
+   ------------------------------------------------------------------------- */
+.csi-video-modal {
+	position: fixed;
+	inset: 0;
+	padding: 24px;
+	background: linear-gradient(180deg, rgba(7, 24, 48, var(--csi-video-modal-alpha)) 0%, rgba(7, 24, 48, 0.88) 100%);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 999999;
+	opacity: 0;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	transition: opacity 0.3s ease;
+}
+
+.csi-video-modal.is-visible {
+	display: flex;
+	opacity: 1;
+}
+
+.csi-video-modal-container {
+	position: relative;
+	width: min(100%, 1100px);
+	aspect-ratio: 16 / 9;
+	overflow: visible;
+	padding: 18px;
+	border: 1px solid rgba(183, 200, 223, 0.95);
+	border-radius: 22px;
+	background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+	box-shadow: 0 32px 72px -40px rgba(2, 12, 27, 0.72);
+}
+
+.csi-video-modal-player {
+	width: 100%;
+	height: 100%;
+	background: #000;
+	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+	border-radius: 14px;
+	overflow: hidden;
+}
+
+.csi-video-modal-container::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 5px;
+	border-radius: 22px 22px 0 0;
+	background: linear-gradient(90deg, #0a3b75 0%, #1e5bb0 72%, #ffc20e 100%);
+}
+
+.csi-video-modal-player iframe,
+.csi-video-modal-player video {
+	width: 100%;
+	height: 100%;
+	border: none;
+}
+
+.csi-video-modal-close {
+	position: absolute;
+	top: 14px;
+	right: 14px;
+	width: 40px;
+	height: 40px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #d7e1ef;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.94);
+	color: #072a56;
+	font-size: 26px;
+	cursor: pointer;
+	line-height: 1;
+	box-shadow: 0 12px 28px -24px rgba(7, 42, 86, 0.45);
+	transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+	z-index: 2;
+}
+
+.csi-video-modal-close:hover {
+	transform: translateY(-1px);
+	border-color: #1e5bb0;
+	box-shadow: 0 22px 50px -34px rgba(7, 42, 86, 0.52);
+}
+
+/* -------------------------------------------------------------------------
+   Responsive safety rails
+   Third-party block output sometimes ships with fixed widths, hard max-width
+   values, or cramped inline sizing. These rules keep the viewport stable.
+   ------------------------------------------------------------------------- */
+body :where(img, svg, video, canvas, .wp-block-image img) {
+	max-width: 100%;
+	height: auto;
+}
+
+body :where(iframe, embed, object, .wp-block-embed iframe, .wp-block-kadence-googlemaps iframe) {
+	max-width: 100%;
+}
+
+body :where(pre, table) {
+	max-width: 100%;
+}
+
+body :where(pre) {
+	overflow: auto;
+}
+
+body :where(.entry-content, .site-main, .calendar-event-row-main, .kt-blocks-post-grid-item-inner, .assoc-search-panel) {
+	overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------------------
+   Feature: mobile hardening for the active Kadence frontend
+   The live site runs Kadence, so mobile fixes need to target its header,
+   off-canvas drawer, rows, columns and post grids.
+   ------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+
+	#mobile-header .site-header-row-container-inner,
+	#mobile-header .site-header-row-wrap,
+	#mobile-header .site-header-row-tablet-layout-contained,
+	#mobile-header .site-header-row-mobile-layout-contained {
+		padding-left: max(14px, env(safe-area-inset-left));
+		padding-right: max(14px, env(safe-area-inset-right));
+	}
+
+	#mobile-header .wp-block-kadence-header-column,
+	#mobile-header .wp-block-kadence-header-section,
+	#mobile-drawer .wp-block-kadence-header-column,
+	#mobile-drawer .wp-block-kadence-header-section {
+		min-width: 0;
+	}
+
+	#mobile-drawer .kb-off-canvas-inner-wrap,
+	.wp-block-kadence-off-canvas .kb-off-canvas-inner-wrap {
+		max-width: min(420px, calc(100vw - 16px)) !important;
+	}
+
+	#mobile-drawer .drawer-inner,
+	#mobile-drawer .drawer-content,
+	#mobile-drawer .kb-off-canvas-inner-wrap {
+		padding-bottom: max(18px, env(safe-area-inset-bottom));
+	}
+
+	#mobile-drawer .kb-link-wrap,
+	#mobile-drawer .drawer-nav-drop-wrap,
+	#mobile-drawer .kb-nav-link-content {
+		min-height: 44px;
+		line-height: 1.3 !important;
+		white-space: normal !important;
+	}
+
+	#mobile-drawer .sub-menu,
+	#mobile-drawer .submenu {
+		padding-left: 12px !important;
+	}
+
+	body .site-main :where(.wp-block-kadence-rowlayout > .kt-row-column-wrap, .kb-row-layout-wrap > .kt-row-column-wrap) {
+		max-width: calc(100vw - 32px) !important;
+		margin-left: auto !important;
+		margin-right: auto !important;
+	}
+
+	body .site-main :where(.wp-block-kadence-rowlayout:not(.kb-row-layout-id35_62a9e2-32), .kb-row-layout-wrap:not(.kb-row-layout-id35_62a9e2-32)) {
+		padding-left: 16px !important;
+		padding-right: 16px !important;
+		box-sizing: border-box !important;
+	}
+
+	body .site-main :where(.wp-block-kadence-column[class*="kadence-column"], .kt-inside-inner-col > [class*="kadence-column"]) {
+		max-width: 100% !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+	}
+
+	body .site-main :where(.kt-blocks-info-box-link-wrap, .wp-block-kadence-infobox) {
+		max-width: 100% !important;
+	}
+
+	body .site-main :where(.kt-post-grid-wrap, .kt-blocks-post-grid-item-inner-wrap, .kt-post-slider-item) {
+		min-width: 0;
+	}
+
+	body .site-main .kt-post-grid-wrap {
+		gap: 20px !important;
+	}
+
+	body .site-main .kt-blocks-post-grid-item .entry-title {
+		font-size: clamp(1.05rem, 4.8vw, 1.35rem) !important;
+		line-height: 1.25 !important;
+	}
+
+	body .site-main .kt-blocks-post-grid-item .entry-content {
+		font-size: .95rem;
+		line-height: 1.55;
+	}
+
+	body .site-main :where(.hero-overlay .kadence-post-content, .hero-overlay .kadence-post-grid-content, .hero-overlay .kb-post-grid-content) {
+		padding: 14px 16px !important;
+	}
+}
+
+/* -------------------------------------------------------------------------
+   Feature: narrow-tablet and phone layout polish
+   This covers search panels, calendar controls, footer stacking and legacy
+   reusable block headers without touching the active global Kadence header.
+   ------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+
+	/* Make the home page hero carousel full bleed like the settori section */
+	body .site-main .kb-row-layout-id35_62a9e2-32 {
+		background-image: none !important;
+		padding: 0 !important;
+	}
+
+	body .site-main .kb-row-layout-id35_62a9e2-32>.kt-row-column-wrap {
+		max-width: 100% !important;
+		width: 100% !important;
+		padding: 0 !important;
+	}
+
+	body .site-main .kb-row-layout-id35_62a9e2-32>.kt-row-column-wrap>.wp-block-kadence-column:first-child,
+	body .site-main .kb-row-layout-id35_62a9e2-32>.kt-row-column-wrap>.wp-block-kadence-column:first-child>.kt-inside-inner-col {
+		max-width: 100% !important;
+		width: 100% !important;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+
+	body .site-main .kb-row-layout-id35_62a9e2-32 .wp-block-kadence-advancedgallery {
+		margin: 0 !important;
+		width: 100% !important;
+		min-height: 300px !important;
+		/* Fallback to prevent collapse */
+	}
+
+	body .site-main .kb-row-layout-id35_62a9e2-32 .kb-gallery-ul-has-ratio,
+	body .site-main .kb-row-layout-id35_62a9e2-32 .kb-gallery-ul,
+	body .site-main .kb-row-layout-id35_62a9e2-32 .kt-blocks-carousel,
+	body .site-main .kb-row-layout-id35_62a9e2-32 .splide__track {
+		min-height: 300px !important;
+		height: 100% !important;
+	}
+
+	/* Hide the empty second column that causes the gap */
+	body .site-main .kb-row-layout-id35_62a9e2-32>.kt-row-column-wrap>.wp-block-kadence-column:nth-child(n+2) {
+		display: none !important;
+	}
+
+	#masthead,
+	header.wp-block-kadence-header,
+	.wp-block-kadence-header-tablet {
+		display: none !important;
+	}
+
+	.content-area,
+	.entry-content-wrap,
+	.site-main {
+		margin-top: 0 !important;
+		padding-top: 0 !important;
+	}
+
+	body.wp-theme-kadence .my-sticky-header :where(.wp-block-kadence-navigation, .kb-header-navigation, .header-navigation) {
+		display: none !important;
+	}
+
+	body.wp-theme-kadence .my-sticky-header.csi-mobile-nav-open :where(.wp-block-kadence-navigation, .kb-header-navigation, .header-navigation) {
+		display: block !important;
+	}
+
+	body.wp-theme-kadence .my-sticky-header .csi-mobile-nav-panel ul {
+		display: flex !important;
+		flex-direction: column !important;
+		gap: 0 !important;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+
+	body.wp-theme-kadence .my-sticky-header .csi-mobile-nav-panel li {
+		width: 100% !important;
+		text-align: center !important;
+	}
+
+	body.wp-theme-kadence .my-sticky-header .csi-mobile-nav-panel a {
+		display: block !important;
+		padding: 12px 16px !important;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+	}
+
+	.assoc-search-head,
+	.calendar-view-mode,
+	.calendar-results-meta {
+		flex-direction: column !important;
+		align-items: stretch !important;
+	}
+
+	.calendar-view-mode-buttons {
+		display: grid !important;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		width: 100%;
+	}
+
+	.calendar-view-mode-button {
+		width: 100%;
+	}
+
+	.assoc-portal-calendar-filters,
+	.assoc-search-panel,
+	.culturacsi-news-search-panel {
+		padding: 16px !important;
+	}
+
+	.assoc-portal-calendar-browser>.calendar-primary-display,
+	.assoc-portal-calendar-browser>.calendar-search-results-list {
+		min-width: 0;
+	}
+
+	body :where(.entry-content table, .site-main table) {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.calendar-event-row-title {
+		font-size: 1rem;
+	}
+
+	.calendar-event-row-meta {
+		gap: 6px 10px;
+		font-size: .85rem;
+	}
+
+	.calendar-results-pagination,
+	.calendar-results-pagination-list {
+		gap: 8px !important;
+	}
+
+	.my-sticky-header {
+		position: relative !important;
+		top: auto !important;
+		margin-top: 0 !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+		padding: 8px 12px !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+
+	.my-sticky-header.alignwide,
+	.my-sticky-header .alignwide,
+	.my-sticky-header .wp-block-group__inner-container,
+	.my-sticky-header .wp-block-column,
+	.my-sticky-header .wp-block-image,
+	.my-sticky-header .wp-block-site-logo,
+	.my-sticky-header .wp-block-site-title,
+	.my-sticky-header .wp-block-kadence-advancedbtn,
+	.my-sticky-header .wp-block-kadence-column {
+		width: 100% !important;
+		max-width: 100% !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container {
+		padding: 0 !important;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container>.wp-block-columns {
+		display: grid !important;
+		grid-template-columns: 1fr !important;
+		gap: 12px !important;
+		padding-top: 10px !important;
+		padding-bottom: 12px !important;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container>.wp-block-columns>.wp-block-column {
+		margin: 0 !important;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container>.wp-block-columns>.wp-block-column:nth-child(2) {
+		order: 1;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container>.wp-block-columns>.wp-block-column:nth-child(1) {
+		order: 2;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container>.wp-block-columns>.wp-block-column:nth-child(3) {
+		order: 3;
+		display: flex !important;
+		flex-direction: row !important;
+		align-items: center !important;
+		justify-content: center !important;
+		gap: 12px !important;
+	}
+
+	.my-sticky-header>.wp-block-group__inner-container>.wp-block-columns>.wp-block-column:nth-child(3)>* {
+		margin: 0 !important;
+		width: auto !important;
+		flex: 0 0 auto !important;
+	}
+
+	.my-sticky-header .csi-mobile-nav-panel {
+		order: 4;
+		display: none !important;
+	}
+
+	.my-sticky-header.csi-mobile-nav-open .csi-mobile-nav-panel {
+		display: block !important;
+		margin-top: 6px !important;
+	}
+
+	.csi-mobile-hamburger {
+		display: inline-flex !important;
+		align-items: center;
+		justify-content: center;
+		position: absolute !important;
+		top: 12px;
+		left: 12px;
+		z-index: 100;
+		gap: 6px;
+		min-height: 40px;
+		width: 40px !important;
+		max-width: 100%;
+		padding: 0;
+		border: 1px solid #0a3b75;
+		border-radius: 8px;
+		background: #fff;
+		color: #0a3b75;
+		font-weight: 700;
+		font-size: .85rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.my-sticky-header .wp-block-image,
+	.my-sticky-header .wp-block-site-logo,
+	.my-sticky-header .wp-block-site-title,
+	.my-sticky-header .wp-block-kadence-advancedbtn,
+	.my-sticky-header .kb-buttons-wrap {
+		text-align: center !important;
+		justify-content: center !important;
+		margin: 0 auto !important;
+	}
+
+	.my-sticky-header .wp-block-image img,
+	.my-sticky-header .wp-block-site-logo img {
+		display: block;
+		width: auto !important;
+		max-width: min(180px, 58vw) !important;
+		max-height: 44px !important;
+		margin: 0 auto !important;
+	}
+
+	.my-sticky-header .wp-block-site-title {
+		margin-top: 4px !important;
+		font-size: .68rem !important;
+		line-height: 1.25 !important;
+	}
+
+	.my-sticky-header .kb-button,
+	.my-sticky-header .wp-block-button__link,
+	.my-sticky-header .button {
+		min-height: 36px !important;
+		padding: 0 12px !important;
+		font-size: .72rem !important;
+	}
+
+	#colophon .site-bottom-footer-inner-wrap,
+	#colophon .site-middle-footer-inner-wrap,
+	#colophon .site-top-footer-inner-wrap {
+		display: flex !important;
+		flex-direction: column !important;
+		gap: 10px !important;
+	}
+
+	#colophon [class*="site-footer-bottom-section-"],
+	#colophon [class*="site-footer-middle-section-"],
+	#colophon [class*="site-footer-top-section-"] {
+		width: 100% !important;
+	}
+
+	#colophon .footer-widget-area .widget_text p {
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	#colophon .footer-widget-area-inner {
+		padding-left: 16px !important;
+		padding-right: 16px !important;
+	}
+
+	#colophon .footer-social-inner-wrap {
+		display: grid !important;
+		grid-template-columns: 1fr !important;
+		gap: 8px !important;
+	}
+
+	#colophon .footer-social-item {
+		justify-content: flex-start !important;
+		padding: 8px 10px !important;
+		border: 1px solid rgba(255, 255, 255, .22);
+		border-radius: 10px;
+	}
+
+	#colophon .footer-social-wrap {
+		padding-left: 1rem !important;
+		padding-right: 1rem !important;
+	}
+}
+
+@media (max-width: 782px) {
+
+	/* Compact modal treatment on narrow screens. */
+	body :where(.event-modal-content, .culturacsi-login-panel, .csi-video-modal-container, .kt-modal .kt-modal-content, .kb-modal .kb-modal-content, .kb-modal-drawer .kb-modal-content) {
+		border-radius: 18px;
+	}
+
+	body .assoc-portal-calendar.calendar-primary-display,
+	body .assoc-portal-calendar .calendar-grid {
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+
+	body .assoc-portal-calendar.calendar-primary-display {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	body .assoc-portal-calendar .calendar-grid {
+		table-layout: auto !important;
+		font-size: .74rem;
+		min-width: 500px !important;
+	}
+
+	body .assoc-portal-calendar .calendar-grid th,
+	body .assoc-portal-calendar .calendar-grid td {
+		width: auto !important;
+		min-width: 70px !important;
+		padding: 4px 6px !important;
+	}
+
+	body .assoc-portal-calendar .calendar-grid td {
+		height: 82px !important;
+	}
+
+	body .assoc-portal-calendar .day-number {
+		font-size: .85rem;
+		margin-bottom: 3px;
+	}
+
+	body .assoc-portal-calendar .events-in-day {
+		font-size: .66rem;
+	}
+
+	body .assoc-portal-calendar .events-in-day li {
+		margin-bottom: 3px;
+		padding: 2px;
+	}
+
+	body .site-main .kt-post-grid-wrap,
+	body .site-main .kt-post-grid-wrap[data-carousel-dots],
+	body .site-main .kt-post-grid-wrap[data-carousel-arrows] {
+		grid-template-columns: minmax(0, 1fr) !important;
+	}
+
+	body .site-main :where(.wp-block-kadence-rowlayout > .kt-row-column-wrap, .kb-row-layout-wrap > .kt-row-column-wrap) {
+		max-width: calc(100vw - 24px) !important;
+	}
+
+	body .site-main :where(.kt-inside-inner-col, .entry-content-wrap, .wp-block-group.has-background) {
+		padding-left: min(14px, 4vw);
+		padding-right: min(14px, 4vw);
+	}
+
+	.calendar-view-mode-buttons {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.calendar-filter-grid,
+	.assoc-search-form,
+	.abf-toolbar-row {
+		grid-template-columns: minmax(0, 1fr) !important;
+	}
+
+	.assoc-search-field,
+	.abf-field {
+		grid-column: 1 / -1 !important;
+		grid-row: auto !important;
+	}
+
+	.csi-video-modal {
+		padding: 12px;
+	}
+
+	.csi-video-modal-container {
+		padding: 14px;
+		border-radius: 18px;
+	}
+
+	.csi-video-modal-container::before {
+		border-radius: 18px 18px 0 0;
+	}
+
+	.csi-video-modal-close {
+		top: 10px;
+		right: 10px;
+	}
+}
+
+@media (max-width: 640px) {
+
+	/* Standardize vertical spacing on mobile */
+	body .site-main>.wp-block-kadence-rowlayout,
+	body .site-main>.kb-row-layout-wrap {
+		padding-top: 3rem !important;
+		padding-bottom: 3rem !important;
+	}
+
+	#mobile-drawer .kb-off-canvas-inner-wrap,
+	.wp-block-kadence-off-canvas .kb-off-canvas-inner-wrap {
+		max-width: calc(100vw - 8px) !important;
+	}
+
+	body .site-main :where(.hero-overlay .kadence-post-content, .hero-overlay .kadence-post-grid-content, .hero-overlay .kb-post-grid-content) {
+		padding: 12px !important;
+	}
+
+	body .site-main .kt-blocks-post-grid-item .entry-title {
+		font-size: 1rem !important;
+	}
+}

@@ -1,5 +1,75 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+if ( ! function_exists( 'culturacsi_activity_tree_asset_path' ) ) {
+	function culturacsi_activity_tree_asset_path( string $relative_path ): string {
+		return __DIR__ . '/assets/' . ltrim( $relative_path, '/' );
+	}
+}
+
+if ( ! function_exists( 'culturacsi_activity_tree_asset_url' ) ) {
+	function culturacsi_activity_tree_asset_url( string $relative_path ): string {
+		return content_url( 'mu-plugins/culturacsi-core/assets/' . ltrim( $relative_path, '/' ) );
+	}
+}
+
+if ( ! function_exists( 'culturacsi_activity_tree_asset_version' ) ) {
+	function culturacsi_activity_tree_asset_version( string $relative_path ): ?string {
+		$asset_path = culturacsi_activity_tree_asset_path( $relative_path );
+
+		if ( ! file_exists( $asset_path ) ) {
+			return null;
+		}
+
+		return (string) filemtime( $asset_path );
+	}
+}
+
+if ( ! function_exists( 'culturacsi_activity_tree_enqueue_assets' ) ) {
+	/**
+	 * Load the shared activity-tree checklist assets where the checklist can appear.
+	 *
+	 * The script is event-delegated and self-guarding, so it is safe to load on
+	 * the reserved frontend and on admin edit screens for the supported post types.
+	 */
+	function culturacsi_activity_tree_enqueue_assets(): void {
+		$should_enqueue = false;
+
+		if ( is_admin() ) {
+			$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+			$should_enqueue = $screen instanceof WP_Screen
+				&& in_array( (string) $screen->post_type, array( 'association', 'event' ), true );
+		} else {
+			$path = function_exists( 'culturacsi_routing_current_path' )
+				? culturacsi_routing_current_path()
+				: trim( (string) wp_parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
+			$should_enqueue = ( 'area-riservata' === $path || 0 === strpos( $path, 'area-riservata/' ) );
+		}
+
+		if ( ! $should_enqueue ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'culturacsi-activity-tree',
+			culturacsi_activity_tree_asset_url( 'activity-tree.css' ),
+			array(),
+			culturacsi_activity_tree_asset_version( 'activity-tree.css' )
+		);
+
+		wp_enqueue_script(
+			'culturacsi-activity-tree',
+			culturacsi_activity_tree_asset_url( 'activity-tree.js' ),
+			array(),
+			culturacsi_activity_tree_asset_version( 'activity-tree.js' ),
+			true
+		);
+	}
+	add_action( 'wp_enqueue_scripts', 'culturacsi_activity_tree_enqueue_assets', 45 );
+	add_action( 'admin_enqueue_scripts', 'culturacsi_activity_tree_enqueue_assets', 45 );
+}
 
 if ( ! function_exists( 'culturacsi_activity_tree_option_name' ) ) {
 	function culturacsi_activity_tree_option_name(): string {
@@ -904,8 +974,11 @@ if ( ! function_exists( 'culturacsi_activity_tree_render_checklist' ) ) {
 			return (string) ob_get_clean();
 		}
 
-		$out = '<style>.csi-activity-tree-label{display:flex;align-items:center;gap:8px;padding:2px 6px;border-radius:6px}.csi-activity-tree-label>span{display:inline-block;padding:2px 4px;border-radius:4px}.csi-activity-tree-label input:checked+span,.csi-activity-tree-label.is-checked>span{background:#dbeafe;color:#0b3d91;font-weight:700;box-shadow:inset 0 0 0 1px #93c5fd}.csi-activity-tree-label.level-macro input:checked+span,.csi-activity-tree-label.level-macro.is-checked>span{background:#bfdbfe}.csi-activity-tree-label.level-settore input:checked+span,.csi-activity-tree-label.level-settore.is-checked>span{background:#dbeafe}.csi-activity-tree-label.level-settore2 input:checked+span,.csi-activity-tree-label.level-settore2.is-checked>span{background:#eef6ff}</style>';
-		$out .= '<ul class="csi-activity-tree csi-activity-tree-macro">';
+		if ( ! is_admin() ) {
+			culturacsi_activity_tree_enqueue_assets();
+		}
+
+		$out = '<ul class="csi-activity-tree csi-activity-tree-macro">';
 		foreach ( $nodes as $macro => $settori_map ) {
 			$macro_path = trim( (string) $macro );
 			if ( '' === $macro_path ) {
@@ -950,7 +1023,6 @@ if ( ! function_exists( 'culturacsi_activity_tree_render_checklist' ) ) {
 			$out .= '</li>';
 		}
 		$out .= '</ul>';
-		$out .= '<script>(function(){if(window.__csiActivityTreeCascadeBound){return;}window.__csiActivityTreeCascadeBound=true;var directCheckbox=function(li){if(!li||!li.children){return null;}for(var i=0;i<li.children.length;i++){var child=li.children[i];if(!child||child.tagName!=="LABEL"){continue;}var cb=child.querySelector("input[type=checkbox]");if(cb){return cb;}}return null;};var parentItem=function(li){var p=li?li.parentElement:null;while(p){if(p.classList&&p.classList.contains("csi-activity-tree-item")){return p;}p=p.parentElement;}return null;};var directSettore2Checkboxes=function(li){var boxes=[];if(!li||!li.children){return boxes;}for(var i=0;i<li.children.length;i++){var child=li.children[i];if(!child||child.tagName!=="UL"||!child.classList||!child.classList.contains("level-settore2")){continue;}for(var j=0;j<child.children.length;j++){var node=child.children[j];if(!node||!node.classList||!node.classList.contains("csi-activity-tree-item")){continue;}var cb=directCheckbox(node);if(cb){boxes.push(cb);}}}return boxes;};document.addEventListener("change",function(evt){var target=evt.target;if(!target||target.tagName!=="INPUT"||target.type!=="checkbox"){return;}if(!target.closest(".csi-activity-tree")){return;}var li=target.closest("li.csi-activity-tree-item");if(!li){return;}if(target.checked){var anc=parentItem(li);while(anc){var ancCb=directCheckbox(anc);if(ancCb&&!ancCb.checked){ancCb.checked=true;}anc=parentItem(anc);}if(li.classList&&li.classList.contains("level-settore")){var s2=directSettore2Checkboxes(li);if(s2.length===1&&!s2[0].checked){s2[0].checked=true;}}return;}if(li.classList&&(li.classList.contains("level-macro")||li.classList.contains("level-settore"))){var descendants=li.querySelectorAll("li.csi-activity-tree-item input[type=checkbox]");for(var k=0;k<descendants.length;k++){descendants[k].checked=false;}}});})();</script>';
 
 		return $out;
 	}

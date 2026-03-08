@@ -1,0 +1,70 @@
+.post-type-csi_content_entry #title {
+	font-size: 1.15rem;
+	min-height: 44px;
+}
+
+.post-type-csi_content_entry #major-publishing-actions .button,
+.post-type-csi_content_entry .wrap .button {
+	min-height: 38px;
+	padding: 0.35rem 0.8rem;
+}
+
+.post-type-csi_content_entry #major-publishing-actions #publish {
+	font-size: 1rem;
+	font-weight: 700;
+	min-height: 44px;
+	min-width: 150px;
+}
+
+.post-type-csi_content_entry #poststuff .inside p,
+.post-type-csi_content_entry #poststuff .inside li,
+.post-type-csi_content_entry #poststuff .inside label {
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.post-type-csi_content_entry .csi-hub-guide {
+	background: #f8fbff;
+	border: 1px solid #d6e6f8;
+	border-radius: 8px;
+	padding: 10px 12px;
+}
+
+.post-type-csi_content_entry .csi-hub-guide-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.post-type-csi_content_entry .csi-hub-guide-item {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	margin: 0 0 8px;
+}
+
+.post-type-csi_content_entry .csi-hub-guide-item:last-child {
+	margin-bottom: 0;
+}
+
+.post-type-csi_content_entry .csi-hub-guide-status {
+	align-items: center;
+	background: #dbe5ee;
+	border-radius: 999px;
+	display: inline-flex;
+	font-weight: 700;
+	height: 24px;
+	justify-content: center;
+	min-width: 24px;
+}
+
+.post-type-csi_content_entry .csi-hub-guide-item.is-complete .csi-hub-guide-status {
+	background: #15803d;
+	color: #fff;
+}
+
+.post-type-csi_content_entry .csi-content-hub-download-fields input[type="text"],
+.post-type-csi_content_entry .csi-content-hub-download-fields input[type="url"] {
+	max-width: 100%;
+	min-height: 40px;
+}

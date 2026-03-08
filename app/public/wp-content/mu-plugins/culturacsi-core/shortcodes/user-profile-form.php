@@ -104,29 +104,6 @@ function culturacsi_portal_user_profile_shortcode(): string {
 	ob_start();
 	echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	?>
-	<style>
-		.password-toggle-wrapper { position: relative; display: flex; align-items: center; }
-		.password-toggle-wrapper input[type="password"],
-		.password-toggle-wrapper input[type="text"] { padding-right: 40px; flex: 1; }
-		.password-toggle-btn { position: absolute; right: 8px; background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 12px; color: #64748b; }
-		.password-toggle-btn:hover { color: #2563eb; }
-	</style>
-	<script>
-	(function() {
-		document.addEventListener('DOMContentLoaded', function() {
-			document.querySelectorAll('.password-toggle-wrapper').forEach(function(wrapper) {
-				var btn = wrapper.querySelector('.password-toggle-btn');
-				var input = wrapper.querySelector('input[type="password"], input[type="text"]');
-				if (!btn || !input) return;
-				btn.addEventListener('click', function() {
-					var isPass = input.type === 'password';
-					input.type = isPass ? 'text' : 'password';
-					btn.textContent = isPass ? 'Nascondi' : 'Mostra';
-				});
-			});
-		});
-	})();
-	</script>
 	<form class="assoc-portal-form" method="post" enctype="multipart/form-data" data-redirect-url="<?php echo esc_url( $root_url ); ?>">
 		<?php wp_nonce_field( 'culturacsi_user_profile_save', 'culturacsi_user_profile_nonce' ); ?>
 		<h2>Profilo Utente</h2>

@@ -452,79 +452,6 @@ if ( ! function_exists( 'culturacsi_portal_content_entries_list_shortcode' ) ) {
 		}
 		?>
 		<div class="assoc-search-panel assoc-content-search">
-			<style>
-			.assoc-content-search .assoc-search-form {
-				align-items: end;
-				display: grid;
-				gap: 10px 10px;
-				grid-template-columns: repeat(4, minmax(0, 1fr));
-			}
-			.assoc-content-search .assoc-search-field {
-				margin: 0;
-				min-width: 0;
-			}
-			.assoc-content-search .assoc-search-field.is-q {
-				grid-column: span 2;
-			}
-			.assoc-content-search .assoc-search-field.is-date {
-				grid-column: 1;
-				grid-row: 2;
-			}
-			.assoc-table-content {
-				table-layout: fixed;
-				width: 100%;
-			}
-			.assoc-table-content th.assoc-col-index,
-			.assoc-table-content td.assoc-col-index {
-				max-width: 4ch;
-				text-align: center;
-				white-space: nowrap;
-				width: 4ch !important;
-			}
-			.assoc-table-content th.assoc-col-title,
-			.assoc-table-content td.assoc-col-title,
-			.assoc-table-content th.assoc-col-section,
-			.assoc-table-content td.assoc-col-section {
-				white-space: normal;
-			}
-			.assoc-content-header-main {
-				align-items: baseline;
-				display: flex;
-				flex-wrap: wrap;
-				gap: 8px 14px;
-			}
-			.assoc-content-header-desc {
-				color: #475569;
-				font-size: 0.95rem;
-				margin: 0;
-			}
-			.assoc-content-help-block {
-				margin-bottom: 12px;
-			}
-			.assoc-content-help-block .csi-process-guide {
-				margin-bottom: 0;
-			}
-			@media (max-width: 1024px) {
-				.assoc-content-search .assoc-search-form {
-					grid-template-columns: repeat(2, minmax(0, 1fr));
-				}
-				.assoc-content-search .assoc-search-field.is-q {
-					grid-column: 1 / -1;
-				}
-				.assoc-content-search .assoc-search-field.is-date {
-					grid-column: auto;
-					grid-row: auto;
-				}
-			}
-			@media (max-width: 719px) {
-				.assoc-content-search .assoc-search-form {
-					grid-template-columns: minmax(0, 1fr);
-				}
-				.assoc-content-search .assoc-search-field {
-					grid-column: 1 / -1;
-				}
-			}
-			</style>
 			<div class="assoc-search-head">
 				<div class="assoc-search-meta">
 					<h3 class="assoc-search-title">Ricerca Contenuti</h3>
@@ -588,21 +515,6 @@ if ( ! function_exists( 'culturacsi_portal_content_entries_list_shortcode' ) ) {
 					</p>
 				<?php endif; ?>
 			</form>
-			<script>
-			(function(){
-				var form = document.getElementById('assoc-content-search-form');
-				if (!form) { return; }
-				var typeField = form.querySelector('#c_type');
-				if (!typeField) { return; }
-				var toggle = function() {
-					var current = typeField.value || 'all';
-					var eventRow = form.querySelector('[data-type-field="event"]');
-					if (eventRow) { eventRow.style.display = (current === 'event') ? '' : 'none'; }
-				};
-				typeField.addEventListener('change', toggle);
-				toggle();
-			})();
-			</script>
 		</div>
 		<div class="assoc-portal-section assoc-portal-content-list">
 			<div class="assoc-content-help-block">
@@ -773,6 +685,10 @@ if ( ! function_exists( 'culturacsi_portal_content_entry_form_shortcode' ) ) {
 					$section   = isset( $_POST['csi_content_section'] ) ? absint( wp_unslash( $_POST['csi_content_section'] ) ) : 0;
 					$url       = isset( $_POST['csi_content_hub_external_url'] ) ? esc_url_raw( wp_unslash( $_POST['csi_content_hub_external_url'] ) ) : '';
 					$btn_label = isset( $_POST['csi_content_hub_button_label'] ) ? sanitize_text_field( wp_unslash( $_POST['csi_content_hub_button_label'] ) ) : '';
+					$allowed_button_labels = array( 'Acquista', 'Visita', 'Scarica' );
+					if ( ! in_array( $btn_label, $allowed_button_labels, true ) ) {
+						$btn_label = '';
+					}
 					$remove    = isset( $_POST['remove_download_file'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['remove_download_file'] ) );
 
 					if ( $section > 0 && taxonomy_exists( 'csi_content_section' ) ) {
@@ -961,7 +877,10 @@ if ( ! function_exists( 'culturacsi_portal_content_entry_form_shortcode' ) ) {
 		$current_file_url  = $current_file_id > 0 ? (string) wp_get_attachment_url( $current_file_id ) : '';
 		$current_file_name = $current_file_id > 0 ? (string) wp_basename( (string) get_attached_file( $current_file_id ) ) : '';
 		$current_url       = $content_id > 0 ? (string) get_post_meta( $content_id, '_csi_content_hub_external_url', true ) : '';
-		$current_btn       = $content_id > 0 ? (string) get_post_meta( $content_id, '_csi_content_hub_button_label', true ) : '';
+		$current_btn       = $content_id > 0 ? trim( (string) get_post_meta( $content_id, '_csi_content_hub_button_label', true ) ) : '';
+		if ( ! in_array( $current_btn, array( 'Acquista', 'Visita', 'Scarica' ), true ) ) {
+			$current_btn = '';
+		}
 
 		ob_start();
 		echo $message; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -1044,7 +963,15 @@ if ( ! function_exists( 'culturacsi_portal_content_entry_form_shortcode' ) ) {
 				<?php echo culturacsi_portal_label_with_tip( 'csi_content_hub_external_url', 'URL esterno (facoltativo)', 'Usa questo campo se il documento e su una piattaforma esterna.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				<input type="url" id="csi_content_hub_external_url" name="csi_content_hub_external_url" value="<?php echo esc_attr( $current_url ); ?>" placeholder="https://">
 			</p>
-			<p><label for="csi_content_hub_button_label">Testo pulsante (facoltativo)</label><input type="text" id="csi_content_hub_button_label" name="csi_content_hub_button_label" value="<?php echo esc_attr( $current_btn ); ?>" placeholder="Es: Scarica documento"></p>
+			<p>
+				<label for="csi_content_hub_button_label">Testo pulsante (facoltativo)</label>
+				<select id="csi_content_hub_button_label" name="csi_content_hub_button_label">
+					<option value="">Seleziona etichetta...</option>
+					<option value="Acquista" <?php selected( $current_btn, 'Acquista' ); ?>>Acquista</option>
+					<option value="Visita" <?php selected( $current_btn, 'Visita' ); ?>>Visita</option>
+					<option value="Scarica" <?php selected( $current_btn, 'Scarica' ); ?>>Scarica</option>
+				</select>
+			</p>
 			<p>
 				<?php
 				$is_library = ( 'library' === $selected_section_slug );
@@ -1114,99 +1041,6 @@ if ( ! function_exists( 'culturacsi_portal_content_sections_manager_shortcode' )
 		}
 		?>
 		<div class="assoc-portal-section assoc-portal-sections-manager">
-			<style>
-			.assoc-portal-sections-manager .assoc-sections-header {
-				margin-bottom: 14px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-desc {
-				color: #475569;
-				margin: 4px 0 0;
-			}
-			.assoc-portal-sections-manager .assoc-sections-shell {
-				background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-				border: 1px solid #334155;
-				border-radius: 12px;
-				color: #e2e8f0;
-				padding: 16px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-title {
-				color: #f8fafc;
-				font-size: 1.05rem;
-				font-weight: 700;
-				margin: 0 0 6px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-note {
-				color: #cbd5e1;
-				margin: 0 0 14px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-grid {
-				align-items: start;
-				display: grid;
-				gap: 12px;
-				grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-			}
-			.assoc-portal-sections-manager .assoc-sections-card {
-				background: rgba(15, 23, 42, 0.58);
-				border: 1px solid #475569;
-				border-radius: 10px;
-				display: flex;
-				flex-direction: column;
-				gap: 10px;
-				padding: 12px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-card p {
-				margin: 0;
-			}
-			.assoc-portal-sections-manager .assoc-sections-card label {
-				color: #e2e8f0;
-				display: block;
-				font-weight: 600;
-				margin-bottom: 4px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-card input,
-			.assoc-portal-sections-manager .assoc-sections-card select {
-				background: #f8fafc;
-				border-color: #cbd5e1;
-				min-height: 40px;
-				width: 100%;
-			}
-			.assoc-portal-sections-manager .assoc-sections-card .button {
-				min-height: 40px;
-				padding-left: 14px;
-				padding-right: 14px;
-				width: 100%;
-			}
-			.assoc-portal-sections-manager .assoc-sections-list {
-				margin-top: 14px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-chips {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 8px;
-				list-style: none;
-				margin: 8px 0 0;
-				padding: 0;
-			}
-			.assoc-portal-sections-manager .assoc-sections-chip {
-				align-items: center;
-				background: #1e293b;
-				border: 1px solid #475569;
-				border-radius: 999px;
-				color: #f1f5f9;
-				display: inline-flex;
-				font-size: 0.88rem;
-				gap: 6px;
-				padding: 6px 10px;
-			}
-			.assoc-portal-sections-manager .assoc-sections-chip.is-protected {
-				background: #7c2d12;
-				border-color: #c2410c;
-			}
-			.assoc-portal-sections-manager .assoc-sections-count {
-				color: #cbd5e1;
-				font-weight: 600;
-			}
-			</style>
 			<div class="assoc-sections-header">
 				<h2 class="assoc-page-title">Sezioni</h2>
 				<p class="assoc-sections-desc">Area separata per la gestione avanzata delle sezioni contenuti.</p>

@@ -1,0 +1,365 @@
+.culturacsi-login-modal {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 2147483002 !important;
+	padding: 14px;
+	overflow-y: auto;
+}
+
+.culturacsi-login-modal.is-open {
+	display: block;
+}
+
+.culturacsi-login-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(10, 23, 46, 0.58);
+	backdrop-filter: blur(5px);
+}
+
+.culturacsi-login-panel {
+	position: relative;
+	width: min(500px, 100%);
+	margin: clamp(8px, 5vh, 42px) auto;
+	background: linear-gradient(180deg, #fff 0%, #f6faff 100%);
+	border: 1px solid #d8e3f0;
+	border-radius: 18px;
+	box-shadow: 0 24px 65px -28px rgba(2, 8, 23, 0.68);
+	overflow: hidden;
+}
+
+.culturacsi-login-panel::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto;
+	height: 4px;
+	background: linear-gradient(90deg, #0b3d91 0%, #2f6fc4 100%);
+}
+
+.culturacsi-login-close {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 1px solid #d4deeb;
+	background: #fff;
+	border-radius: 999px;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	color: #334155;
+	transition: all 0.15s ease;
+}
+
+.culturacsi-login-close:hover,
+.culturacsi-login-close:focus {
+	background: #f1f6fd;
+	border-color: #b7cae4;
+	color: #0f172a;
+}
+
+.culturacsi-login-panel h2 {
+	margin: 0;
+	padding: 16px 18px 10px;
+	font-size: 1.5rem;
+	line-height: 1.2;
+	letter-spacing: 0.01em;
+	color: #0f172a;
+}
+
+.culturacsi-login-body {
+	padding: 0 18px 16px;
+}
+
+.culturacsi-login-body .assoc-auth-wrap {
+	margin: 0;
+	max-width: 100%;
+}
+
+.culturacsi-login-body .assoc-auth-tabs {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 0;
+	margin: 0 0 10px;
+	border-bottom: 1px solid #cfd9e7;
+}
+
+.culturacsi-login-body .assoc-auth-tab {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 35px;
+	padding: 0 14px;
+	border: 1px solid transparent;
+	border-bottom: 0;
+	border-radius: 10px 10px 0 0;
+	background: transparent;
+	color: #334155;
+	font-size: 0.91rem;
+	font-weight: 600;
+	line-height: 1;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	margin: 0 4px -1px 0;
+}
+
+.culturacsi-login-body .assoc-auth-tab:hover,
+.culturacsi-login-body .assoc-auth-tab:focus {
+	background: #edf3fb;
+	color: #0b3d91;
+}
+
+.culturacsi-login-body .assoc-auth-tab.is-active {
+	background: #fff;
+	border-color: #cfd9e7;
+	color: #0b3d91;
+	box-shadow: none;
+}
+
+.culturacsi-login-body .assoc-auth-pane {
+	display: none;
+}
+
+.culturacsi-login-body .assoc-auth-pane.is-active {
+	display: block;
+}
+
+.culturacsi-login-body .assoc-auth-form {
+	padding: 10px 0 0;
+	border: 0;
+	background: transparent;
+}
+
+.culturacsi-login-body .assoc-auth-form h3 {
+	margin: 0 0 6px;
+	font-size: 1.17rem;
+	color: #0f172a;
+}
+
+.culturacsi-login-body .assoc-auth-form .description {
+	margin: 0 0 8px;
+	font-size: 0.89rem;
+	line-height: 1.35;
+	color: #475569;
+}
+
+.culturacsi-login-body .assoc-auth-form p {
+	margin: 0 0 8px;
+}
+
+.culturacsi-login-body .assoc-auth-form label {
+	display: block;
+	margin-bottom: 4px;
+	font-size: 0.89rem;
+	font-weight: 600;
+	color: #1f2937;
+}
+
+.culturacsi-login-body .assoc-portal-form input[type=text],
+.culturacsi-login-body .assoc-portal-form input[type=email],
+.culturacsi-login-body .assoc-portal-form input[type=password] {
+	max-width: none;
+	min-height: 38px;
+	padding: 8px 10px;
+	border-radius: 9px;
+	border: 1px solid #c9d6e6;
+}
+
+.culturacsi-login-body .assoc-portal-form input[type=text]:focus,
+.culturacsi-login-body .assoc-portal-form input[type=email]:focus,
+.culturacsi-login-body .assoc-portal-form input[type=password]:focus {
+	border-color: #2f6fc4;
+	box-shadow: 0 0 0 3px rgba(47, 111, 196, 0.14);
+	outline: none;
+}
+
+.culturacsi-login-body .assoc-auth-form .button {
+	min-height: 38px;
+	padding: 8px 12px;
+	border-radius: 9px;
+}
+
+.culturacsi-login-body .assoc-auth-pane .button.button-primary {
+	width: 100%;
+	margin-top: 2px;
+}
+
+.culturacsi-login-body .assoc-admin-notice {
+	margin: 0 0 10px;
+	border-radius: 10px;
+	padding: 11px 12px;
+	text-align: center;
+	font-weight: 700;
+	font-size: 0.96rem;
+	border: 2px solid #d1deef;
+	background: #f7faff;
+	color: #0f172a;
+}
+
+.culturacsi-login-body .assoc-admin-notice-success {
+	border-color: #8bcaa5;
+	background: #e8f8ee;
+	color: #14532d;
+}
+
+.culturacsi-login-body .assoc-admin-notice-warning {
+	border-color: #f5be62;
+	background: #fff7e8;
+	color: #7c4303;
+}
+
+.culturacsi-login-body .assoc-admin-notice-error {
+	border-color: #dc2626;
+	background: #fee2e2;
+	color: #991b1b;
+	box-shadow: 0 10px 18px -16px rgba(153, 27, 27, 0.8);
+}
+
+.culturacsi-login-body .assoc-admin-notice a {
+	color: inherit;
+	font-weight: 800;
+	text-decoration: underline;
+}
+
+body.culturacsi-login-open {
+	overflow: hidden;
+}
+
+.culturacsi-language-selector {
+	position: relative;
+	display: inline-block;
+}
+
+.culturacsi-language-selector.inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.culturacsi-lang-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 15px;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	line-height: 1.2;
+	color: #0b3d91;
+	box-sizing: border-box;
+}
+
+.culturacsi-lang-btn:hover {
+	background: #f5f5f5;
+	color: #0b3d91;
+}
+
+.culturacsi-lang-options {
+	display: none;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	margin: 4px 0 0;
+	padding: 0;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: 9999;
+	min-width: 150px;
+}
+
+.culturacsi-language-selector.open .culturacsi-lang-options {
+	display: block;
+}
+
+.culturacsi-lang-options li a {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 14px;
+	text-decoration: none;
+	color: #333;
+	font-size: 14px;
+}
+
+.culturacsi-lang-options li a:hover {
+	background: #f5f5f5;
+}
+
+.culturacsi-lang-options li.active a {
+	background: #e8f4ff;
+	color: #0b3d91;
+	font-weight: 600;
+}
+
+.culturacsi-lang-label {
+	font-size: 14px;
+	color: #666;
+}
+
+.culturacsi-lang-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	text-decoration: none;
+	color: #333;
+	font-size: 13px;
+	border-radius: 4px;
+}
+
+.culturacsi-lang-item:hover {
+	background: #f0f0f0;
+}
+
+.culturacsi-lang-item.active {
+	background: #0b3d91;
+	color: #fff;
+	font-weight: 600;
+}
+
+@media (max-width: 680px) {
+	.culturacsi-login-modal {
+		padding: 8px;
+	}
+
+	.culturacsi-login-panel {
+		width: 100%;
+		margin: 6px auto;
+		border-radius: 14px;
+	}
+
+	.culturacsi-login-panel h2 {
+		padding: 14px 14px 8px;
+		font-size: 1.32rem;
+	}
+
+	.culturacsi-login-body {
+		padding: 0 14px 12px;
+	}
+
+	.culturacsi-login-body .assoc-auth-tabs {
+		margin-bottom: 8px;
+	}
+
+	.culturacsi-login-body .assoc-auth-tab {
+		min-height: 31px;
+		padding: 0 10px;
+		font-size: 0.85rem;
+		margin-right: 2px;
+	}
+
+	.culturacsi-login-body .assoc-auth-form p {
+		margin-bottom: 7px;
+	}
+}

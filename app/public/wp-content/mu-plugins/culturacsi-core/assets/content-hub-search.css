@@ -1,0 +1,47 @@
+.culturacsi-content-search .assoc-search-form {
+	display: grid;
+	grid-auto-flow: row;
+	gap: 10px 10px;
+	align-items: end;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.culturacsi-content-search.is-variant-library .assoc-search-form {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.culturacsi-content-search.is-variant-convenzioni .assoc-search-form {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.culturacsi-content-search .assoc-search-field {
+	margin: 0;
+	min-width: 0;
+}
+
+.culturacsi-content-search.is-variant-library .assoc-search-field.is-q {
+	grid-column: span 2;
+}
+
+.culturacsi-content-search .assoc-search-field input,
+.culturacsi-content-search .assoc-search-field select {
+	width: 100%;
+	min-height: 44px;
+	padding: 7px 10px;
+	border: 1px solid #c7d3e4;
+	border-radius: 8px;
+	background: #fff;
+}
+
+@media (max-width: 719px) {
+	.culturacsi-content-search .assoc-search-form,
+	.culturacsi-content-search.is-variant-library .assoc-search-form,
+	.culturacsi-content-search.is-variant-convenzioni .assoc-search-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.culturacsi-content-search .assoc-search-field,
+	.culturacsi-content-search.is-variant-library .assoc-search-field.is-q {
+		grid-column: 1 / -1;
+	}
+}

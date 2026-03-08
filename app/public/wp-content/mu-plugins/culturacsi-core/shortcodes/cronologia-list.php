@@ -170,21 +170,6 @@ function culturacsi_portal_cronologia_list_shortcode(): string {
 	$export_url = function_exists( 'culturacsi_export_build_url' ) ? culturacsi_export_build_url( 'cronologia', (string) ( $_SERVER['REQUEST_URI'] ?? '' ) ) : (string) add_query_arg( 'culturacsi_export', 'cronologia', $_SERVER['REQUEST_URI'] ?? '' );
 	echo '<div class="assoc-page-toolbar"><h2 class="assoc-page-title">Cronologia (Audit Log)</h2>';
 	echo '<div style="display:flex;gap:10px;"><a class="button" style="background-color: #22c55e; color: white; border-color: #16a34a;" href="' . esc_url( $export_url ) . '">Esporta CSV</a></div></div>';
-
-	echo '<style>
-		/* Align with shared admin list aesthetics */
-		.assoc-table-cronologia td,.assoc-table-cronologia th{padding:6px 10px!important;line-height:1.35}
-		.assoc-table-cronologia td:first-child{width:3.5ch;min-width:3.5ch;max-width:3.5ch;white-space:nowrap;text-align:right;color:#94a3b8;font-size:11px}
-		.cron-data-row{cursor:pointer;user-select:none}
-		.cron-data-row:hover td{background:rgba(59,130,246,.06)!important}
-		.cron-detail-row{display:none}
-		.cron-detail-row.is-open{display:table-row}
-		.cron-detail-row td{background:#f8fafc!important;padding:10px 12px!important;border-top:none!important}
-		.cron-detail-inner{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 20px;font-size:.9rem}
-		.cron-detail-inner dt{color:#64748b;font-weight:600;margin-bottom:1px}
-		.cron-detail-inner dd{color:#1e293b;margin:0 0 4px;word-break:break-word}
-		.cron-detail-inner a{color:#0b3d91;text-decoration:underline}
-	</style>';
 	echo '<table class="widefat striped assoc-admin-table assoc-table-cronologia"><colgroup><col style="width:3.5ch"><col style="width:11rem"><col style="width:30%"><col style="width:12rem"><col style="width:10rem"><col style="width:7rem"></colgroup><thead><tr>';
 	echo culturacsi_portal_sortable_th( 'ID', 'id', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-index', array( 'c_page' ) );
 	echo culturacsi_portal_sortable_th( 'Data e Ora', 'created_at', $sort_state['sort'], $sort_state['dir'], 'c_sort', 'c_dir', $base_url, 'assoc-col-date', array( 'c_page' ) );
@@ -285,25 +270,6 @@ function culturacsi_portal_cronologia_list_shortcode(): string {
 		echo '<tr><td colspan="6">Nessuna cronologia trovata.</td></tr>';
 	}
 	echo '</tbody></table>';
-
-	// Toggle JS — pure vanilla, no deps
-	echo '<script>
-	(function(){
-		var table = document.querySelector(".assoc-table-cronologia");
-		if(!table) return;
-		table.addEventListener("click", function(e){
-			var row = e.target.closest(".cron-data-row");
-			if(!row) return;
-			var targetId = row.getAttribute("data-target");
-			var detail = document.getElementById(targetId);
-			if(!detail) return;
-			var isOpen = detail.classList.contains("is-open");
-			detail.classList.toggle("is-open", !isOpen);
-			row.classList.toggle("is-open", !isOpen);
-			row.setAttribute("aria-expanded", String(!isOpen));
-		});
-	})();
-	</script>';
 
 	if ( $max_pages > 1 ) {
 		echo '<div class="assoc-pagination" style="margin-top:20px; text-align:right;">';

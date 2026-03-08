@@ -1,10 +1,27 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Normalize the current frontend request path for redirect rules.
+ */
+function culturacsi_routing_current_path(): string {
+	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+	return trim( (string) wp_parse_url( $request_uri, PHP_URL_PATH ), '/' );
+}
+
+/**
+ * Preserve the raw query string on alias redirects.
+ */
+function culturacsi_routing_current_query_string(): string {
+	return isset( $_SERVER['QUERY_STRING'] ) ? trim( (string) wp_unslash( $_SERVER['QUERY_STRING'] ) ) : '';
+}
+
 add_action(
 	'template_redirect',
 	static function() {
-		$uri_path = wp_parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
-		$path     = trim( (string) $uri_path, '/' );
+		$path = culturacsi_routing_current_path();
 
 		// Single entry point for all dashboard access.
 		if ( 'area-riservata' === $path ) {
@@ -133,7 +150,7 @@ add_action(
 			if ( $target_path === $path ) {
 				return;
 			}
-			$query  = isset( $_SERVER['QUERY_STRING'] ) ? trim( (string) $_SERVER['QUERY_STRING'] ) : '';
+			$query = culturacsi_routing_current_query_string();
 			if ( $query !== '' ) {
 				$target .= ( strpos( $target, '?' ) === false ? '?' : '&' ) . $query;
 			}
@@ -142,6 +159,23 @@ add_action(
 		}
 	},
 	1
+);
+
+add_filter(
+	'template_include',
+	static function( $template ) {
+		if ( ! is_post_type_archive( 'news' ) ) {
+			return $template;
+		}
+
+		$custom_template = WP_CONTENT_DIR . '/themes/culturacsi/archive-news.php';
+		if ( file_exists( $custom_template ) ) {
+			return $custom_template;
+		}
+
+		return $template;
+	},
+	20
 );
 
 /**
