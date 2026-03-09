@@ -3,7 +3,7 @@
  * Plugin Name: Kadence Blocks - PRO Extension
  * Plugin URI:  https://www.kadencewp.com/product/kadence-gutenberg-blocks/
  * Description: Extends Kadence Blocks with powerful extras that make it possible to create beautiful content in the WordPress Block Editor
- * Version:     2.8.10
+ * Version:     2.8.11
  * Author:      Kadence WP
  * Author URI:  https://www.kadencewp.com/
  * Requires PHP: 7.4
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'KBP_VERSION' ) ) {
-	define( 'KBP_VERSION', '2.8.10' );
+	define( 'KBP_VERSION', '2.8.11' );
 }
 
 if ( ! defined( 'KBP_PLUGIN_FILE' ) ) {

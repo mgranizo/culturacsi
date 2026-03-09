@@ -3,7 +3,7 @@ Contributors: britner, oakesjosh, woodardmc
 Tags: gutenberg, blocks, page builder, google fonts, dual buttons, svg icons, editor width,
 Requires at least: 6.6
 Tested up to: 6.9.1
-Stable tag: 2.8.10
+Stable tag: 2.8.11
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -39,6 +39,16 @@ assist you with verification, CVE assignment, and notify the
 developers of this plugin.
 
 == Changelog ==
+
+= 2.8.11 =
+Release Date: 25th February 2026
+* Fix: Modal block not closing the content area
+* Fix: WP Admin Form Entry Display Bug 
+* Fix: Issue with custom padding values to the Navigation(Adv) block
+* Fix: Refresh AOS on kb-query-loaded event
+* Fix: Text(adv) ignores empty spaces entered in Suffix/Prefix field
+* Fix: Query Loop(Adv) Filter blocks' parent terms are not showing the posts under their child categories 
+* Fix: Post Grid/Carousel Read More Align Bottom does not work on Masonry and Carousel Layout
 
 = 2.8.10 =
 Release Date: 11th February 2026

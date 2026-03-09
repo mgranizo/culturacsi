@@ -1323,13 +1323,26 @@ class Kadence_Blocks_Pro_Dynamic_Content {
 					foreach ( $options as $key => $value ) {
 						// first option will still have data- on the front, strip that off.
 						$value = str_replace( 'data-', '', $value );
-						// options will still have a trailing space, strip that.
-						$value = trim( $value );
+						// Trim only the key (left of =); do not trim the value so leading/trailing spaces in before/after are preserved.
+						$value = ltrim( $value );
 						if ( empty( $value ) ) {
 							continue;
 						}
-						$data_split             = explode( '=', $value, 2 );
-						$args[ $data_split[0] ] = str_replace( '"', '', $data_split[1] );
+						$data_split = explode( '=', $value, 2 );
+						$attr_key   = trim( $data_split[0] );
+						$attr_val   = '';
+						if ( isset( $data_split[1] ) ) {
+							// Extract value as string between first and second quote so we don't include " class=" or trailing quote.
+							$val_str = $data_split[1];
+							$start   = strpos( $val_str, '"' );
+							if ( false !== $start ) {
+								$end = strpos( $val_str, '"', $start + 1 );
+								$attr_val = ( false !== $end ) ? substr( $val_str, $start + 1, $end - $start - 1 ) : trim( $val_str, '"' );
+							} else {
+								$attr_val = trim( $val_str, '"' );
+							}
+						}
+						$args[ $attr_key ] = $attr_val;
 					}
 
 					if ( isset( $args['field'] ) && $args['field'] ) {

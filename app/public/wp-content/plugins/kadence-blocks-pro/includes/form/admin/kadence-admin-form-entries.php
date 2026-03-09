@@ -181,105 +181,104 @@ class KB_Form_Admin_Entries {
 						</div>
 						<div id="postbox-container-1" class="postbox-container kadence-blocks-entry-details">
 							<div id="kadence-blocks-entry-details" class="postbox">
-									<h2 class="hndle">
-										<span><?php esc_html_e( 'Entry Details', 'kadence-blocks-pro' ); ?></span>
-									</h2>
-									<div class="inside">
-										<div class="kadence-blocks-entry-details-meta">
-											<p class="kadence-blocks-entry-id">
-												<span class="dashicons dashicons-admin-network"></span>
-												<?php esc_html_e( 'Entry ID:', 'kadence-blocks-pro' ); ?>
-												<strong><?php echo absint( $entry->get_id() ); ?></strong>
-											</p>
-											<p class="kadence-blocks-entry-form-id" data-form-id="<?php echo esc_attr( $entry->get_form_id() ); ?>">
-												<span class="dashicons dashicons-id"></span>
-												<?php esc_html_e( 'Form ID:', 'kadence-blocks-pro' ); ?>
-												<?php if ( $has_link ) { ?>
-													<strong><a href="<?php echo esc_attr( get_edit_post_link( $entry->get_form_id() ) ); ?>"><?php echo esc_html( $entry->get_form_id() ); ?></a></strong>
-												<?php } else { ?>
-													<strong><?php echo esc_html( $entry->get_form_id() ); ?></strong>
-												<?php } ?>
-											</p>
-											<p class="kadence-blocks-entry-form-name" data-form-id="<?php echo esc_attr( $entry->get_form_id() ); ?>">
-												<span class="dashicons dashicons-nametag"></span>
-												<?php esc_html_e( 'Form Name:', 'kadence-blocks-pro' ); ?>
-												<?php if ( $has_link ) { ?>
-													<strong><a href="<?php echo esc_attr( get_edit_post_link( $entry->get_form_id() ) ); ?>"><?php echo esc_html( $form_name ); ?></a></strong>
-												<?php } else { ?>
-													<strong><?php echo esc_html( $form_name ); ?></strong>
-												<?php } ?>
-											</p>
-											<p class="kadence-blocks-entry-date">
-												<span class="dashicons dashicons-calendar"></span>
-												<?php esc_html_e( 'Submitted:', 'kadence-blocks-pro' ); ?>
-												<strong><?php echo $entry->get_date_created(); ?></strong>
-											</p>
+								<h2 class="hndle">
+									<span><?php esc_html_e( 'Entry Details', 'kadence-blocks-pro' ); ?></span>
+								</h2>
+								<div class="inside">
+									<div class="kadence-blocks-entry-details-meta">
+										<p class="kadence-blocks-entry-id">
+											<span class="dashicons dashicons-admin-network"></span>
+											<?php esc_html_e( 'Entry ID:', 'kadence-blocks-pro' ); ?>
+											<strong><?php echo absint( $entry->get_id() ); ?></strong>
+										</p>
+										<p class="kadence-blocks-entry-form-id" data-form-id="<?php echo esc_attr( $entry->get_form_id() ); ?>">
+											<span class="dashicons dashicons-id"></span>
+											<?php esc_html_e( 'Form ID:', 'kadence-blocks-pro' ); ?>
+											<?php if ( $has_link ) { ?>
+												<strong><a href="<?php echo esc_attr( get_edit_post_link( $entry->get_form_id() ) ); ?>"><?php echo esc_html( $entry->get_form_id() ); ?></a></strong>
+											<?php } else { ?>
+												<strong><?php echo esc_html( $entry->get_form_id() ); ?></strong>
+											<?php } ?>
+										</p>
+										<p class="kadence-blocks-entry-form-name" data-form-id="<?php echo esc_attr( $entry->get_form_id() ); ?>">
+											<span class="dashicons dashicons-nametag"></span>
+											<?php esc_html_e( 'Form Name:', 'kadence-blocks-pro' ); ?>
+											<?php if ( $has_link ) { ?>
+												<strong><a href="<?php echo esc_attr( get_edit_post_link( $entry->get_form_id() ) ); ?>"><?php echo esc_html( $form_name ); ?></a></strong>
+											<?php } else { ?>
+												<strong><?php echo esc_html( $form_name ); ?></strong>
+											<?php } ?>
+										</p>
+										<p class="kadence-blocks-entry-date">
+											<span class="dashicons dashicons-calendar"></span>
+											<?php esc_html_e( 'Submitted:', 'kadence-blocks-pro' ); ?>
+											<strong><?php echo $entry->get_date_created(); ?></strong>
+										</p>
 
-											<?php if ( ! empty( $entry->get_user_id() ) && 0 !== $entry->get_user_id() ) : ?>
-												<p class="kadence-blocks-entry-user">
-													<span class="dashicons dashicons-admin-users"></span>
-													<?php
-													esc_html_e( 'User:', 'kadence-blocks-pro' );
-													$user      = get_userdata( $entry->get_user_id() );
-													$user_name = esc_html( ! empty( $user->display_name ) ? $user->display_name : $user->user_login );
-													$user_url  = esc_url(
-														add_query_arg(
-															array(
-																'user_id' => absint( $user->ID ),
-															),
-															admin_url( 'user-edit.php' )
-														)
-													);
-													?>
-													<strong><a href="<?php echo $user_url; ?>"><?php echo $user_name; ?></a></strong>
-												</p>
-											<?php endif; ?>
-											<?php if ( ! empty( $entry->get_referer() ) ) : ?>
-												<p class="kadence-blocks-entry-referer">
-													<span class="dashicons dashicons-text-page"></span>
-													<?php esc_html_e( 'Page:', 'kadence-blocks-pro' ); ?>
-													<strong><?php echo '<a href="' . esc_url( $entry->get_referer() ) . '"> ' . esc_html( $entry->get_referer() ) . '</a>'; ?></strong>
-												</p>
-											<?php endif; ?>
-											<?php if ( ! empty( $entry->get_user_ip() ) ) : ?>
-												<p class="kadence-blocks-entry-ip">
-													<span class="dashicons dashicons-location"></span>
-													<?php esc_html_e( 'User IP:', 'kadence-blocks-pro' ); ?>
-													<strong><?php echo esc_html( $entry->get_user_ip() ); ?></strong>
-												</p>
-											<?php endif; ?>
-											<?php if ( ! empty( $entry->get_user_device() ) ) : ?>
-												<p class="kadence-blocks-entry-device">
-													<span class="dashicons dashicons-laptop"></span>
-													<?php esc_html_e( 'User Device:', 'kadence-blocks-pro' ); ?>
-													<strong><?php echo esc_html( $entry->get_user_device() ); ?></strong>
-												</p>
-											<?php endif; ?>
-										</div>
-
-										<div id="major-publishing-actions">
-											<div id="delete-action">
+										<?php if ( ! empty( $entry->get_user_id() ) && 0 !== $entry->get_user_id() ) : ?>
+											<p class="kadence-blocks-entry-user">
+												<span class="dashicons dashicons-admin-users"></span>
 												<?php
-												printf(
-													'<a class="button button-large button-secondary" href="%s"><span class="dashicons dashicons-trash"></span>%s</a>',
-													esc_url(
-														wp_nonce_url(
-															add_query_arg(
-																array(
-																	'action' => 'trash',
-																	'entry'  => $entry->get_id(),
-																),
-																admin_url( 'admin.php?page=kadence-blocks-entries' )
-															),
-															'kb_form_delete_entry'
-														)
-													),
-													__( 'Move to trash', 'kadence-blocks-pro' )
+												esc_html_e( 'User:', 'kadence-blocks-pro' );
+												$user      = get_userdata( $entry->get_user_id() );
+												$user_name = esc_html( ! empty( $user->display_name ) ? $user->display_name : $user->user_login );
+												$user_url  = esc_url(
+													add_query_arg(
+														array(
+															'user_id' => absint( $user->ID ),
+														),
+														admin_url( 'user-edit.php' )
+													)
 												);
 												?>
-											</div>
-											<div class="clear"></div>
+												<strong><a href="<?php echo $user_url; ?>"><?php echo $user_name; ?></a></strong>
+											</p>
+										<?php endif; ?>
+										<?php if ( ! empty( $entry->get_referer() ) ) : ?>
+											<p class="kadence-blocks-entry-referer">
+												<span class="dashicons dashicons-text-page"></span>
+												<?php esc_html_e( 'Page:', 'kadence-blocks-pro' ); ?>
+												<strong><?php echo '<a href="' . esc_url( $entry->get_referer() ) . '"> ' . esc_html( $entry->get_referer() ) . '</a>'; ?></strong>
+											</p>
+										<?php endif; ?>
+										<?php if ( ! empty( $entry->get_user_ip() ) ) : ?>
+											<p class="kadence-blocks-entry-ip">
+												<span class="dashicons dashicons-location"></span>
+												<?php esc_html_e( 'User IP:', 'kadence-blocks-pro' ); ?>
+												<strong><?php echo esc_html( $entry->get_user_ip() ); ?></strong>
+											</p>
+										<?php endif; ?>
+										<?php if ( ! empty( $entry->get_user_device() ) ) : ?>
+											<p class="kadence-blocks-entry-device">
+												<span class="dashicons dashicons-laptop"></span>
+												<?php esc_html_e( 'User Device:', 'kadence-blocks-pro' ); ?>
+												<strong><?php echo esc_html( $entry->get_user_device() ); ?></strong>
+											</p>
+										<?php endif; ?>
+									</div>
+
+									<div id="major-publishing-actions">
+										<div id="delete-action">
+											<?php
+											printf(
+												'<a class="button button-large button-secondary" href="%s"><span class="dashicons dashicons-trash"></span>%s</a>',
+												esc_url(
+													wp_nonce_url(
+														add_query_arg(
+															array(
+																'action' => 'trash',
+																'entry'  => $entry->get_id(),
+															),
+															admin_url( 'admin.php?page=kadence-blocks-entries' )
+														),
+														'kb_form_delete_entry'
+													)
+												),
+												__( 'Move to trash', 'kadence-blocks-pro' )
+											);
+											?>
 										</div>
+										<div class="clear"></div>
 									</div>
 								</div>
 							</div>

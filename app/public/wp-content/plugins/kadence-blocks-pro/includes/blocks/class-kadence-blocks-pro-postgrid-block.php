@@ -826,6 +826,12 @@ class Kadence_Blocks_Pro_Postgrid_Block extends Kadence_Blocks_Pro_Abstract_Bloc
 		$css->render_measure_output( $attributes, 'imageBorderRadius', 'border-radius' );
 		// Align Read More Bottom.
 		if ( isset( $attributes['displayReadMore'] ) && $attributes['displayReadMore'] && isset( $attributes['readMoreAlign'] ) && $attributes['readMoreAlign'] ) {
+			// Each item must have full height, to make sure read more is at bottom.
+			if( 'masonry' !== $layout ) {
+				$css->set_selector( '.kt-post-loop' . $unique_id . ' .kt-blocks-post-grid-item' );
+				$css->add_property( 'height', '100%' );
+			}
+
 			if ( isset( $attributes['alignImage'] ) && 'left' === $attributes['alignImage'] ) {
 				$css->set_selector( '.kt-post-loop' . $unique_id . ' .kt-blocks-post-grid-item-inner-wrap .kt-blocks-post-grid-item-inner' );
 				$css->add_property( 'height', '100%' );

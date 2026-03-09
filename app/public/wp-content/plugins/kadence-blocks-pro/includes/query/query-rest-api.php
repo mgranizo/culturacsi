@@ -602,7 +602,7 @@ class Kadence_Blocks_Query_Loop_CPT_Rest_Controller extends WP_REST_Posts_Contro
 					$tax_query[] = array(
 						'taxonomy'         => 'category',
 						'terms'            => array_filter( array_map( 'intval', $ql_query_meta['categoryIds'] ) ),
-						'include_children' => false,
+						'include_children' => true,
 					);
 				}
 				if ( ! $use_global_query && ! empty( $ql_query_meta['tagIds'] ) ) {
@@ -621,7 +621,7 @@ class Kadence_Blocks_Query_Loop_CPT_Rest_Controller extends WP_REST_Posts_Contro
 						$query['tax_query'][] = array(
 							'taxonomy'         => $taxonomy,
 							'terms'            => array_filter( array_map( 'intval', $terms ) ),
-							'include_children' => false,
+							'include_children' => is_taxonomy_hierarchical( $taxonomy ),
 						);
 					}
 				}

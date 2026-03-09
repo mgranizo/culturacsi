@@ -49,6 +49,10 @@ class Taxonomy_Source {
 
 		if ( $hash && $object_ids ) {
 			$terms = $this->get_terms_from_index( $hash, $object_ids );
+			if ( $terms && is_taxonomy_hierarchical( $taxonomy ) ) {
+				$term_object_ids = $this->get_term_object_ids_from_index( $hash, $object_ids );
+				$this->add_descendant_counts_to_parents( $terms, $taxonomy, $term_object_ids );
+			}
 		} else {
 			$terms = $this->get_terms_from_wordpress( $taxonomy, $exclude_values, $include_values, $show_result_count, $object_ids, $lang );
 		}
@@ -113,6 +117,66 @@ class Taxonomy_Source {
 			->limit( $this->filter_limit );
 		
 		return $index_query->getAll();
+	}
+
+	/**
+	 * Get term_id => array of object_id from the index (one row per term–post assignment).
+	 * Used for hierarchical count so we can count distinct posts.
+	 *
+	 * @param string $hash        Filter hash.
+	 * @param array  $object_ids  Object IDs to limit to.
+	 * @return array Map of term_id (int) => array of object_id (int).
+	 */
+	private function get_term_object_ids_from_index( $hash, array $object_ids ) {
+		$rows = DB::table( 'kbp_query_index' )
+			->select( 'facet_id as term_id', 'object_id' )
+			->where( 'hash', $hash, '=' )
+			->whereIn( 'object_id', $object_ids )
+			->limit( $this->filter_limit * 500 )
+			->getAll();
+		$term_object_ids = array();
+		if ( ! empty( $rows ) && is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				$tid = (int) $row->term_id;
+				if ( ! isset( $term_object_ids[ $tid ] ) ) {
+					$term_object_ids[ $tid ] = array();
+				}
+				$term_object_ids[ $tid ][] = (int) $row->object_id;
+			}
+		}
+		return $term_object_ids;
+	}
+
+	/**
+	 * For hierarchical taxonomies, set each term's count to the number of distinct posts
+	 * that have that term OR any descendant term (so a post in both parent and child is counted once).
+	 *
+	 * @param array $terms             Terms from index (objects with term_id, count).
+	 * @param string $taxonomy         Taxonomy slug.
+	 * @param array $term_object_ids   Map of term_id => array of object_id from index.
+	 */
+	private function add_descendant_counts_to_parents( array $terms, $taxonomy, array $term_object_ids ) {
+		foreach ( $terms as $term ) {
+			$tid = (int) $term->term_id;
+			$object_ids = isset( $term_object_ids[ $tid ] ) ? $term_object_ids[ $tid ] : array();
+			$descendant_ids = get_terms(
+				array(
+					'taxonomy'   => $taxonomy,
+					'child_of'   => $tid,
+					'fields'     => 'ids',
+					'hide_empty' => false,
+				)
+			);
+			if ( ! is_wp_error( $descendant_ids ) && ! empty( $descendant_ids ) ) {
+				foreach ( (array) $descendant_ids as $descendant_id ) {
+					$did = (int) $descendant_id;
+					if ( isset( $term_object_ids[ $did ] ) ) {
+						$object_ids = array_merge( $object_ids, $term_object_ids[ $did ] );
+					}
+				}
+			}
+			$term->count = count( array_unique( $object_ids ) );
+		}
 	}
 
 	/**

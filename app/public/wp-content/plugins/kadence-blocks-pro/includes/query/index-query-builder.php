@@ -206,6 +206,66 @@ class Kadence_Blocks_Pro_Query_Index_Query_Builder {
 	}
 
 	/**
+	 * Expand selected term IDs to include all descendant term IDs for hierarchical taxonomies.
+	 * This ensures filtering by a parent category includes posts in child categories (WordPress archive behavior).
+	 *
+	 * @param array $values Filter values (term IDs or slugs).
+	 * @param array $facet Facet configuration.
+	 * @param string $index_field Either 'facet_id' or 'facet_value'.
+	 * @return array Expanded values.
+	 */
+	private function expand_terms_with_children( $values, $facet, $index_field ) {
+		if ( $index_field !== 'facet_id' && $index_field !== 'facet_value' ) {
+			return $values;
+		}
+		$taxonomy = '';
+		if ( strpos( $facet['source'], 'taxonomy/' ) === 0 ) {
+			$taxonomy = substr( $facet['source'], strlen( 'taxonomy/' ) );
+		} elseif ( ! empty( $facet['taxonomy'] ) ) {
+			$taxonomy = $facet['taxonomy'];
+		}
+		if ( ! $taxonomy || ! is_taxonomy_hierarchical( $taxonomy ) ) {
+			return $values;
+		}
+		$expanded = array();
+		foreach ( $values as $value ) {
+			$term_id = is_numeric( $value ) ? (int) $value : 0;
+			if ( ! $term_id && $index_field === 'facet_value' ) {
+				$term = get_term_by( 'slug', $value, $taxonomy );
+				$term_id = $term ? (int) $term->term_id : 0;
+			}
+			if ( $term_id ) {
+				if ( $index_field === 'facet_id' ) {
+					$expanded[] = $term_id;
+				} else {
+					$term = get_term( $term_id, $taxonomy );
+					if ( $term && ! is_wp_error( $term ) ) {
+						$expanded[] = $term->slug;
+					}
+				}
+				$child_terms = get_terms(
+					array(
+						'taxonomy'   => $taxonomy,
+						'child_of'   => $term_id,
+						'fields'     => ( $index_field === 'facet_id' ) ? 'ids' : 'id=>slug',
+						'hide_empty' => false,
+					)
+				);
+				if ( ! is_wp_error( $child_terms ) && ! empty( $child_terms ) ) {
+					if ( $index_field === 'facet_id' ) {
+						$expanded = array_merge( $expanded, array_map( 'intval', (array) $child_terms ) );
+					} else {
+						$expanded = array_merge( $expanded, array_values( (array) $child_terms ) );
+					}
+				}
+			} else {
+				$expanded[] = $value;
+			}
+		}
+		return array_unique( $expanded );
+	}
+
+	/**
 	 * Do a dropdown filter.
 	 * 
 	 * @param mixed $index_query The index_query.
@@ -233,6 +293,8 @@ class Kadence_Blocks_Pro_Query_Index_Query_Builder {
 			}
 
 		}
+
+		$values = $this->expand_terms_with_children( $values, $facet, $index_field );
 
 		if ( $local_compare === 'AND' ) {
 			$value_result_arrays = array();
@@ -304,6 +366,8 @@ class Kadence_Blocks_Pro_Query_Index_Query_Builder {
 				$values[0] = 2;
 			}
 		}
+
+		$values = $this->expand_terms_with_children( $values, $facet, $index_field );
 
 		$query_to_use = &$index_query;
 		if ( $this->global_compare === 'AND' ) {

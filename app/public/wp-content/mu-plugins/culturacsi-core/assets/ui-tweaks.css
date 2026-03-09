@@ -114,6 +114,14 @@ body :where(.calendar-event-row, .assoc-event-card, .culturacsi-news-item, .asso
 	border-radius: var(--csi-ui-radius-md);
 }
 
+/* The sticky site header must always have square corners — override the
+ * generic .wp-block-group.has-background rule above. A plain class selector
+ * beats :where() (specificity 0) without needing !important. */
+.my-sticky-header.wp-block-group {
+	border-radius: 0;
+}
+
+
 body :where(.assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-calendar-filters) {
 	background: linear-gradient(135deg, #0a3b75 0%, #1e5bb0 100%) !important;
 	border: 1px solid rgba(255, 255, 255, 0.18) !important;
