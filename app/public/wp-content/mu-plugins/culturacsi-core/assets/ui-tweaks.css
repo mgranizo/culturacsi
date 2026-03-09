@@ -852,6 +852,22 @@ body :where(.entry-content, .site-main, .calendar-event-row-main, .kt-blocks-pos
 		border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 	}
 
+	/* Fix submenu overflow by centering them instead of a left-aligned flyout */
+	body.wp-theme-kadence .my-sticky-header .csi-mobile-nav-panel .sub-menu {
+		left: 50% !important;
+		right: auto !important;
+		transform: translateX(-50%) !important;
+		width: max-content !important;
+		min-width: 220px !important;
+		max-width: calc(100vw - 32px) !important;
+		text-align: center !important;
+	}
+
+	body.wp-theme-kadence .my-sticky-header .csi-mobile-nav-panel .sub-menu .sub-menu {
+		top: 100% !important;
+		margin-top: 5px !important;
+	}
+
 	.assoc-search-head,
 	.calendar-view-mode,
 	.calendar-results-meta {
