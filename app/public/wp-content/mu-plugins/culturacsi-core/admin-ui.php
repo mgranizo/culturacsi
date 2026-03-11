@@ -732,6 +732,31 @@ add_action( 'edit_user_profile_update', 'culturacsi_admin_save_user_avatar_field
  */
 function culturacsi_remove_unused_admin_menus(): void {
 	remove_menu_page( 'edit.php' ); // Posts / Articoli
+	remove_menu_page( 'edit-comments.php' );
+	remove_submenu_page( 'themes.php', 'theme-editor.php' );
+	remove_submenu_page( 'plugins.php', 'plugin-editor.php' );
+	remove_submenu_page( 'kadence-blocks', 'edit.php?post_type=kb_icon' );
+
+	if ( current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	remove_submenu_page( 'edit.php?post_type=association', 'ab-settori-structure-modal' );
+	remove_menu_page( 'edit.php?post_type=csi_content_entry' );
+	remove_menu_page( 'themes.php' );
+	remove_submenu_page( 'themes.php', 'kadence' );
+	remove_menu_page( 'plugins.php' );
+	remove_menu_page( 'users.php' );
+	remove_menu_page( 'tools.php' );
+	remove_submenu_page( 'tools.php', 'ab-sync-csv' );
+	remove_submenu_page( 'tools.php', 'ab-settori-images' );
+	remove_menu_page( 'ai1wm_export' );
+	remove_menu_page( 'options-general.php' );
+	remove_menu_page( 'edit.php?post_type=notification' );
+	remove_menu_page( 'options-general.php?page=updraftplus' );
+	remove_menu_page( 'kadence-blocks' );
+	remove_submenu_page( 'kadence-blocks', 'edit.php?post_type=kadence_navigation' );
+	remove_submenu_page( 'kadence-blocks', 'edit.php?post_type=kadence_header' );
 }
 add_action( 'admin_menu', 'culturacsi_remove_unused_admin_menus', 999 );
 

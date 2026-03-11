@@ -65,7 +65,7 @@ function assoc_portal_calendar_browser_get_association_data( int $association_id
         'comune' => '',
     ];
 
-    if ( $association_id <= 0 || ! in_array( get_post_type( $association_id ), [ 'association', 'tribe_organizer' ], true ) ) {
+    if ( $association_id <= 0 || 'association' !== get_post_type( $association_id ) ) {
         $cache[ $association_id ] = $data;
         return $data;
     }
@@ -90,7 +90,7 @@ function assoc_portal_calendar_browser_get_association_data( int $association_id
 
 function assoc_portal_calendar_browser_collect_events(): array {
     $query = new WP_Query( [
-        'post_type' => [ 'event', 'tribe_events' ],
+        'post_type' => [ 'event' ],
         'post_status' => [ 'publish', 'future' ],
         'posts_per_page' => -1,
         'orderby' => 'date',
@@ -103,7 +103,6 @@ function assoc_portal_calendar_browser_collect_events(): array {
             $query->the_post();
             $event_id = get_the_ID();
             $start_raw = trim( (string) get_post_meta( $event_id, 'start_date', true ) );
-            if ( $start_raw === '' ) $start_raw = trim( (string) get_post_meta( $event_id, '_EventStartDate', true ) );
             if ( $start_raw === '' ) $start_raw = trim( (string) get_post_field( 'post_date', $event_id ) );
             if ( $start_raw === '' ) continue;
 
@@ -114,9 +113,9 @@ function assoc_portal_calendar_browser_collect_events(): array {
             $end_ts = $end_raw !== '' ? strtotime( $end_raw ) : false;
 
             $association_id = 0;
-            foreach ( [ 'organizer_association_id', 'association_id', 'association_post_id', '_assoc_id', '_association_id', 'assoc_id', '_EventOrganizerID', '_tribe_event_organizer', 'organizer_id' ] as $meta_key ) {
+            foreach ( [ 'organizer_association_id', 'association_id', 'association_post_id', '_assoc_id', '_association_id', 'assoc_id', 'organizer_id' ] as $meta_key ) {
                 $candidate = (int) get_post_meta( $event_id, $meta_key, true );
-                if ( $candidate > 0 && in_array( get_post_type( $candidate ), [ 'association', 'tribe_organizer' ], true ) ) {
+                if ( $candidate > 0 && 'association' === get_post_type( $candidate ) ) {
                     $association_id = $candidate;
                     break;
                 }

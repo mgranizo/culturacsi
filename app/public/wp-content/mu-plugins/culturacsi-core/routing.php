@@ -161,23 +161,6 @@ add_action(
 	1
 );
 
-add_filter(
-	'template_include',
-	static function( $template ) {
-		if ( ! is_post_type_archive( 'news' ) ) {
-			return $template;
-		}
-
-		$custom_template = WP_CONTENT_DIR . '/themes/culturacsi/archive-news.php';
-		if ( file_exists( $custom_template ) ) {
-			return $custom_template;
-		}
-
-		return $template;
-	},
-	20
-);
-
 /**
  * Reserved-area hard fallback shortcodes.
  * These keep the frontend portal operational even if plugin shortcode registration breaks.
