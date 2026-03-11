@@ -7,6 +7,7 @@ require_once __DIR__ . '/shortcodes/association-form.php';
 require_once __DIR__ . '/shortcodes/associations-form.php';
 require_once __DIR__ . '/shortcodes/associations-list.php';
 require_once __DIR__ . '/shortcodes/cronologia-list.php';
+require_once __DIR__ . '/shortcodes/forum-board.php';
 require_once __DIR__ . '/shortcodes/ux-guidance.php';
 require_once __DIR__ . '/shortcodes/content-entries.php';
 require_once __DIR__ . '/shortcodes/event-form.php';
@@ -791,6 +792,7 @@ function culturacsi_portal_force_shortcode_registry(): void {
 	add_shortcode( 'assoc_content_entries_list', 'culturacsi_portal_content_entries_list_shortcode' );
 	add_shortcode( 'assoc_content_entry_form', 'culturacsi_portal_content_entry_form_shortcode' );
 	add_shortcode( 'assoc_content_sections_manager', 'culturacsi_portal_content_sections_manager_shortcode' );
+	add_shortcode( 'culturacsi_reserved_forum', 'culturacsi_portal_forum_board_shortcode' );
 	add_shortcode( 'assoc_sezioni_manager', 'culturacsi_portal_content_sections_manager_shortcode' );
 	add_shortcode( 'assoc_contenuti_list', 'culturacsi_portal_content_entries_list_shortcode' );
 	add_shortcode( 'assoc_contenuto_form', 'culturacsi_portal_content_entry_form_shortcode' );

@@ -19,7 +19,7 @@ function culturacsi_it_ensure_reserved_area_pages(): void {
 	// Version string: bump this ONLY when new reserved-area pages need to be created.
 	// The function runs once per version, then permanently stops until the next version bump.
 	// This prevents deleted pages from being recreated on every request.
-	$pages_schema_version = 'v5';
+	$pages_schema_version = 'v6';
 
 	if ( get_option( 'culturacsi_reserved_pages_version' ) === $pages_schema_version && ! isset( $_GET['force_pages'] ) ) {
 		return;
@@ -35,6 +35,7 @@ function culturacsi_it_ensure_reserved_area_pages(): void {
 	$news_form_block    = '<!-- wp:shortcode -->[assoc_news_form]<!-- /wp:shortcode -->';
 	$content_list_block = '<!-- wp:shortcode -->[assoc_content_entries_list]<!-- /wp:shortcode -->';
 	$content_form_block = '<!-- wp:shortcode -->[assoc_content_entry_form]<!-- /wp:shortcode -->';
+	$forum_block        = '<!-- wp:shortcode -->[culturacsi_reserved_forum]<!-- /wp:shortcode -->';
 	$sections_manager_block = '<!-- wp:shortcode -->[assoc_content_sections_manager]<!-- /wp:shortcode -->';
 	$users_list_block   = '<!-- wp:shortcode -->[culturacsi_users_search]<!-- /wp:shortcode -->' . "\n\n" . '<!-- wp:shortcode -->[assoc_users_list]<!-- /wp:shortcode -->';
 	$users_form_block   = '<!-- wp:shortcode -->[assoc_users_form]<!-- /wp:shortcode -->';
@@ -199,6 +200,14 @@ function culturacsi_it_ensure_reserved_area_pages(): void {
 			array( $content_form_block )
 		);
 	}
+	$ensure_child_page(
+		'area-riservata/bacheca',
+		'Area Riservata Bacheca',
+		'bacheca',
+		$compose_content( $forum_block ),
+		$parent_id,
+		array( $forum_block )
+	);
 	$ensure_child_page(
 		'area-riservata/sezioni',
 		'Area Riservata Sezioni',

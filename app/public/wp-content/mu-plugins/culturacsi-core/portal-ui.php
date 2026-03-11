@@ -72,6 +72,7 @@ if ( ! function_exists( 'culturacsi_portal_reserved_nav_shortcode' ) ) {
 			// Site admin: unified contents hub + users + associations.
 			$items = array(
 				array( 'label' => 'Contenuti',    'url' => home_url( '/area-riservata/contenuti/' ) ),
+				array( 'label' => 'Bacheca',      'url' => home_url( '/area-riservata/bacheca/' ) ),
 				array( 'label' => 'Utenti',       'url' => home_url( '/area-riservata/utenti/' ) ),
 				array( 'label' => 'Associazioni', 'url' => home_url( '/area-riservata/associazioni/' ) ),
 				array( 'label' => 'Cronologia',   'url' => home_url( '/area-riservata/cronologia/' ) ),
@@ -80,6 +81,7 @@ if ( ! function_exists( 'culturacsi_portal_reserved_nav_shortcode' ) ) {
 			// Association manager: unified contents hub + colleagues + profile.
 			$items = array(
 				array( 'label' => 'Contenuti',    'url' => home_url( '/area-riservata/contenuti/' ) ),
+				array( 'label' => 'Bacheca',      'url' => home_url( '/area-riservata/bacheca/' ) ),
 				array( 'label' => 'Utenti',       'url' => home_url( '/area-riservata/utenti/' ) ),
 				array( 'label' => 'Associazioni', 'url' => home_url( '/area-riservata/associazione/' ) ),
 				array( 'label' => 'Cronologia',   'url' => home_url( '/area-riservata/cronologia/' ) ),
