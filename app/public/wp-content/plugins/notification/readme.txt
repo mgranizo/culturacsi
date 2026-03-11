@@ -1,0 +1,397 @@
+=== Notification - Custom Notifications and Alerts for WordPress ===
+Contributors: notification, bracketspace, Kubitomakita
+Tags: notification, notify, alert, email, mail
+Requires at least: 4.9
+Tested up to: 6.9
+Stable tag: 9.0.10
+Requires PHP: 7.4
+License: GPLv3
+License URI: http://www.gnu.org/licenses/gpl-3.0.html
+
+Take full control of WordPress emails and notifications. Replace default messages, add custom triggers, and send alerts via email, webhook, Slack, and more.
+
+== Description ==
+
+**WordPress sends emails you can’t customize.** You can’t change who receives them, what they say, or how they look. And if you need to notify your team about content changes, user activity, or security events — WordPress simply doesn’t do that.
+
+**Notification fixes this.** It gives you complete control over what WordPress sends, to whom, and through which channel. Replace rigid default emails with fully customizable messages, or create entirely new notifications triggered by any WordPress event. No coding required — set up your first notification in under 5 minutes.
+
+[youtube https://www.youtube.com/watch?v=gW2KHrT_a7U]
+
+= WHAT YOU CAN DO WITH THE FREE VERSION =
+
+* **Replace default WordPress emails** — Disable any built-in email (new user, password reset, comments, etc.) and replace it with your own version using the built-in Wizard
+* **Create custom notifications** — Get notified when posts are published, users register, comments arrive, plugins update, and 50+ other WordPress events
+* **Use dynamic content** — Insert Merge Tags like `{post_title}`, `{user_email}`, or `{comment_content}` to personalize every message
+* **Send to anyone** — Route notifications to specific email addresses, users, or entire roles
+* **Send via email or webhook** — Email is built-in; webhooks let you connect to any external service or automation tool
+* **Control with precision** — Enable or disable individual triggers, configure carriers, and set up multiple notifications per event
+
+= REPLACE DEFAULT WORDPRESS EMAILS =
+
+The built-in Wizard walks you through disabling WordPress default emails and replacing them with your own. You keep full control over the content, recipients, and formatting — no more generic messages you can’t edit.
+
+= BUILT-IN TRIGGERS =
+
+Over 50 triggers are ready to use out of the box. Enable or disable them in Settings.
+
+* **Posts & Custom Post Types** — published, drafted, updated, pending review, approved, trashed (works with any CPT)
+* **Taxonomy terms** — created, updated, deleted (works with any taxonomy)
+* **Comments, Pingbacks & Trackbacks** — new, replied, approved, unapproved, spam, trashed
+* **Users** — registered, profile updated, logged in, failed login, logged out, password reset/changed, deleted
+* **Media** — added, updated, deleted
+* **Plugins** — activated, deactivated, installed, removed, updated
+* **Themes** — installed, switched, updated
+* **WordPress** — available updates (on a schedule you define)
+* **Privacy** — personal data erased, erase request, exported, export request
+
+Each trigger comes with its own set of Merge Tags, plus you can use Global Merge Tags (`{site_title}`, `{admin_email}`, `{home_url}`, etc.) anywhere.
+
+= EXTENSIONS =
+
+Extend the plugin with additional carriers, triggers, and features:
+
+* [Webhooks](https://bracketspace.com/downloads/notification-webhooks/) - send and receive Webhooks
+* [Conditionals](https://bracketspace.com/downloads/notification-conditionals/) - send Notifications only when specific conditions are met
+* [Custom Fields](https://bracketspace.com/downloads/notification-custom-fields/) - use any meta value in your Notifications
+* [Slack](https://bracketspace.com/downloads/notification-slack/) - post messages to Slack channel
+* [Push](https://bracketspace.com/downloads/notification-push/) - send push notifications via browser’s native system
+* [Discord](https://bracketspace.com/downloads/notification-discord/) - post messages to Discord channel
+* [Twilio](https://bracketspace.com/downloads/notification-twilio/) - send bulk SMS messages from your Twilio registered phone number
+* [Scheduled Triggers](https://bracketspace.com/downloads/notification-scheduled-triggers/) - schedule your notifications based on events time
+* [Review Queue](https://bracketspace.com/downloads/notification-review-queue/) - catch your Notifications into a queue for manual review
+* [WooCommerce](https://bracketspace.com/downloads/notification-woocommerce/) - triggers specific to WooCommerce
+* [Pushbullet](https://bracketspace.com/downloads/notification-pushbullet/) - send Push and SMS Notifications via your phone
+* [Pushover](https://bracketspace.com/downloads/notification-pushover/) - send Push messages to devices registered in Pushover
+* [SendGrid](https://bracketspace.com/downloads/notification-sendgrid/) - send emails using SendGrid service
+* [Mailgun](https://bracketspace.com/downloads/notification-mailgun/) - send emails using Mailgun service
+* [File Log](https://bracketspace.com/downloads/notification-file-log/) - save Notifications as file logs on the server
+* [bbPress](https://wordpress.org/plugins/notification-bbpress/) - bbPress triggers
+* [BuddyPress](https://wordpress.org/plugins/notification-buddypress/) - BuddyPress triggers and integration with their notification system
+* [Signature](https://wordpress.org/plugins/signature-notification/) - add a signature to all your emails automatically
+* [Email Attachments](https://bracketspace.com/downloads/notification-email-attachments/) - attach files to your notification
+
+= DEVELOPER-FRIENDLY =
+
+Notification is designed to be extended. Create custom Triggers from any `do_action()` call, add Merge Tags in a single line of code, or build entirely new Carriers. The plugin can be bundled with your theme or plugin and white-labeled with one function call.
+
+* [Developer documentation](https://docs.bracketspace.com/notification/developer/general)
+* [Extension Boilerplate](https://github.com/BracketSpace/Notification-Extension-Boilerplate/) to start building your own add-on
+
+= USE CASES =
+
+* **Editorial workflows** — Notify editors when a post is submitted for review, and authors when it's approved or scheduled
+* **Security monitoring** — Get alerts on failed login attempts, user role changes, or plugin activations
+* **Client sites** — Replace confusing default WordPress emails with branded, clear messages for your clients
+* **Team coordination** — Send Slack or webhook notifications when content is updated, users register, or comments need moderation
+* **WooCommerce stores** — Trigger custom alerts for orders, stock changes, and customer activity (with the WooCommerce extension)
+
+Here are some of the most popular specific setups. See the FAQ section for step-by-step details on each.
+
+* Notify authors when their post is published
+* Email editors when a post is submitted for review
+* Replace the default new user welcome email with a branded version
+* Alert admins on failed login attempts with IP address details
+* Get notified when someone edits a published post
+* Send Slack/webhook alerts when plugins are activated or updated
+* Notify users when their role changes
+* Disable default WordPress emails and replace them with custom ones
+* Monitor user registrations, password resets, and account deletions
+* Set up comment moderation notifications for post authors
+
+= USEFUL LINKS =
+
+* [Documentation](https://docs.bracketspace.com/notification/)
+* [GitHub repository](https://github.com/BracketSpace/Notification)
+* [Report a bug](https://github.com/BracketSpace/Notification/issues/new)
+
+= CUSTOM DEVELOPMENT =
+
+BracketSpace - the company behind this plugin provides [custom WordPress plugin development services](https://bracketspace.com/custom-development/). We can create any custom plugin for you.
+
+== Installation ==
+
+= Requirements =
+
+This plugin requires at least PHP 7.4.
+
+= Plugin install =
+
+Download and install this plugin from Plugins -> Add New admin screen.
+
+= Distributing in a plugin or theme =
+
+Notification can be loaded also as a part of any plugin or theme. To do it just include plugins's `load.php` file. It will figure out if it's loaded from theme or from plugin.
+
+[See the detailed guide](https://docs.bracketspace.com/notification/developer/general/bundling)
+
+== Frequently Asked Questions ==
+
+= How can I test my notifications? =
+
+No 3rd-party plugins needed. The Notification plugin comes with a built-in logger — activate it in Settings > Debugging and you'll see all notification parameters in a log visible only to you.
+
+= Why am I not receiving any emails? =
+
+First, check if WordPress sends any emails at all — try resetting your password. If that email doesn't arrive, the issue is your server configuration, not this plugin. Use any SMTP plugin to fix that.
+
+You can also activate the debug log in plugin settings to confirm whether the notification is being triggered.
+
+= Is this plugin for regular users? =
+
+Absolutely. The plugin has an intuitive visual interface in the WordPress Admin — no coding skills required. Developers get a powerful API on top of that, but it's entirely optional.
+
+= How do I notify authors when their post is published? =
+
+Create a new notification and select the **Post Published** trigger. Add an Email carrier and set the recipient type to **Email/Merge Tag** with the value `{post_author_user_email}`. Use merge tags like `{post_title}` in the subject and `{post_permalink}`, `{post_publication_datetime}` in the body.
+
+= How do I get email notifications for posts pending review? =
+
+WordPress doesn't send these by default — it's one of the most requested missing features. Create a notification with the **Post Pending Review** trigger. Set the recipient to the **Role** type and choose Editor (or Administrator). Use `{post_title}`, `{post_author_user_display_name}`, and `{post_permalink}` to build a useful message.
+
+= How do I replace the default WordPress new user email? =
+
+First, disable the default WordPress new user email in **Notifications > Settings > Integrations**. Then create a notification with the **User Registered** trigger. Set the recipient to **Email/Merge Tag** → `{user_email}`. Use `{user_login}`, `{user_password_setup_link}`, and `{site_title}` in the body to create your branded welcome message.
+
+= How do I get notified about failed login attempts? =
+
+Create a notification with the **User Login Failed** trigger. Set the recipient to the Administrator role. Include `{user_login}`, `{user_IP}`, and `{user_login_failed_datetime}` in the body to see who tried to log in, from where, and when.
+
+= How do I know when someone edits a published post? =
+
+Use the **Post Updated** trigger. Set the recipient to the Administrator role (or any role/email you prefer). Include `{post_title}`, `{post_permalink}`, `{post_updating_user_display_name}`, and `{post_revision_link}` in the body to see what changed and who changed it.
+
+= How do I get notified when plugins are activated or updated? =
+
+Create two notifications — one with the **Plugin Activated** trigger and one with the **Plugin Updated** trigger. Use `{plugin_name}`, `{plugin_version}`, and `{plugin_activation_date_time}` in the message body. Similar triggers are also available for themes.
+
+= How do I notify a user when their role changes? =
+
+Create a notification with the **User Role Changed** trigger. Set the recipient to **Email/Merge Tag** → `{user_email}` so the affected user gets the notification. Use `{user_display_name}`, `{old_role}`, and `{new_role}` in the body.
+
+= How do I set up comment notifications for post authors? =
+
+Create a notification with the **Comment Published** trigger. Set the recipient to **Email/Merge Tag** → `{post_author_user_email}` so the post author is notified. Use `{comment_author_user_display_name}`, `{comment_content}`, `{post_title}`, and `{post_permalink}` in the body.
+
+= How is this plugin different from Better Notifications for WP (BNFW)? =
+
+Both plugins let you customize WordPress email notifications, but they take different approaches:
+
+* **Merge Tags vs shortcodes** — Notification uses a visual Merge Tag picker with a click-to-insert interface. BNFW uses shortcodes typed into a WYSIWYG editor.
+* **Multiple carriers** — Notification has a carrier architecture that supports email, webhooks, and (via extensions) Slack, Discord, Push, SMS, and more. BNFW focuses on email only.
+* **Developer API** — Notification lets you create custom triggers from any WordPress action, add merge tags, build new carriers, and bundle/white-label the plugin. BNFW doesn't offer this level of extensibility.
+* **Extension ecosystem** — 20+ extensions for additional carriers (Slack, Twilio, Pushover), conditional logic, scheduled triggers, WooCommerce, and more.
+
+BNFW is a solid choice if you only need to customize email content. Notification is for users who want full control over what gets sent, where, and how.
+
+= How does Notification compare to OneSignal? =
+
+They solve completely different problems. **OneSignal** sends browser push notifications to re-engage visitors after they leave your site. **Notification** sends event-driven alerts (email, webhook, Slack, etc.) when something happens inside WordPress — a post is published, a user registers, a comment needs moderation.
+
+They complement each other rather than compete. Use OneSignal for marketing push notifications to your audience, and Notification for internal workflow alerts for your team.
+
+= How does Notification compare to Manage Notification E-mails? =
+
+Manage Notification E-mails gives you on/off toggles for default WordPress emails — you can mute them, but that's it. Notification can also disable default emails, but then lets you **replace them** with fully customized versions — custom content, custom recipients, merge tags, and multiple carrier options. It's the difference between muting emails and owning them.
+
+= How to register my own triggers? =
+
+With `register_trigger()` function. [See the detailed guide](https://docs.bracketspace.com/notification/developer/triggers/custom-trigger)
+
+= How to include a custom field in the notification? =
+
+You can [write a merge tag](https://docs.bracketspace.com/notification/developer/triggers/adding-merge-tags-to-existing-triggers) yourself or use the [Custom Fields extension](https://bracketspace.com/downloads/notification-custom-fields/) for a no-code solution.
+
+= How to target only specific post / category / user etc? =
+
+Use the [Conditionals extension](https://bracketspace.com/downloads/notification-conditionals/) to control exactly when a notification is sent.
+
+= Can I send to a custom recipient list based on my own plugin or theme logic? =
+
+Yes, just include `filter-id:some-value` in the `Recipient` value (using the `Email/Merge tag` type with the `Email` carrier), then return your recipient list from the `notification/recipient/email/some-value` filter.
+
+= Can I bundle the plugin with my plugin or theme? =
+
+Yes. [See the detailed guide](https://docs.bracketspace.com/notification/developer/general/bundling)
+
+= Is this plugin capable of sending high volume emails? =
+
+The plugin can handle it, but your server probably can't. For thousands of emails at once, use the [SendGrid](https://bracketspace.com/downloads/notification-sendgrid/) or [Mailgun](https://bracketspace.com/downloads/notification-mailgun/) extensions, which are designed for high volume via a single API call. SMTP typically times out after a dozen emails.
+
+= Can you create a plugin for me? =
+
+Yes! We offer [custom plugin development](https://bracketspace.com/custom-development/) services. Feel free to contact us.
+
+== Screenshots ==
+
+1. Trigger edit screen
+2. All triggers
+3. Settings
+4. Extensions
+5. Help tab with global Merge Tags
+6. Wizard
+7. Default email disabler
+
+== Changelog ==
+
+= 9.0.10 =
+* [Fixed] Carrier recipient data lost during cron background processing, causing emails to receive user IDs instead of email addresses
+* [Fixed] Warning on activation when cron period setting is not yet initialized
+
+= 9.0.9 =
+* [Fixed] Plugin crash on certain hosting configurations due to missing build file
+
+= 9.0.8 =
+* [Changed] Optimized plugin package by removing build tool dependencies from the distributed archive
+
+= 9.0.7 =
+* [Fixed] Hardened security for AJAX handlers, file imports, and database queries
+* [Fixed] Filesystem method filter no longer globally overrides server SSH2/FTP configuration
+* [Added] Background license verification via daily WP-Cron
+* [Added] 24-hour cooldown after failed license server requests to prevent repeated timeouts
+* [Changed] Added $notification and $trigger parameters to notification/background_processing/delay filter for better context when filtering delay time.
+* [Changed] License inactive notices suppressed during server communication failures
+* [Changed] Upgraded PHPCS dev dependencies for PHP 8.4+ compatibility
+* [Fixed] License checks no longer block admin page loads when license server is unreachable
+* [Fixed] Bedrock compatibility for asset URL resolution
+* [Fixed] Various PHP warnings and deprecation notices
+
+= 9.0.6 =
+* [Added] "Refresh All Licenses" button in Extensions page to manually check all extension license statuses from the store.
+* [Changed] Updated package.json files to support Node.js 22 compatibility with explicit engine requirements.
+* [Changed] Improved GitHub workflows - removed development workflow and enhanced stable workflow with automatic WordPress.org deployment alongside GitHub releases.
+* [Fixed] Extension license status not refreshing after reactivation in store, showing stale "inactive" warnings despite valid licenses.
+* [Fixed] Deactivate license button not working for expired licenses and other license statuses.
+* [Fixed] Deactivated licenses still appearing in extension boxes due to cache key mismatch.
+* [Fixed] Renewal links not appearing for licenses expired in the past but cached with different status.
+* [Fixed] Password reset and setup links now properly handle email addresses with @ symbols and usernames with spaces in merge tags.
+* [Added] Comprehensive unit tests for password reset and setup link encoding to prevent regression.
+* [Fixed] Code editor field width is now properly constrained to 100% of its container.
+* [Fixed] Repeater fields layout incompatibility with other plugins.
+* [Fixed] Code linting errors.
+
+= 9.0.5 =
+* [Fixed] Dochooks compatibility file has been updated.
+
+= 9.0.4 =
+* [Fixed] Fix issues with invalid JSON of Notification in wp_posts table.
+* [Fixed] Duplicate email prevention not working for custom post types.
+
+= 9.0.3 =
+* [Fixed] No license activated in v8 being displayed in the admin.
+
+= 9.0.2 =
+* [Fixed] WP CLI add command function is not giving warnings anymore.
+* [Fixed] Comment author email and display name merge tags.
+* [Fixed] Do not escape HTML entities in URL merge tags.
+* [Fixed] Fix user password setup link and user password reset link resolvers.
+* [Fixed] Post triggers various user merge tags.
+* [Fixed] Comment triggers post author merge tags.
+
+= 9.0.1 =
+* [Changed] Notification data is now kept in the wp_posts table for easier reverting to previous version.
+
+= 9.0.0 =
+
+**Compatibility Breaking Changes**
+
+- Webook and Webhook JSON Carriers are now deprecated and won't work. [Read more about that change](https://docs.bracketspace.com/notification/extensions/webhooks)
+- Notifications are now saved into the custom table instead of relying on wp_posts.
+- Class methods and properties has been changed from snake_case to camelCase.
+- In Post Triggers, dynamic property `$trigger->{$post_type}` has been replaced with static prop `$trigger->post`.
+- The same as above applies to Post Trigger datetime tags, namely: postCreationDatetime, postPublicationDatetime, and postModificationDatetime.
+- Post Merge Tags will now use `property_name` attribute rather than `post_type` to set trigger property used by resolvers.
+- Hook `notification/data/save` and `notification/data/save/after` now pass Core\Notification instance in the first param instead of the WordPress adapter instance.
+- Runtime components are now referenced by FQCN (Fully Qualified Class Name), instead of the name.
+
+Namespace changes:
+- `BracketSpace\Notification\Defaults\` changed to `BracketSpace\Notification\Repository\`
+- `BracketSpace\Notification\Abstracts\Carrier` changed to `BracketSpace\Notification\Repository\Carrier\BaseCarrier`
+- `BracketSpace\Notification\Abstracts\Field` changed to `BracketSpace\Notification\Repository\Field\BaseField`
+- `BracketSpace\Notification\Abstracts\MergeTag` changed to `BracketSpace\Notification\Repository\MergeTag\BaseMergeTag`
+- `BracketSpace\Notification\Abstracts\Recipient` changed to `BracketSpace\Notification\Repository\Recipient\BaseRecipient`
+- `BracketSpace\Notification\Abstracts\Resolver` changed to `BracketSpace\Notification\Repository\Resolver\BaseResolver`
+- `BracketSpace\Notification\Abstracts\Trigger` changed to `BracketSpace\Notification\Repository\Trigger\BaseTrigger`
+
+Hook depracations:
+- `notification/data/save/after`, use `notification/data/saved`
+
+Function and method deprecations:
+- `BracketSpace\Notification\Admin\PostType::getAllNotifications()`, use `BracketSpace\Notification\Database\NotificationDatabaseService::getAll()`
+- `notification_convert_data()`, use `BracketSpace\Notification\Core\Notification::from('array', $array)`
+- `notification_register_settings()`, use the `notification/settings/register` action directly
+- `notification_get_settings()`, use `\Notification::component('settings')->getSettings()`
+- `notification_update_setting()`, use `\Notification::component('settings')->updateSetting()`
+- `notification_get_setting()`, use `\Notification::component('settings')->getSetting()`
+- `notification_adapt()`, use `BracketSpace\Notification\Core\Notification::to()`
+- `notification_adapt_from()`, use `BracketSpace\Notification\Core\Notification::from()`
+- `notification_swap_adapter()`, use `::from()` and `::to()` methods on the `BracketSpace\Notification\Core\Notification` class
+- `notification_add()`, use `BracketSpace\Notification\Register::notification()`
+- `notification_log()`, use `BracketSpace\Notification\Core\Debugger::log()`
+- `notification()`, use `BracketSpace\Notification\Register::notificationFromArray()`
+
+Removed deprecated hooks:
+- `notitication/admin/notifications/pre`, use `notification/admin/carriers/pre`
+- `notitication/admin/notifications`, use `notification/admin/carriers`
+- `notification/email/use_html_mime`, use `notification/carrier/email/use_html_mime`
+- `notification/email/recipients`, use `notification/carrier/email/recipients`
+- `notification/email/subject`, use `notification/carrier/email/subject`
+- `notification/email/message/pre`, use `notification/carrier/email/message/pre`
+- `notification/email/message/use_autop`, use `notification/carrier/email/message/use_autop`
+- `notification/email/message`, use `notification/carrier/email/message`
+- `notification/email/headers`, use `notification/carrier/email/headers`
+- `notification/email/attachments`, use `notification/carrier/email/attachments`
+- `notification/webhook/args`, use `notification/carrier/webhook/args`
+- `notification/webhook/args/{$type}`, use `notification/carrier/webhook/args/{$type}`
+- `notification/notification/form_fields/values`, use `notification/carrier/fields/values`
+
+**Full changelog**
+
+* [Added] Option to disable notification about admin email address changed.
+* [Added] New trigger after user confirms his new email address.
+* [Added] New trigger after admin confirms new site email address.
+* [Added] New trigger after WordPress update.
+* [Added] notification/admin/allow_column/$column filter.
+* [Added] Notification converter concept, with array and JSON default converters.
+* [Added] Custom wp_notifications table (with corresponding helper tables).
+* [Added] User nickname merge tag.
+* [Added] Possibility to define return field for built-in recipients (ID or user_email)
+* [Changed] Notification is now saved to the custom table instead of wp_posts.
+* [Changed] Global functions has been deprecated and got equivalents in respective classes.
+* [Changed] Removed v6 & v7 deprecated functions.
+* [Changed] Minimum required PHP version to 7.4 or newer.
+* [Changed] WordPress Coding Standards to PSR-12 standards.
+* [Changed] Trigger dropdown is now taller for better UX.
+* [Changed] Notification table is now filtered from uneccessary columns.
+* [Changed] Multiple function, method and hook deprecations, see above for detailed list and replacements.
+* [Changed] Runtime components names, see above for detailed list and replacements.
+* [Changed] Namespace `BracketSpace\Notification\Defaults\` to `BracketSpace\Notification\Repository\`.
+* [Changed] Runtime components are now referenced by FQCN (Fully Qualified Class Name), instead of the name.
+* [Changed] Abstract classes are now renamed BaseSomething convention and placed in Repository dir.
+* [Changed] Date-related merge tags (`Date`, `DateTime` and `Time`) now requires `timestamp` argument to be callable.
+* [Changed] Unify attribute name used by resolvers to `property_name` in all Merge Tags.
+* [Fixed] Shortcodes being uncorrectly stripped leaving closing "]" behind.
+* [Fixed] PHP 8.2 deprecations.
+* [Fixed] Stripping shortcodes in carrier fields.
+* [Fixed] Email carrier header "From" prioritized over header in settings.
+* [Fixed] User password reset link requires encoded username.
+* [Fixed] Notification class serialization.
+* [Removed] DOING_NOTIFICATION_SAVE constant.
+* [Removed] NotificationQueries class in favor of NotificationDatabaseService.
+* [Removed] Webook and Webhook JSON Carriers.
+
+== Upgrade Notice ==
+
+= 9.0.0 =
+Minimum required PHP version is 7.4.
+Compatibility breaking changes. Please make sure to review the changelog before upgrading and adjust your customizations.
+The premium plugins won't work with Notification 9.0.0 unless updated.
+Webook and Webhook JSON Carriers are now deprecated and won't work unless you get an add-on.
+
+= 8.0.0 =
+Compatibility breaking changes and security fixes. Please make sure to review the changelog before upgrading and adjust your customizations.
+The premium plugins won't work with Notification v8 unless updated.
+
+= 7.0.0 =
+Compatibility breaking changes. Please make sure to review the changelog before upgrading and adjust your customizations.
+The premium plugins won't work with Notification v7 unless updated.

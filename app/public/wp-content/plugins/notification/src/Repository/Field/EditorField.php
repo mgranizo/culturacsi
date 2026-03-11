@@ -1,0 +1,90 @@
+<?php
+
+/**
+ * Editor field class
+ *
+ * @package notification
+ */
+
+declare(strict_types=1);
+
+namespace BracketSpace\Notification\Repository\Field;
+
+/**
+ * Editor field class
+ */
+class EditorField extends BaseField
+{
+	/**
+	 * Editor settings
+	 *
+	 * @see https://codex.wordpress.org/Function_Reference/wp_editor#Arguments
+	 * @var string
+	 */
+	protected $settings = 'text';
+
+	/**
+	 * Field constructor
+	 *
+	 * @param array<mixed> $params field configuration parameters.
+	 * @since 5.0.0
+	 */
+	public function __construct($params = [])
+	{
+		if (isset($params['settings'])) {
+			if (is_array($params['settings'])) {
+				$encoded = wp_json_encode($params['settings']);
+				$this->settings = $encoded !== false ? $encoded : '{}';
+			} elseif (is_scalar($params['settings'])) {
+				$this->settings = (string)$params['settings'];
+			}
+		}
+
+		parent::__construct($params);
+	}
+
+	/**
+	 * Returns field HTML
+	 *
+	 * @return string html
+	 */
+	public function field()
+	{
+		$settings = wp_parse_args(
+			$this->settings,
+			[
+				'textarea_name' => $this->getName(),
+				'textarea_rows' => 20,
+				'editor_class' => $this->cssClass(),
+			]
+		);
+
+		ob_start();
+
+		$value = $this->getValue();
+		$stringValue = is_scalar($value) ? (string)$value : '';
+
+		wp_editor(
+			$stringValue,
+			$this->getId(),
+			$settings
+		);
+
+		return ob_get_clean() !== false ? ob_get_clean() : '';
+	}
+
+	/**
+	 * Sanitizes the value sent by user
+	 *
+	 * @param mixed $value value to sanitize.
+	 * @return mixed        sanitized value
+	 */
+	public function sanitize($value)
+	{
+		/**
+		 * Fixes WPLinkPreview TinyMCE component which adds the https:// prefix to invalid URL.
+		 */
+		$stringValue = is_scalar($value) ? (string)$value : '';
+		return str_replace(['https://{', 'http://{'], '{', $stringValue);
+	}
+}
