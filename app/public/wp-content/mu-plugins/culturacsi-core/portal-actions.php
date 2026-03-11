@@ -166,6 +166,8 @@ if ( ! function_exists( 'culturacsi_portal_process_post_row_action' ) ) {
 				'hold'    => 'pending',
 			);
 			$new_status = isset( $status_map[ $action ] ) ? $status_map[ $action ] : '';
+			$old_post_status = (string) $post->post_status;
+			$old_post_state  = array( 'post_status' => $old_post_status );
 			if ( '' === $new_status ) {
 				return culturacsi_portal_notice( 'Azione non valida.', 'error' );
 			}
@@ -184,7 +186,18 @@ if ( ! function_exists( 'culturacsi_portal_process_post_row_action' ) ) {
 			}
 
 			clean_post_cache( $target_id );
-			wp_transition_post_status( $new_status, $post->post_status, $post );
+			wp_transition_post_status( $new_status, $old_post_status, $post );
+			$updated_post = get_post( $target_id );
+			if ( $updated_post instanceof WP_Post ) {
+				$new_post_state = array( 'post_status' => (string) get_post_status( $updated_post ) );
+				if ( 'approve' === $action ) {
+					do_action( 'culturacsi_post_approved', $updated_post, $old_post_state, $new_post_state, $action, $user_id );
+				} elseif ( 'reject' === $action ) {
+					do_action( 'culturacsi_post_rejected', $updated_post, $old_post_state, $new_post_state, $action, $user_id );
+				} elseif ( 'hold' === $action ) {
+					do_action( 'culturacsi_post_held', $updated_post, $old_post_state, $new_post_state, $action, $user_id );
+				}
+			}
 
 			$labels = array(
 				'approve' => 'Elemento approvato.',
@@ -350,12 +363,25 @@ if ( ! function_exists( 'culturacsi_portal_process_user_row_action' ) ) {
 			if ( user_can( $user, 'manage_options' ) ) {
 				return culturacsi_portal_notice( 'Azione non consentita su questo utente.', 'error' );
 			}
+			$actor_user_id        = get_current_user_id();
+			$get_user_bridge_state = static function( WP_User $target_user ): array {
+				return array(
+					'roles'            => array_values( (array) $target_user->roles ),
+					'moderation_state' => (string) get_user_meta( (int) $target_user->ID, 'assoc_moderation_state', true ),
+					'pending_approval' => (string) get_user_meta( (int) $target_user->ID, 'assoc_pending_approval', true ),
+				);
+			};
+			$old_user_state = $get_user_bridge_state( $user );
 			if ( 'approve' === $action ) {
 				$user->set_role( 'association_manager' );
 				delete_user_meta( (int) $user->ID, 'assoc_pending_approval' );
 				update_user_meta( (int) $user->ID, 'assoc_moderation_state', 'approved' );
 				if ( function_exists( 'culturacsi_log_event' ) ) {
 					culturacsi_log_event( 'approve_user', 'user', (int) $user->ID, 'User approved: ' . $user->user_login );
+				}
+				$updated_user = get_user_by( 'id', (int) $user->ID );
+				if ( $updated_user instanceof WP_User ) {
+					do_action( 'culturacsi_user_approved', $updated_user, $old_user_state, $get_user_bridge_state( $updated_user ), $action, $actor_user_id );
 				}
 				$success_msg = 'Utente approvato.';
 				if ( isset( $_REQUEST['is_portal_ajax'] ) && '1' === (string) $_REQUEST['is_portal_ajax'] ) {
@@ -374,6 +400,15 @@ if ( ! function_exists( 'culturacsi_portal_process_user_row_action' ) ) {
 			update_user_meta( (int) $user->ID, 'assoc_moderation_state', $new_state );
 			if ( function_exists( 'culturacsi_log_event' ) ) {
 				culturacsi_log_event( 'moderate_user', 'user', (int) $user->ID, "Action: $action ($new_state) for " . $user->user_login );
+			}
+			$updated_user = get_user_by( 'id', (int) $user->ID );
+			if ( $updated_user instanceof WP_User ) {
+				$new_user_state = $get_user_bridge_state( $updated_user );
+				if ( 'reject' === $action ) {
+					do_action( 'culturacsi_user_rejected', $updated_user, $old_user_state, $new_user_state, $action, $actor_user_id );
+				} elseif ( 'hold' === $action ) {
+					do_action( 'culturacsi_user_held', $updated_user, $old_user_state, $new_user_state, $action, $actor_user_id );
+				}
 			}
 			$success_msg = 'Stato utente aggiornato.';
 			if ( isset( $_REQUEST['is_portal_ajax'] ) && '1' === (string) $_REQUEST['is_portal_ajax'] ) {
