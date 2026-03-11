@@ -78,13 +78,167 @@
 		}, 500);
 	}
 
+	function getCalendarHeroCandidateImage(candidate) {
+		if (!candidate) {
+			return null;
+		}
+
+		if (candidate.tagName === 'IMG') {
+			return candidate;
+		}
+
+		return candidate.querySelector('img') || candidate.querySelector('.kb-img');
+	}
+
+	function findCalendarHeroCandidate() {
+		var entryContent = document.querySelector('.entry-content');
+		if (!entryContent) {
+			return null;
+		}
+
+		var images = Array.from(entryContent.querySelectorAll('.wp-block-image, .wp-block-kadence-image, .kb-image-wrap'));
+		var heroCandidate = null;
+		var maxArea = 0;
+
+		images.forEach(function (candidate) {
+			if (candidate.closest('.assoc-portal-calendar-browser, header, .my-sticky-header')) {
+				return;
+			}
+
+			var img = getCalendarHeroCandidateImage(candidate);
+			if (!img) {
+				return;
+			}
+
+			var width = img.naturalWidth || img.clientWidth || 0;
+			if (width > 0 && width < 300) {
+				return;
+			}
+
+			var area = width * (img.naturalHeight || img.clientHeight || 1);
+			if (area > maxArea) {
+				maxArea = area;
+				heroCandidate = candidate;
+			}
+		});
+
+		if (!heroCandidate) {
+			heroCandidate = entryContent.querySelector('.kb-row-layout-wrap:not(.my-sticky-header)');
+		}
+
+		return heroCandidate;
+	}
+
+	function queueCalendarHeroOverlayBootstrap() {
+		if (!isCalendarPage() || !document.body) {
+			return;
+		}
+
+		if (document.querySelector('.calendar-hero-month-overlay')) {
+			return;
+		}
+
+		if (document.body.dataset.csiCalendarHeroBootstrapQueued === '1') {
+			return;
+		}
+
+		document.body.dataset.csiCalendarHeroBootstrapQueued = '1';
+
+		function runBootstrap() {
+			document.body.removeAttribute('data-csi-calendar-hero-bootstrap-queued');
+
+			if (document.querySelector('.calendar-hero-month-overlay')) {
+				return;
+			}
+
+			var overlay = ensureCalendarHeroOverlayExists(true);
+			if (!overlay) {
+				return;
+			}
+
+			scheduleCalendarHeroMonthFit();
+			fixCalendarHeroDuplicateText();
+		}
+
+		if (document.readyState === 'complete') {
+			window.setTimeout(runBootstrap, 0);
+			return;
+		}
+
+		window.addEventListener('load', runBootstrap, { once: true });
+	}
+
+	function ensureCalendarHeroOverlayExists(allowCreate) {
+		if (!isCalendarPage()) {
+			return null;
+		}
+
+		var overlay = document.querySelector('.calendar-hero-month-overlay');
+		if (overlay && overlay.parentElement) {
+			return overlay;
+		}
+
+		if (!allowCreate) {
+			queueCalendarHeroOverlayBootstrap();
+			return null;
+		}
+
+		var heroCandidate = findCalendarHeroCandidate();
+		if (!heroCandidate) {
+			return null;
+		}
+
+		overlay = heroCandidate.querySelector('.calendar-hero-month-overlay');
+		if (overlay && overlay.parentElement) {
+			return overlay;
+		}
+
+		heroCandidate.style.position = 'relative';
+		heroCandidate.style.overflow = 'hidden';
+		heroCandidate.style.display = 'block';
+
+		var heroImg = getCalendarHeroCandidateImage(heroCandidate);
+		if (heroImg) {
+			heroImg.style.width = '100%';
+			if (heroImg.naturalWidth && heroImg.naturalHeight) {
+				var naturalAspect = heroImg.naturalWidth / heroImg.naturalHeight;
+				heroImg.style.aspectRatio = (naturalAspect * 1.5).toString();
+				heroImg.style.objectFit = 'cover';
+			}
+		}
+
+		var tintOverlay = heroCandidate.querySelector('.calendar-hero-tint-overlay');
+		if (!tintOverlay) {
+			tintOverlay = document.createElement('div');
+			tintOverlay.className = 'calendar-hero-tint-overlay';
+			tintOverlay.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background-color: rgba(17, 89, 175, 0.6) !important; z-index: 5 !important; pointer-events: none !important;';
+			heroCandidate.appendChild(tintOverlay);
+		}
+
+		overlay = document.createElement('div');
+		overlay.className = 'calendar-hero-month-overlay';
+		overlay.style.cssText = 'position: absolute !important; left: 50% !important; bottom: -2.2% !important; width: 100% !important; text-align: center !important; font-family: \'Raleway\', \'Roboto\', sans-serif !important; font-weight: 800 !important; color: #ffffff !important; text-transform: uppercase !important; z-index: 10 !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; text-shadow: none !important; white-space: nowrap !important; transform: translateX(-50%) !important; display: flex; justify-content: center;';
+
+		var textSpan = document.createElement('span');
+		textSpan.style.display = 'inline-block';
+		textSpan.style.transformOrigin = 'bottom center';
+		textSpan.style.lineHeight = '0.73';
+		textSpan.style.marginLeft = '-0.15em';
+		textSpan.style.marginRight = '-0.1em';
+		textSpan.textContent = getMonthLabelFromUrl(new URL(window.location.href));
+		overlay.appendChild(textSpan);
+
+		heroCandidate.appendChild(overlay);
+		return overlay;
+	}
+
 	// Keep the calendar month title fitted by width only.
 	// We leave the original hero/image layout intact and reproduce the same
 	// transform-based sizing model that the calendar snippet uses on a full page
 	// load. This avoids a mismatch between reload behavior and in-page month
 	// changes.
 	function ensureManagedCalendarHeroOverlay() {
-		var overlay = document.querySelector('.calendar-hero-month-overlay');
+		var overlay = ensureCalendarHeroOverlayExists(false);
 		if (!overlay || !overlay.parentElement) {
 			return null;
 		}
@@ -93,18 +247,8 @@
 			return overlay;
 		}
 
-		var managedOverlay = document.createElement('div');
-		managedOverlay.className = overlay.className;
-		managedOverlay.style.cssText = overlay.style.cssText;
-		managedOverlay.dataset.csiManaged = '1';
-
-		var textSpan = document.createElement('span');
-		textSpan.textContent = overlay.textContent ? overlay.textContent.trim() : '';
-		managedOverlay.appendChild(textSpan);
-
-		overlay.replaceWith(managedOverlay);
-
-		return managedOverlay;
+		overlay.dataset.csiManaged = '1';
+		return overlay;
 	}
 
 	function ensureCalendarHeroTextSpan(overlay) {
@@ -290,6 +434,44 @@
 		return path === '/calendar' || path === '/calendario';
 	}
 
+	function getMonthLabelFromUrl(url) {
+		var currentUrl = url instanceof URL ? url : new URL(url || window.location.href, window.location.href);
+		var today = new Date();
+
+		var monthValue = currentUrl.searchParams.get('ev_m');
+		if (monthValue === null || monthValue === '') {
+			monthValue = currentUrl.searchParams.get('m');
+		}
+		if (monthValue === null || monthValue === '') {
+			monthValue = String(today.getMonth() + 1);
+		}
+
+		var yearValue = currentUrl.searchParams.get('ev_y');
+		if (yearValue === null || yearValue === '') {
+			yearValue = currentUrl.searchParams.get('y');
+		}
+		if (yearValue === null || yearValue === '') {
+			yearValue = String(today.getFullYear());
+		}
+
+		var month = parseInt(monthValue, 10);
+		if (!(month > 0)) {
+			month = today.getMonth() + 1;
+		}
+
+		var year = parseInt(yearValue, 10);
+		if (!(year > 0)) {
+			year = today.getFullYear();
+		}
+
+		try {
+			return new Intl.DateTimeFormat('it-IT', { month: 'long' }).format(new Date(year, month - 1, 1)).toLocaleUpperCase('it-IT');
+		} catch (error) {
+			var fallbackMonths = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
+			return fallbackMonths[new Date(year, month - 1, 1).getMonth()] || '';
+		}
+	}
+
 	// The calendar page currently changes month via normal GET navigation.
 	// That rebuilds the entire document even though the hero image stays the same.
 	// We intercept same-origin month links, fetch the next page in the background,
@@ -333,28 +515,6 @@
 				return null;
 			}
 			return url;
-		}
-
-		function getMonthLabelFromUrl(url) {
-			var month = parseInt(url.searchParams.get('ev_m') || url.searchParams.get('m') || '', 10);
-			var year = parseInt(url.searchParams.get('ev_y') || url.searchParams.get('y') || '', 10);
-			var today = new Date();
-
-			if (!month || month < 1 || month > 12) {
-				month = today.getMonth() + 1;
-			}
-			if (!year || year < 1000) {
-				year = today.getFullYear();
-			}
-
-			try {
-				var locale = document.documentElement.lang || 'it-IT';
-				var formatter = new Intl.DateTimeFormat(locale, { month: 'long' });
-				return formatter.format(new Date(year, month - 1, 1)).toUpperCase();
-			} catch (error) {
-				var fallbackMonths = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
-				return fallbackMonths[month - 1] || '';
-			}
 		}
 
 		function updateHeroMonthLabel(url) {
