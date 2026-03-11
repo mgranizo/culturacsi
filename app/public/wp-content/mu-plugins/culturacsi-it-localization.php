@@ -37,6 +37,7 @@ $culturacsi_mu_modules = array(
 	'culturacsi-core/logging.php',
 	'culturacsi-core/performance-hints.php',
 	'culturacsi-core/exports.php',
+	'culturacsi-core/notification-triggers.php',
 	'culturacsi-core/kadence-hardening.php',
 	'culturacsi-core/migrations.php',
 	'culturacsi-core/ui-tweaks.php',
@@ -45,4 +46,3 @@ $culturacsi_mu_modules = array(
 foreach ( $culturacsi_mu_modules as $culturacsi_mu_module ) {
 	culturacsi_mu_require( $culturacsi_mu_module );
 }
-
