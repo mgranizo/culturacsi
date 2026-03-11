@@ -913,7 +913,9 @@ function assoc_portal_dashboard_shortcode() {
     // Return the captured HTML.
     return ob_get_clean();
 }
-add_shortcode( 'assoc_dashboard', 'assoc_portal_dashboard_shortcode' );
+if ( ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
+    add_shortcode( 'assoc_dashboard', 'assoc_portal_dashboard_shortcode' );
+}
 
 /**
  * Shortcode: [assoc_profile_form]
@@ -1178,7 +1180,9 @@ function assoc_portal_profile_form_shortcode() {
     <?php
     return ob_get_clean();
 }
-add_shortcode( 'assoc_event_form', 'assoc_event_form_shortcode' );
+if ( ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
+    add_shortcode( 'assoc_event_form', 'assoc_event_form_shortcode' );
+}
 
 /**
  * Shortcode: [events_calendar]
@@ -1520,7 +1524,9 @@ function assoc_portal_reserved_nav_shortcode() {
     echo '</ul></nav>';
     return ob_get_clean();
 }
-add_shortcode( 'assoc_reserved_nav', 'assoc_portal_reserved_nav_shortcode' );
+if ( ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
+    add_shortcode( 'assoc_reserved_nav', 'assoc_portal_reserved_nav_shortcode' );
+}
 
 /**
  * Frontend admin panel shortcode used by /area-riservata/amministrazione.
@@ -1557,13 +1563,15 @@ function assoc_portal_admin_control_panel_shortcode() {
     echo '</ul></div>';
     return ob_get_clean();
 }
-add_shortcode( 'assoc_admin_control_panel', 'assoc_portal_admin_control_panel_shortcode' );
+if ( ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
+    add_shortcode( 'assoc_admin_control_panel', 'assoc_portal_admin_control_panel_shortcode' );
+}
 
-if ( function_exists( 'assoc_portal_profile_form_shortcode' ) && ! shortcode_exists( 'assoc_profile_form' ) ) {
+if ( function_exists( 'assoc_portal_profile_form_shortcode' ) && ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
     add_shortcode( 'assoc_profile_form', 'assoc_portal_profile_form_shortcode' );
 }
 
-if ( function_exists( 'assoc_portal_profile_form_shortcode' ) && ! shortcode_exists( 'assoc_association_form' ) ) {
+if ( function_exists( 'assoc_portal_profile_form_shortcode' ) && ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
     add_shortcode( 'assoc_association_form', 'assoc_portal_profile_form_shortcode' );
 }
 
@@ -1608,7 +1616,9 @@ function assoc_portal_events_list_shortcode() {
     wp_reset_postdata();
     return ob_get_clean();
 }
-add_shortcode( 'assoc_events_list', 'assoc_portal_events_list_shortcode' );
+if ( ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
+    add_shortcode( 'assoc_events_list', 'assoc_portal_events_list_shortcode' );
+}
 
 /**
  * Use profile form for placeholders until dedicated shortcodes are implemented.
@@ -1619,7 +1629,9 @@ function assoc_portal_placeholder_shortcode() {
     }
     return '';
 }
-add_shortcode( 'assoc_user_profile_form', 'assoc_portal_placeholder_shortcode' );
-add_shortcode( 'assoc_news_list', 'assoc_portal_placeholder_shortcode' );
-add_shortcode( 'assoc_news_form', 'assoc_portal_placeholder_shortcode' );
+if ( ! function_exists( 'culturacsi_portal_force_shortcode_registry' ) ) {
+    add_shortcode( 'assoc_user_profile_form', 'assoc_portal_placeholder_shortcode' );
+    add_shortcode( 'assoc_news_list', 'assoc_portal_placeholder_shortcode' );
+    add_shortcode( 'assoc_news_form', 'assoc_portal_placeholder_shortcode' );
+}
 
