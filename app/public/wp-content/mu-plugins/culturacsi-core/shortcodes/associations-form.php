@@ -128,7 +128,7 @@ function culturacsi_portal_associations_form_shortcode(): string {
 							if ( 'phone' === $key ) {
 								$val = $normalize_multivalue_text( $raw );
 							}
-							if ( in_array( array( 'website', 'facebook', 'instagram', 'youtube', 'tiktok', 'x' ), $key, true ) ) {
+							if ( in_array( $key, array( 'website', 'facebook', 'instagram', 'youtube', 'tiktok', 'x' ), true ) ) {
 								$val = esc_url_raw( $val );
 							}
 							if ( 'email' === $key ) {

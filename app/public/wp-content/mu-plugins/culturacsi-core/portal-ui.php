@@ -92,6 +92,8 @@ if ( ! function_exists( 'culturacsi_portal_reserved_nav_shortcode' ) ) {
 		}
 
 		$current_path = trim( (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
+		$show_back_button = 'area-riservata' !== $current_path;
+		$back_fallback_url = home_url( '/area-riservata/' );
 		$logo_url     = culturacsi_get_site_logo_url( 'full', false );
 		$role_label   = culturacsi_portal_panel_role_label();
 		$nav_title = 'Area Riservata';
@@ -131,7 +133,11 @@ if ( ! function_exists( 'culturacsi_portal_reserved_nav_shortcode' ) ) {
 				. ( culturacsi_portal_nav_item_is_active( (string) $item['url'], $current_path ) ? ' is-active' : '' );
 			echo '<li><a class="' . esc_attr( $link_class ) . '" href="' . esc_url( $item['url'] ) . '">' . esc_html( $item['label'] ) . '</a></li>';
 		}
-		echo '</ul></nav>';
+		if ( $show_back_button ) {
+			echo '<li class="assoc-reserved-nav-actions"><a class="assoc-reserved-nav-back" href="' . esc_url( $back_fallback_url ) . '" data-assoc-back-link="1" data-assoc-back-fallback="' . esc_attr( $back_fallback_url ) . '">&larr; Indietro</a></li>';
+		}
+		echo '</ul>';
+		echo '</nav>';
 		return ob_get_clean();
 	}
 }

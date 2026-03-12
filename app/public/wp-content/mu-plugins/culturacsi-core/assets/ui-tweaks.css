@@ -121,6 +121,15 @@ body :where(.calendar-event-row, .assoc-event-card, .culturacsi-news-item, .asso
 	border-radius: 0;
 }
 
+.my-sticky-header.is-position-sticky {
+	z-index: 99999;
+}
+
+.has-text-justify {
+	text-align: justify;
+	hyphens: auto;
+}
+
 
 body :where(.assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-calendar-filters) {
 	background: linear-gradient(135deg, #0a3b75 0%, #1e5bb0 100%) !important;
@@ -130,6 +139,40 @@ body :where(.assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-ca
 
 body :where(.assoc-search-panel, .culturacsi-news-search-panel, .assoc-portal-calendar-filters) :where(h1, h2, h3, h4, p, label, span, .calendar-view-mode-label, .ab-muted) {
 	color: #fff !important;
+}
+
+/* Preserve the public Notizie search panel styling while removing Customizer CSS. */
+body .assoc-search-panel.assoc-news-search {
+	background-color: #336dac !important;
+	border-color: #336dac !important;
+	color: #fff !important;
+	padding: 20px !important;
+	border-radius: 8px !important;
+}
+
+body .assoc-search-panel.assoc-news-search :where(h3, p, label) {
+	color: #fff !important;
+}
+
+body .assoc-search-panel.assoc-news-search :where(input, select) {
+	background-color: #d6e2ee !important;
+	color: #000 !important;
+	border: 1px solid #ccc !important;
+}
+
+body .assoc-search-panel.assoc-news-search input::placeholder {
+	color: #555 !important;
+}
+
+body .assoc-search-panel.assoc-news-search .button {
+	background-color: #193a5b !important;
+	color: #fff !important;
+	border: none !important;
+}
+
+body .assoc-search-panel.assoc-news-search .button:hover,
+body .assoc-search-panel.assoc-news-search .button:focus {
+	background-color: #0d1e30 !important;
 }
 
 body :where(.calendar-event-row, .assoc-event-card, .culturacsi-news-item, .entry-content-wrap) {

@@ -237,6 +237,43 @@
 		});
 	}
 
+	function initReservedBackLinks() {
+		document.querySelectorAll('[data-assoc-back-link="1"]').forEach(function (link) {
+			if (!link || link.dataset.csiBackBound === '1') {
+				return;
+			}
+
+			link.dataset.csiBackBound = '1';
+			link.addEventListener('click', function (event) {
+				var fallback = (link.getAttribute('data-assoc-back-fallback') || link.getAttribute('href') || '').trim();
+				var referrer = (document.referrer || '').trim();
+				if (!referrer) {
+					return;
+				}
+
+				try {
+					var referrerUrl = new URL(referrer, window.location.origin);
+					var currentUrl = window.location.pathname + window.location.search + window.location.hash;
+					var referrerTarget = referrerUrl.pathname + referrerUrl.search + referrerUrl.hash;
+
+					if (referrerUrl.origin !== window.location.origin || referrerTarget === currentUrl) {
+						if (fallback) {
+							link.setAttribute('href', fallback);
+						}
+						return;
+					}
+
+					event.preventDefault();
+					window.history.back();
+				} catch (error) {
+					if (fallback) {
+						link.setAttribute('href', fallback);
+					}
+				}
+			});
+		});
+	}
+
 	function initCronologiaDetails() {
 		var table = document.querySelector('.assoc-table-cronologia');
 		if (!table) {
@@ -610,6 +647,7 @@
 		initRowDetails();
 		initModifiedFieldsTracking();
 		initPasswordToggles();
+		initReservedBackLinks();
 		initCronologiaDetails();
 		initContentSearchTypeToggle();
 		initPortalGuidance();
